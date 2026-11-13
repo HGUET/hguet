@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "native_sol_price_quote",
+  "quote_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment": "sandbox",
+  "network": "devnet",
+  "genesis_hash": "SYNTHETIC_DEVNET_GENESIS_DO_NOT_USE",
+  "asset": "SOL",
+  "receiver": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "memo_reference": "HGUET:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "message_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "intent_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "requested_profile": "strict",
+  "requested_capabilities": [
+    "network_health",
+    "program_risk"
+  ],
+  "data_scope": "metadata_only",
+  "subjects_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "claim_secret_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "usd_price_micros": "10000",
+  "sol_usd_price_micros": "100000000",
+  "oracle_source_id": "SYNTHETIC_PYTH_SOL_USD_EXAMPLE",
+  "oracle_published_at": "2026-11-13T15:00:00Z",
+  "oracle_confidence_bps": 20,
+  "lamports_due": "100000",
+  "issued_at": "2026-11-13T15:00:03Z",
+  "expires_at": "2026-11-13T15:01:33Z"
+}
