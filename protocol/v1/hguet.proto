@@ -1,4 +1,4 @@
-// HGUET PUBLIC protocol v1: UNRELEASED DRAFT (v0.2 accountless SOL pay-per-check).
+// HGUET PUBLIC protocol v1: UNRELEASED DRAFT (accountless SOL pay-per-check).
 // Transport: server-authenticated PQ-capable TLS 1.3, then 4-byte network-order
 // frame size and exactly one Protobuf Envelope. Max frame size 1 MiB.
 // There is NO mandatory account, no balance, no client enrollment and no USDC.
