@@ -196,12 +196,12 @@
         "top_level_instructions": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 128
+          "maximum": 64
         },
         "resolved_accounts": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 256
+          "maximum": 96
         },
         "lookup_tables": {
           "type": "integer",
@@ -211,7 +211,7 @@
         "distinct_programs": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 128
+          "maximum": 64
         },
         "risk_subjects": {
           "type": "integer",
