@@ -7,7 +7,7 @@
 **[Unified interoperability contract](interoperability.md)** distinguishes two independently verified artifacts:
 
 1. **SecurityVerdict (this document)** — final JSON produced by the **CLI** after combining mandatory local checks with any optional Cloud facts. This *composite JSON is not server-signed*.
-2. **CloudAssessment** — signed, server-issued *enrichment* with network/program/behavior findings, whose canonical schema lives in [protocol/v1/cloud-assessment.schema.json](../../protocol/v1/cloud-assessment.schema.json). BillingReceipt has its own signature and key/nonce domain.
+2. **CloudAssessment** — signed, server-issued *enrichment* with network/program/behavior findings, whose canonical schema lives in [protocol/v1/cloud-assessment.schema.json](../../protocol/v1/cloud-assessment.schema.json). PaymentReceipt has its own signature and domain-separated signed body.
 
 A valid Cloud signature authenticates only the CloudAssessment, not a guarantee that the overall payment is safe. Local hard DENY remains DENY. Invalid/expired/mismatched Cloud evidence is discarded, and Cloud-required profiles return UNKNOWN.
 
@@ -142,7 +142,7 @@ Cloud may append only documented extension objects:
 }
 ```
 
-No raw proprietary feed or tenant data should leak by default. A customer must see the **reason and provenance** for a Cloud finding, not only a proprietary opaque number.
+No raw proprietary feed, private claim secret or customer transaction content should leak by default. A customer must see the **reason and provenance** for a Cloud finding, not only a proprietary opaque number.
 
 ## 5. Signature design
 
