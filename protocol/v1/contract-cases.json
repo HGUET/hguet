@@ -108,6 +108,11 @@
       "id": "interop-pricing-cap",
       "request": "server quoted price above CLI configured max credit-unit fee",
       "expected": "fail before check, do not silently accept revised price"
+    },
+    {
+      "id": "interop-source-provenance",
+      "request": "CloudAssessment missing source evidence digest or altered source provenance",
+      "expected": "reject missing required fields; signature verification fails if sourced evidence changes"
     }
   ]
 }
