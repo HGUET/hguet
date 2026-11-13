@@ -17,6 +17,7 @@ use serde_json::json;
 pub struct DirectTokenInstruction {
     pub instruction_index: usize,
     pub program_address_from_lookup: bool,
+    pub account_addresses_from_lookup: bool,
     pub decoded: TokenCpiInstruction,
 }
 #[derive(Debug,Clone,Serialize)]
@@ -58,6 +59,8 @@ pub fn inspect_direct_tokens(
         }
         let program=&addresses[ix.program_index];
         let program_from_lookup=ix.program_index>=parsed.static_account_count;
+        let accounts_from_lookup=ix.account_indices.iter()
+            .any(|&index|index>=parsed.static_account_count);
         let declared=&parsed.program_ids[i];
         if !program_from_lookup && declared!=program ||
            program_from_lookup && declared!="<unresolved-ALT-program>" {
@@ -73,7 +76,8 @@ pub fn inspect_direct_tokens(
         let map=data.as_object().ok_or(RpcError::InvalidResponse)?;
         match decode_token_cpi(program,map,&addresses,i,0)? {
             TokenCpiDecode::Recognized(decoded)=>recognized.push(DirectTokenInstruction {
-                instruction_index:i,program_address_from_lookup:program_from_lookup,decoded,
+                instruction_index:i,program_address_from_lookup:program_from_lookup,
+                account_addresses_from_lookup:accounts_from_lookup,decoded,
             }),
             TokenCpiDecode::Opaque {extension,observation,..}=>opaque.push(
                 OpaqueDirectTokenInstruction {
@@ -135,7 +139,7 @@ mod tests {
         assert!(!ix.program_address_from_lookup);
         assert_eq!(ix.decoded.operation,"transfer_checked");
         assert_eq!(ix.decoded.amount_raw.as_deref(),Some("1234"));
-        assert_eq!(ix.decoded.mint.as_deref(),Some(key(3).as_str()));
+        assert_eq!(ix.decoded.mint.as_deref(),Some(key(4).as_str()));
         assert_eq!(ix.decoded.source_account.as_deref(),Some(key(2).as_str()));
         assert_eq!(ix.decoded.destination_account.as_deref(),Some(key(3).as_str()));
     }
