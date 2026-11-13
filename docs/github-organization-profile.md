@@ -35,6 +35,14 @@ An agent can execute a valid transaction that is still *wrong*: wrong recipient,
 
 > **Status:** Early-stage development. No released, audited security product is being claimed.
 
+### Support development
+
+Voluntary Solana mainnet **SOL** donations help support HGUET's open-source development:
+
+`39iqkHNMqncEPp3p52zKwUHnYzk2MJbcaHyY4Hhg2fWC`
+
+This is **not** a Cloud billing or service-credit payment address.
+
 ---
 
 <div align="center">
