@@ -1,212 +1,90 @@
-# HGUET CLI — Commands, configuration and UX contract
+# HGUET CLI — Commands, configuration and accountless Cloud UX
 
-**Design status:** proposed, not implemented. The examples are **interface specifications**, not runnable commands. See [overview](README.md).
+**Status:** v0.2 design, **not implemented**. This replaces the old `register/login/topup/balance/usage` design. See [SOL payment specification](payment-per-request.md).
 
-## 1. Command taxonomy
+## Supported command grammar (proposed)
 
 ```text
-hguet
-  --version | --help
-  inspect [TRANSACTION|-] [--offline] [--json]
-  check [TRANSACTION|-] --intent INTENT.json [--policy POLICY.toml]
-       [--mode local|cloud] [--profile strict|review|explore]
-       [--rpc URL] [--network mainnet|devnet] [--max-charge UNITS] [--json]
-  policy validate FILE
-  intent verify FILE [--trusted-key PUBKEY]
-  doctor [--rpc] [--cloud] [--json]
-  config show|set|unset|path
-  register [--email ...]
-  login
-  account
-  pricing [--json]              # authenticated current Cloud quote/schedule
-  device list|revoke DEVICE_ID
-  topup AMOUNT --asset USDC
-  balance
-  usage [--since DATE] [--json]
-  history [--limit N] [--json]
-  logout
-  completions bash|zsh|fish|powershell
+hguet --version | --help
+hguet inspect [TRANSACTION|-] --offline [--encoding binary|base64|base58] [--json]
+hguet check [TRANSACTION|-] --intent PATH [--policy PATH]
+            --network mainnet|devnet|testnet
+            --mode local|cloud
+            [--profile strict|review|explore] [--rpc URL]
+            [--max-fee-lamports INTEGER] [--json]
+            [--payment-signature BASE58] [--claim-file PATH]
+hguet payment status QUOTE_ID --claim-file PATH [--json]
+hguet policy validate FILE
+hguet intent verify FILE [--trusted-key PUBLIC_KEY]
+hguet doctor [--rpc] [--cloud] [--json]
+hguet config show|set|unset|path
+hguet completions bash|zsh|fish|powershell
 ```
 
-`inspect` is non-enforcing disassembly and metadata extraction. `check` is policy evaluation. Account and top-up commands communicate only with our paid service, never with the Solana RPC by default (except when explicitly verifying an invoice payment).
+**There are no commands for HGUET registration, login, credits, balance or prepaid top-ups.** Paid Cloud requires only an ephemeral quote claim and an onchain payment. The CLI itself never accepts or generates the user's wallet private key.
 
-### Behavior by command
-
-| Command | Reads private files? | Network behavior | Expected output |
-| --- | --- | --- | --- |
-| `inspect --offline` | only named transaction | none | decoded transaction and unsupported instructions |
-| `check --mode local` | tx, intent, policy, trust roots | user-configured Solana RPC | SecurityVerdict |
-| `check --mode cloud` | same plus device auth | user RPC + PQ protected Cloud | enriched SecurityVerdict |
-| `policy validate` | policy file | none | syntax, semantics, conflict results |
-| `intent verify` | intent and trusted anchor | none | signer/trust status and restrictions |
-| `doctor` | config and optional device metadata | only requested targets | capability and health report |
-| `register/login` | device identity | HGUET Cloud | account/device enrollment status |
-| `topup` | device identity | HGUET Cloud | unique payment invoice and expiry |
-| `balance/usage/history` | device identity | HGUET Cloud | credit and usage summary |
-
-**Avoid “hguet pay”**: it implies wallet or transfer execution and violates the non-custodial product mandate.
-
-### Price confirmation before charging
-
-Cloud checks first obtain an **authenticated price quote** (network, capabilities, disclosure scope, price schedule, quote ID and expiry). Automated callers configure a maximum **integer credit-unit** charge; the CLI must reject an invoice/check whose verified price exceeds the cap and **never** silently approve a more expensive quote. Interactive CLI can show the price before submitting, without invoking any web cabinet.
-
-### Cloud mode and wallet distinction
-
-`--mode cloud` is canonical. A future `--cloud` shorthand is a convenience alias only; neither may be selected automatically by local-mode defaults. `hguet topup 10 --asset USDC` expresses a **human amount** of 10 USDC. The protocol translates it into a precise integer base-unit quote after mint/network verification; the server never trusts unvalidated float conversions.
-
-All enrollment, invoice display, balance, usage, and status actions happen through CLI. **The actual USDC transfer is signed by the customer's external wallet**, not by HGUET CLI. A Cloud-signed assessment does not make the composite local verdict server-signed.
-
-See the [shared interoperability contract](interoperability.md) and [public protocol draft](../../protocol/v1/README.md).
-
-## 2. First-run examples
-
-Free analysis, no HGUET registration:
+## Local mode (free)
 
 ```sh
-# Offline parsing only; nothing touches HGUET servers or Solana
 hguet inspect tx.bin --offline --json
-
-# Live simulation against explicitly configured RPC
-hguet config set rpc.default "https://user-selected-solana-rpc.example"
-hguet check tx.bin --intent approved-intent.json --profile strict --json
-
-# Integrate from an agent that produces transaction bytes on stdin
-cat tx.base64 | hguet check - --encoding base64 \
-  --intent approved-intent.json --profile strict --json
+hguet check tx.bin --intent approved-intent.json --network devnet --mode local --json
 ```
 
-Optional paid enrichment and account management, entirely through CLI:
+- `inspect --offline` does **no network access**.
+- `check --mode local` uses the **user-configured Solana RPC** (network access to that RPC but **none** to HGUET Cloud).
+- Verify RPC genesis, transaction version (legacy/v0/v1 where supported), address lookup and mandatory source coverage. Invalid or opaque execution cannot silently yield ALLOW.
+- Local mode works even when Cloud, SOL/USD price feeds or public faucets are unavailable.
+
+## Cloud mode: no signers in HGUET
 
 ```sh
-hguet register --email team@example.com
-hguet login
-hguet doctor --cloud
-hguet topup 10 --asset USDC
-hguet balance --json
-hguet pricing --json
-hguet check tx.bin --intent approved-intent.json --mode cloud --json
-hguet usage --since 2026-11-01 --json
-hguet device list
-hguet device revoke DEVICE_ID
+hguet check tx.bin --intent approved-intent.json --network mainnet \
+  --mode cloud --max-fee-lamports 200000 --json
 ```
 
-Account enrollment can include an email challenge entered in the CLI. `topup` returns a payment invoice (recipient, mint, exact base units, network, reference, expiry, instructions); a customer-owned **external** wallet signs the actual USDC payment. The CLI monitors crediting. HGUET receiving payment for its own service is not a wallet custody service for clients. Never ask a user to paste wallet seed phrases.
+Proposed interactive path:
+1. Perform free local evaluation. If a known local hard DENY is present, default to **not charging** for needless Cloud enrichment; deliberate override for additional investigation requires explicit consent.
+2. Generate `quote_id` context and a 256-bit private `claim_secret` stored locally with restrictive file permissions; send its SHA-256 commitment and exact request bindings.
+3. Receive and verify **server-signed PriceQuote** with a fresh SOL/USD market price, the **USD service tariff**, exact integer lamports, correct network/genesis, **separate commercial receiver**, memo reference, quote expiration, requested scope and maximum fee.
+4. Display `<network> / REAL SOL` for Mainnet or `<network> / TEST SOL` for Devnet/Testnet. Show both USD reference and fixed SOL invoice. **No auto-signing**. The caller uses an external wallet; CLI may export the unsigned transfer+memo for compatible wallet integration.
+5. After the customer wallet broadcasts the payment, supply its Solana signature and private claim to HGUET Server. Server independently verifies finalized transfer and that one quote/payment has not previously been spent on a different check.
+6. Verify **signed CloudAssessment** and **separately signed PaymentReceipt**. Merge Cloud evidence with mandatory local checks; CLI composes final `ALLOW / WARN / DENY / UNKNOWN`.
+7. On timeout or disconnect, use `hguet payment status QUOTE_ID --claim-file PATH`. No second charge. If paid service remains unavailable, refer claim to retry/refund workflow.
 
-**No mandatory web cabinet**; if card payments are introduced later, payment provider-hosted authorization is a separate optional integration and must be described honestly.
+Automated agents must be explicitly connected to a **customer-controlled external signer** with per-check fee cap and consent. HGUET cannot bypass wallet authorization or privately hold seed phrases.
 
-## 3. Input contract
+## Network configuration
 
-Transaction sources:
+`--network mainnet|devnet|testnet` binds the **analyzed transaction** and SOL payment; the paid check's cluster and quote's cluster must match. Verify `getGenesisHash` for all RPC sources. Environment mapping is fixed:
 
-- `TRANSACTION` path (binary wire format by default), or `-` for stdin; never read arbitrary directory trees.
-- Optional `--encoding binary|base64|base58`; base64 preferred for RPC.
-- Reject overlong input before allocation, malformed compact-u16, invalid signatures array lengths, unresolved address lookups, invalid version or extra trailing garbage.
-- Cap untrusted input: **16 KiB encoded text; 4,096 bytes decoded transaction wire** as an initial conservative ceiling (actual per-version bounds enforced separately and updated when official formats change). Configurable limits only downward in strict environments.
-- Version support must be explicit (legacy/v0/v1 per current Solana documentation); no unchecked fallback treating unknown version as legacy.
-- Input filenames and paths may contain sensitive details; redact in public logs when configured.
-
-**Never** accept private keys as arguments, stdin data, environment variables or configuration values. A CLI may accept the **public key** and the signed *authorization* produced by an independent signer.
-
-## 4. Policy and trusted-intent input
-
-Example `policy.toml` (proposed):
-
-```toml
-policy_version = 1
-default = "unknown"
-allowed_networks = ["solana-mainnet"]
-allowed_mints = ["<approved mint address>"]
-allowed_programs = ["<approved program id>"]
-max_payment_base_units = "10000000"
-require_verified_intent = true
-deny_unrecognized_instructions = true
-block_authority_changes = true
-
-[simulation]
-required = true
-max_context_age_slots = 80
-minimum_commitment = "confirmed"
-
-[cloud]
-required = false
-```
-
-`max_context_age_slots` and similar values are **risk-policy parameters**, not implied RPC guarantees. The project must test how freshness is actually measured (slot snapshots and observed head lag).
-
-Trusted intent is a separately produced, optionally signed object. In strict mode, an intent supplied by the same untrusted agent without an independently pinned trust root does not authorize a payment. See [security](security.md).
-
-## 5. Configuration and state
-
-Proposed platform locations (use OS-known directories rather than reimplementing them):
-
-| Data | Linux | Windows | macOS |
-| --- | --- | --- | --- |
-| Non-secret config | `$XDG_CONFIG_HOME/hguet/config.toml` | `%APPDATA%\\HGUET\\config.toml` | `~/Library/Application Support/HGUET/config.toml` |
-| Local state/cache | `$XDG_STATE_HOME/hguet/` | `%LOCALAPPDATA%\\HGUET\\` | `~/Library/Application Support/HGUET/` |
-| Device secret | OS keyring or permission-restricted encrypted fallback | Windows credential store / DPAPI | macOS Keychain |
-
-Settings precedence: CLI option > trusted per-user config > safe compiled default. Environment overrides must be explicit and documented; environment variables never silently enable Cloud or weaken transport.
-
-Safe example:
-
-```toml
-schema_version = 1
-network = "solana-mainnet"
-default_mode = "local"
-default_profile = "strict"
-rpc_url = "https://user-selected-solana-rpc.example"
-
-[output]
-format = "human"
-color = "auto"
-redact_sensitive = true
-
-[cloud]
-endpoint = "hguet.fr:443"
-enabled = false
-device_key_reference = "os-keyring:hguet/device"
-```
-
-RPC URL credentials (if any) are sensitive and must not appear in logs or crash traces. Protect config path from symlinks/untrusted writers and refuse world-readable secret-bearing fallback files.
-
-## 6. Output contract, automation and exit codes
-
-- `stdout`: **one complete JSON object** per invocation in `--json` mode; no progress bars, ANSI colors or diagnostic chatter.
-- `stderr`: human warnings/errors with redacted identifiers; machine callers can request typed `errors[]` in output.
-- JSON includes schema version and full coverage/evidence; never return only a score.
-- Stable, documented exit codes:
-
-| Exit | Meaning | CI / signer action |
+| Network | Cloud account / balance | Payment and receiver |
 | --- | --- | --- |
-| `0` | ALLOW | may proceed only if signer revalidates exact transaction binding |
-| `10` | WARN | do not auto-sign; review |
-| `20` | DENY | block |
-| `30` | UNKNOWN | block in strict integrations |
-| `40` | invalid CLI input or configuration | fail |
-| `50` | infrastructure/transport failure | fail |
-| `60` | Cloud auth, credit or account failure | fail |
+| Mainnet | **none** | real SOL → production treasury |
+| Devnet | **none** | test SOL → sandbox receiver |
+| Testnet | **none** | test SOL → sandbox receiver |
 
-A completed check that legitimately concludes `UNKNOWN` returns `30`, whereas an invalid input or network exception not convertible to evidence returns `40/50`; ensure deterministic mapping.
+The `--max-fee-lamports` cap is a caller-side upper bound, **not a tariff**. Accepting a higher quote silently is forbidden. No Cloud mode default in a local-only command.
 
-- `--quiet` affects human diagnostics, not schema fields.
-- `--timeout` upper bounded; `--no-color` and `NO_COLOR` supported.
-- Any prompt/interactive input is prohibited in automation mode (`--json` or non-TTY stdin); CLI fails clearly instead of hanging.
+## CLI inputs and outputs
 
-## 7. Behavior, accessibility and safety
+- `TRANSACTION` may be a bounded binary file or stdin `-`. Base64/Base58 must be explicitly declared or robustly validated. Initial input caps must track tested Solana legacy/v0/v1 format limits.
+- Intent must originate from an independently configured trusted authority; an agent-supplied `intent.json` alone is not proof.
+- `--json` emits **one complete JSON object on stdout**, diagnostic text on stderr. No prompts when stdin is non-TTY; pending payment state should have its own machine-readable status with invoice/claim identifiers but no secrets in shared logs.
+- Report includes exact message/intent hashes, network/genesis, simulation context, supported coverage, findings, cloud status and explicit limitations.
+- Known decision exit codes remain: `0 ALLOW`, `10 WARN`, `20 DENY`, `30 UNKNOWN`, `40 bad input`, `50 infrastructure`, `60 paid Cloud/payment failure`. A pending unpaid quote is NOT a completed verdict.
+- Never print `claim_secret`, wallet secrets, raw private intents or full SOL payment proof in unredacted shared diagnostics.
 
-- Friendly `--help`, shell completion, accessible terminal output without assuming color vision.
-- Deterministic JSON order when signatures/canonical hashes are involved.
-- Sane timeouts, bounded parallel RPC requests, cancellation on Ctrl-C.
-- No telemetry without explicit permission. No automatic Cloud fallback.
-- Clear warning when simulation used a replacement blockhash: result is **not** bound to the exact transaction the signer might sign.
-- Outputs identify `not_simulated`, `unresolved` and `unsupported` instead of turning them into “safe”.
-- Always print the target network and original transaction fingerprint in human-readable summaries.
+## Configuration and secret storage
 
-## 8. Compatibility & versioning
+Non-secret settings: approved RPC endpoints, default `mode=local`, default network, strict profile, output format, market quote cap and privacy preferences. The ephemeral claim secret belongs in **a single-claim local file or OS-protected store**, never HGUET account credentials. Use atomic restrictive file writes, no world-readable claims, and clear retention/erase/recovery instructions.
 
-- CLI command grammar may evolve before `v1.0`, but JSON and cloud schemas receive independent versions.
-- Public fixtures test JSON against schemas; no breaking shape changes without version increase.
-- Binaries for Linux x86_64 and aarch64, Windows x86_64 and macOS arm64/x86_64 are **targets**, not release commitments.
-- Platform PQ TLS support must be verified before adding Cloud to any distribution.
+## Important limitations
 
-See [verdict schema](verdict-schema.md), [cloud protocol](cloud-protocol.md) and [test plan](testing-roadmap.md).
+- Paying SOL does not atomically guarantee an offchain result. A finalized transfer creates a recoverable one-check claim; it may require retry or approved refund on server outage.
+- Test SOL has no real-world cash value even though test invoices use an actual SOL/USD conversion for engineering parity.
+- Native SOL payments here use **HGUET's own Protobuf payment-proof protocol**, not the SPL-oriented Solana x402 exact scheme.
+- A Cloud signature authenticates the server's assessment, **not the final CLI-composed verdict** and not guaranteed network safety.
+
+## References
+
+[Payment architecture](payment-per-request.md) · [Public Protobuf](../../protocol/v1/README.md) · [Solana analysis](solana-engine.md) · [Final verdict](verdict-schema.md) · [Threat model](security.md).
