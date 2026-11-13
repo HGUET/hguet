@@ -425,4 +425,34 @@ mod tests {
         let p=parse_transaction(&legacy(&[(u64::MAX,0,1),(1,0,1)],false)).unwrap();
         assert_eq!(p.declared_system_transfer_lamports,"18446744073709551616");
     }
+
+    #[test] fn independently_signed_intent_enforces_known_sol_transfer_lower_bound() {
+        use crate::{verify_intent, PaymentIntentPayload, SignedPaymentIntent};
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        let p=parse_transaction(&legacy(&[(75,0,1)],false)).unwrap();
+        let signer=SigningKey::from_bytes(&[23u8;32]);
+        let trusted_key=bs58::encode(signer.verifying_key().to_bytes()).into_string();
+        let signed_intent=|limit: &str| {
+            let intent=PaymentIntentPayload {
+                schema_version:1,kind:"hguet_payment_intent".into(),
+                intent_id:"test-spend-cap".into(),network:"devnet".into(),
+                message_sha256:p.message_sha256.clone(),
+                not_before_unix:1,expires_at_unix:4102444800,
+                allowed_program_ids:vec![SYSTEM_PROGRAM.into()],
+                max_spend_lamports:limit.into(),
+            };
+            let bytes=serde_json::to_vec(&intent).unwrap();
+            let mut message=b"HGUET-PAYMENT-INTENT\0".to_vec();
+            message.extend(&bytes);
+            SignedPaymentIntent {
+                payload_b64:STANDARD.encode(bytes),
+                signer_pubkey_b58:trusted_key.clone(),
+                signature_b58:bs58::encode(signer.sign(&message).to_bytes()).into_string(),
+            }
+        };
+        let too_low=signed_intent("74");
+        let err=verify_intent(&too_low,&trusted_key,"devnet",&p,100).unwrap_err();
+        assert!(err.contains("exceed"));
+        assert!(verify_intent(&signed_intent("75"),&trusted_key,"devnet",&p,100).is_ok());
+    }
 }
