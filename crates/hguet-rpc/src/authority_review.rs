@@ -311,6 +311,59 @@ mod tests {
         assert!(!gone.authorization_proven);
     }
     #[test]
+    fn token2022_mint_permanent_delegate_is_a_third_observed_authority_role(){
+        use crate::{
+            mint_rpc::{MintAccountObservation,MintRpcSnapshot},
+            mint_state::Token2022MintState,
+        };
+        let mint=MintRpcSnapshot {
+            context_slot:602,simulation_slot:600,atomic_with_simulation:false,
+            accounts:vec![MintAccountObservation {
+                address:pubkey(2),status:"token_2022".into(),
+                state:Some(Token2022MintState {
+                    mint_address:pubkey(2),supply_raw:"5000".into(),decimals:6,
+                    extensions:vec![],fee_config:None,hook:None,
+                    permanent_delegate:Some(pubkey(5)),
+                    unknown_extension_count:0,confidential_extension_present:false,
+                    limitations:"test".into(),
+                }),
+            }],
+            limitation:"test".into(),
+        };
+        let token=snap("token_2022",Some(state(4,None,250,0)));
+        let signed=signed(TOKEN_2022_PROGRAM,5,"100");
+        let r=correlate_signed_source_authority_with_mints(
+            &signed,Some(&token),Some(&mint),600).unwrap();
+        assert_eq!(r.sources[0].authority_relationship,"observed_permanent_delegate");
+        assert_eq!(r.sources[0].mint_permanent_delegate_matches_authority,Some(true));
+        assert_eq!(r.sources[0].observed_mint_permanent_delegate.as_deref(),
+            Some(pubkey(5).as_str()));
+        assert_eq!(r.mint_context_slot,Some(602));
+        assert!(!r.authorization_proven);
+        assert!(!r.total_spending_proven);
+        assert!(!r.atomic_with_simulation);
+        let legacy=correlate_signed_source_authority_with_mints(
+            &signed(TOKEN_PROGRAM,5,"100"),Some(&snap("legacy_token",Some(state(4,None,250,0)))),
+            Some(&mint),600).unwrap();
+        assert_eq!(legacy.sources[0].authority_relationship,"unmatched");
+        assert_eq!(legacy.sources[0].mint_permanent_delegate_matches_authority,None);
+    }
+    #[test]
+    fn invalid_mint_snapshot_slot_does_not_create_false_authority(){
+        use crate::mint_rpc::MintRpcSnapshot;
+        let review=signed(TOKEN_2022_PROGRAM,5,"100");
+        let mut mint=MintRpcSnapshot {
+            context_slot:599,simulation_slot:600,atomic_with_simulation:false,
+            accounts:vec![],limitation:"test".into(),
+        };
+        assert_eq!(correlate_signed_source_authority_with_mints(
+            &review,None,Some(&mint),600).unwrap_err(),RpcError::InvalidResponse);
+        mint.context_slot=601;
+        mint.atomic_with_simulation=true;
+        assert_eq!(correlate_signed_source_authority_with_mints(
+            &review,None,Some(&mint),600).unwrap_err(),RpcError::InvalidResponse);
+    }
+    #[test]
     fn old_slot_atomic_claim_duplicate_or_inconsistent_state_is_rejected(){
         let signed=signed(TOKEN_2022_PROGRAM,4,"100");
         let mut s=snap("token_2022",Some(state(4,None,200,0)));
