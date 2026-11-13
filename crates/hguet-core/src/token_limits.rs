@@ -90,8 +90,9 @@ pub fn review_declared_token_limits(
         let (mint_index,amount) = match bytes.as_slice(){
             // SPL Token TransferChecked and BurnChecked (both token programs):
             // opcode + u64 raw debit + u8 decimals; mint is account index 1.
-            [12|15,amount @ ..] if amount.len()==9 && ix.account_indices.len()>=
-                if bytes[0]==12 {4}else{3} => {
+            _ if bytes.len()==10 &&
+                ((bytes[0]==12 && ix.account_indices.len()>=4) ||
+                 (bytes[0]==15 && ix.account_indices.len()>=3)) => {
                 let raw=u64::from_le_bytes(bytes[1..9].try_into()
                     .map_err(|_|"invalid checked token debit amount")?);
                 (1,raw)
