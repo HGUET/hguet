@@ -1,7 +1,7 @@
 # HGUET Cloud — SOL pay-per-request and automatic USD quotation
 
-**Status:** proposed architecture v0.2, **not implemented**. Updated 2026-11-13.  
-**Normative for v0.2:** this public document supersedes earlier CLI/server discussions of registered accounts, prepaid credits and USDC top-ups. The private server must follow the same rules.
+**Status:** Unreleased architecture draft, **not implemented**. Updated 2026-11-13.  
+**Current design authority:** this public document supersedes earlier CLI/server discussions of registered accounts, prepaid credits and USDC top-ups. The private server must follow the same rules.
 
 ## Decision
 
@@ -118,7 +118,7 @@ TLS remains **server-authenticated** with the required tested hybrid PQ profile 
 
 Strict traffic admission rules must protect anonymous quotes, PQ handshake CPU and expensive RPC/database work. Limit quotes by coarse transport/IP controls with privacy-safe operational telemetry, price quote TTL and outstanding claim caps. Never claim “only our official binary can call the server”; the wire protocol is public.
 
-## 7. v0.2 command contract (planned)
+## 7. Planned CLI command contract
 
 ```sh
 hguet check tx.bin --intent approved-intent.json --network mainnet --mode local --json
@@ -132,7 +132,7 @@ Automated agents should support an **external signer/wallet integration** and ex
 
 ## 8. Public compatibility boundary
 
-- The public `protocol/v1/hguet.proto` must expose **anonymous quote + paid check + payment status**, not mandatory `AccountGet / EnrollStart / CreditBalance / TopUp` for v0.2.
+- The public `protocol/v1/hguet.proto` must expose **anonymous quote + paid check + payment status**, not mandatory `AccountGet / EnrollStart / CreditBalance / TopUp` for current draft.
 - Signed quote schema is distinct from signed CloudAssessment and signed PaymentReceipt. **Server does not sign final CLI SecurityVerdict.**
 - Private server pins the exact public commit; implements environment isolation and onchain payment verifier, not a global credit ledger.
 - This is a breaking **draft** rework before any released stable protocol. Do not claim production v1 backward compatibility.
