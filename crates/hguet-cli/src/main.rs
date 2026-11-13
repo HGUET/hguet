@@ -409,6 +409,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
     verdict.transaction_sha256=Some(parsed.transaction_sha256.clone());
     verdict.coverage.push("wire_structure".into());
     verdict.limitations.extend(parsed.limitations.clone());
+    let mut offline_direct_analysis: Option<hguet_rpc::DirectTokenAnalysis> = None;
     // The offline path uses ONLY original wire bytes and static accounts.
     // v0 ALT addresses need separate RPC resolution; do not fabricate them.
     if parsed.unresolved_lookup_addresses==0 {
@@ -421,6 +422,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 for (code,severity,message) in wire_direct_token_findings(&direct) {
                     verdict.finding(code,severity,message);
                 }
+                offline_direct_analysis=Some(direct);
             }
             Err(_)=>{
                 verdict.finding("WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE","high",
@@ -488,6 +490,17 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 verdict.finding("INTENT_UNVERIFIED","high","--trusted-key is required to verify independent authorization");
             }
             _=>{}
+        }
+    }
+    if verified_intent.is_some() {
+        if let Some(ref direct)=offline_direct_analysis {
+            if direct.recognized.iter().any(|ix|matches!(ix.decoded.operation.as_str(),
+                "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
+                "burn"|"burn_checked"|"approve"|"approve_checked")) ||
+                !direct.opaque.is_empty() {
+                verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
+                    "The independently verified PaymentIntent caps native SOL lamports only; it has no per-mint token amount caps, so direct token movement, allowances and opaque token instructions are not covered by an enforceable token-spend limit");
+            }
         }
     }
     if let Some(endpoint)=&v.rpc_url {
