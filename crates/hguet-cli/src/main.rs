@@ -530,6 +530,58 @@ fn token_account_snapshot_findings(
 /// net flows to a particular CPI or proves that later state was the bank state.
 /// Later single-provider account state can show owner/delegate *agreement*,
 /// but it cannot authenticate historical execution-time permissions.
+/// CPI source addresses and token-account state both come from one untrusted
+/// RPC. These observations are never transaction-local authorization proofs.
+fn cpi_source_coverage_findings(
+    review:&hguet_rpc::CpiSourceCoverage,
+)->Vec<(&'static str,&'static str,&'static str)>{
+    let mut findings=Vec::new();
+    if !review.entries.is_empty() {
+        findings.push(("RPC_CPI_SOURCE_NON_ATOMIC","medium",
+            "CPI source roles and later token-account state come from the selected RPC; no authenticated execution-bank or gross spending proof is available"));
+    }
+    if review.unsupported_or_missing_cpi_source_semantics {
+        findings.push(("RPC_CPI_SOURCE_SEMANTICS_INCOMPLETE","high",
+            "CPI recording is absent or contains opaque or unsupported Token-2022 instructions; missing source roles are not zero debit"));
+    }
+    if review.unobserved_sources>0 {
+        findings.push(("RPC_CPI_SOURCE_UNOBSERVED","high",
+            "At least one RPC-declared CPI token source has no decodable later token-account state; source ownership and debits are unverified"));
+    }
+    if review.entries.iter().any(|x|x.program_matches_cpi==Some(false)){
+        findings.push(("RPC_CPI_SOURCE_PROGRAM_MISMATCH","high",
+            "A later CPI source token-account program differs from the program identified by the selected RPC CPI instruction"));
+    }
+    if review.entries.iter().any(|x|x.mint_matches_cpi==Some(false)){
+        findings.push(("RPC_CPI_SOURCE_MINT_MISMATCH","high",
+            "The token account's later decoded mint differs from the selected RPC checked CPI declared mint"));
+    }
+    if review.entries.iter().any(|x|x.claim.declared_mint.is_none()&&
+        matches!(x.claim.operation.as_str(),"transfer"|"approve")) {
+        findings.push(("RPC_CPI_SOURCE_UNCHECKED_MINT","high",
+            "An unchecked CPI transfer or approval declares no mint; a later observed mint cannot be treated as an independently verified transfer asset"));
+    }
+    if review.entries.iter().any(|x|x.authority_relationship==
+        "unmatched_or_mint_delegate_unobserved") {
+        findings.push(("RPC_CPI_SOURCE_AUTHORITY_UNRESOLVED","high",
+            "CPI authority does not match later token-account owner/delegate; permanent mint delegate, PDA, multisig and execution-time state remain unverified"));
+    }
+    if review.entries.iter().any(|x|x.later_delegate_allowance_covers_declared==
+        Some(false)) {
+        findings.push(("RPC_CPI_SOURCE_DELEGATE_ALLOWANCE_LOW","high",
+            "Later CPI source delegate allowance is smaller than the CPI-declared amount; the allowance at execution is unknown"));
+    }
+    if review.entries.iter().any(|x|x.later_balance_covers_declared==Some(false)){
+        findings.push(("RPC_CPI_SOURCE_BALANCE_LOW","medium",
+            "Later CPI source balance is lower than the declared amount; it may be a post-simulation balance and is not evidence of execution failure"));
+    }
+    if review.entries.iter().any(|x|x.frozen_at_observation==Some(true)){
+        findings.push(("RPC_CPI_SOURCE_FROZEN","high",
+            "A CPI source account was frozen at the later RPC slot; transferability at execution is unverified"));
+    }
+    findings
+}
+
 fn source_authority_findings(
     review:&hguet_rpc::SourceAuthorityReview,
 )->Vec<(&'static str,&'static str,&'static str)> {
@@ -895,6 +947,51 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         }
                     }
                 }
+                // CPI-only source observations are isolated from signed
+                // source and balance RPC snapshots; this third bounded read
+                // occurs only if the prior RPC evidence missed a decoded CPI
+                // token source, never in offline/failed-simulation paths.
+                let mut cpi_source_account_snapshot=None;
+                let mut cpi_source_coverage=None;
+                if evidence.status=="rpc_succeeded" {
+                    match hguet_rpc::fetch_missing_cpi_sources(
+                        &HttpsTransport::default(),endpoint,evidence.context_slot,
+                        &evidence.effect_analysis,
+                        evidence.token_account_snapshot.as_ref(),
+                        signed_source_account_snapshot.as_ref(),
+                    ){
+                        Ok(extra)=>{
+                            if extra.is_some(){
+                                verdict.coverage.push("rpc_cpi_source_account_read_non_atomic".into());
+                            }
+                            cpi_source_account_snapshot=extra;
+                        }
+                        Err(err)=>{
+                            verdict.finding("RPC_CPI_SOURCE_READ_UNAVAILABLE","high",
+                                format!("Bounded CPI source RPC read failed ({:?}); missing source accounts remain unobserved",err.code()));
+                        }
+                    }
+                    match hguet_rpc::correlate_cpi_source_coverage(
+                        evidence.context_slot,&evidence.effect_analysis,
+                        evidence.token_account_snapshot.as_ref(),
+                        signed_source_account_snapshot.as_ref(),
+                        cpi_source_account_snapshot.as_ref(),
+                    ){
+                        Ok(review)=>{
+                            if !review.entries.is_empty(){
+                                verdict.coverage.push("rpc_cpi_source_correlation_advisory".into());
+                            }
+                            for (code,severity,message) in cpi_source_coverage_findings(&review){
+                                verdict.finding(code,severity,message);
+                            }
+                            cpi_source_coverage=Some(review);
+                        }
+                        Err(_)=>{
+                            verdict.finding("RPC_CPI_SOURCE_CORRELATION_INVALID","high",
+                                "CPI source evidence is malformed or conflicting across later RPC snapshots; no execution or authority proof is inferred");
+                        }
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     if intent.token_spend_limits.is_some() {
                         for (code,severity,message) in rpc_signed_token_cap_findings(
@@ -948,6 +1045,8 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     "signed_token_source_review":signed_token_source_review,
                     "signed_source_account_snapshot":signed_source_account_snapshot,
                     "signed_source_authority_evidence":signed_source_authority_evidence,
+                    "cpi_source_account_snapshot":cpi_source_account_snapshot,
+                    "cpi_source_coverage":cpi_source_coverage,
                     "verdict":verdict}),30)
             }
             Err(err)=>{
