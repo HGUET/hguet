@@ -2,7 +2,7 @@
 //! An extended account has base 165 bytes, account_type=2 at 165 and TLV
 //! from 166. A 165-byte legacy-layout account has no extension evidence.
 //! All data is from a user-selected single provider and never authorizes spend.
-use crate::{mint_state::extension_family, token_semantics::TOKEN_2022_PROGRAM, RpcError};
+use crate::{mint_state::extension_family, token_semantics::{TOKEN_PROGRAM, TOKEN_2022_PROGRAM}, RpcError};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -74,8 +74,15 @@ fn bool_payload(data:&[u8])->Result<bool,RpcError>{
 pub(crate) fn parse_token_2022_account(
     token_account:&str, owner_program:&str, bytes:&[u8],
 )->Result<Token2022AccountState,RpcError>{
-    if owner_program!=TOKEN_2022_PROGRAM {return Err(RpcError::InvalidResponse);}
+    if owner_program!=TOKEN_2022_PROGRAM && owner_program!=TOKEN_PROGRAM {
+        return Err(RpcError::InvalidResponse);
+    }
     if bytes.len()>MAX_ACCOUNT_BYTES {return Err(RpcError::TooLarge);}
+    // Legacy SPL Token account data is *exactly* 165 bytes. Only Token-2022
+    // may carry the account type and TLV suffix.
+    if owner_program==TOKEN_PROGRAM && bytes.len()!=BASE {
+        return Err(RpcError::InvalidResponse);
+    }
     if bytes.len()!=BASE && bytes.len()<TLV_START {return Err(RpcError::InvalidResponse);}
     let status=match bytes[108] {
         1=>"initialized",
@@ -184,6 +191,22 @@ mod tests {
     }
     fn parse(bytes:&[u8])->Result<Token2022AccountState,RpcError>{
         parse_token_2022_account("token-account",TOKEN_2022_PROGRAM,bytes)
+    }
+    #[test]
+    fn legacy_token_accounts_share_strict_165_byte_base_without_tlv(){
+        let mut base=account();
+        base.truncate(BASE);
+        let legacy=parse_token_2022_account("legacy-address",TOKEN_PROGRAM,&base).unwrap();
+        assert_eq!(legacy.token_account,"legacy-address");
+        assert_eq!(legacy.account_state,"initialized");
+        assert_eq!(legacy.amount_raw,"100");
+        assert!(legacy.extensions.is_empty());
+        assert!(parse_token_2022_account("legacy-address",TOKEN_PROGRAM,&account()).is_err());
+        assert!(parse_token_2022_account("legacy-address","11111111111111111111111111111111",&base).is_err());
+        let mut invalid=base;
+        invalid[108]=0;
+        assert_eq!(parse_token_2022_account("legacy-address",TOKEN_PROGRAM,&invalid).unwrap_err(),
+            RpcError::InvalidResponse);
     }
     #[test]
     fn full_account_base_is_not_mint_and_reports_authorities_exactly(){
