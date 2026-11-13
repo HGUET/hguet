@@ -12,9 +12,12 @@
 mod alt;
 mod effects;
 mod extension_semantics;
+mod mint_state;
+mod mint_rpc;
 mod token_semantics;
 pub use token_semantics::TokenCpiInstruction;
 pub use extension_semantics::Token2022ExtensionObservation;
+pub use mint_rpc::MintRpcSnapshot;
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -158,6 +161,7 @@ pub struct SimulationEvidence {
     pub replacement_blockhash_present: bool,
     pub lookup_resolution: Option<LookupResolution>,
     pub effect_analysis: SimulationEffects,
+    pub mint_snapshot: Option<MintRpcSnapshot>,
     pub limitation: String,
 }
 
@@ -225,6 +229,12 @@ pub fn simulate_with<T: JsonRpcTransport>(
         Some(_) => return Err(RpcError::InvalidResponse)
     };
     let effect_analysis=effects::inspect_simulation_effects(body,&decoded,lookup_resolution.as_ref())?;
+    // Never contact a second endpoint, and do not fetch additional mint state
+    // for failed simulations. This optional request goes to the same explicitly
+    // selected provider, with a lower slot bound but no atomicity guarantee.
+    let mint_snapshot=if status=="rpc_succeeded" {
+        mint_rpc::fetch_candidate_mints(transport,endpoint,slot,&effect_analysis)?
+    } else { None };
     Ok(SimulationEvidence {
         network: network.into(),
         verified_genesis_hash: genesis,
@@ -240,6 +250,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
             .is_some_and(|x| !x.is_null()),
         lookup_resolution,
         effect_analysis,
+        mint_snapshot,
         limitation: "Single-provider RPC simulation is advisory, uses replacement blockhash and does not verify resulting onchain execution, CPI completeness, authorization, or future account state".into(),
     })
 }
