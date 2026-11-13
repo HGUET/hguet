@@ -1,7 +1,6 @@
 {
   "schema_version": 1,
   "status": "design_targets_not_executed",
-  "design_version": "0.2-SOL-pay-per-check",
   "protocol_major": 1,
   "protocol_minor": 0,
   "cases": [
@@ -155,5 +154,6 @@
       "request": "devnet/testnet reset or faucet unavailable",
       "expected": "no production dependency; sandbox states may be reset"
     }
-  ]
+  ],
+  "design_status": "unreleased-draft-sol-pay-per-check"
 }
