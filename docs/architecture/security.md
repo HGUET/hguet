@@ -22,13 +22,13 @@ The engine is **an advisor**. Strong enforcement is a property of the client-con
 | Payment intent | forge or rewrite recipient, amount or authorized task |
 | Unspent budget | split purchases or race checks to overspend |
 | Transaction representation | conceal dangerous CPI, ALT, extension or fee |
-| HGUET Cloud credentials | steal paid checks, access another tenant |
+| Private one-shot Cloud claim | steal paid Cloud report or reuse payment proof |
 | Security result | forge ALLOW, replay an old ALLOW or change checked bytes |
 | Network observations | poison RPC data, induce stale/false “safe” result |
 | Local config | add attacker key or downgrade policy / transport |
 | Machine telemetry | exfiltrate sensitive transaction or customer data |
 
-Adversaries include: prompt-injection content; compromised AI agent processes; malicious x402/MPP resource providers; malicious/compromised onchain programs; adversarial RPC endpoints; stolen device credentials; compromised Cloud telemetry feed; compromised CI/dependency delivery.
+Adversaries include: prompt-injection content; compromised AI agent processes; malicious x402/MPP resource providers; malicious/compromised onchain programs; adversarial RPC endpoints; stolen quote claim secrets; compromised Cloud telemetry feed; compromised CI/dependency delivery.
 
 **Out of scope for the standalone CLI:** a fully compromised OS/root account, a signer which does not verify HGUET policy, a customer deliberately overriding denial, Solana consensus failure or future unknowable protocol behavior.
 
@@ -131,7 +131,7 @@ Both integrations must use maintained reference clients/parsers where practical.
 - `local` means zero HGUET Cloud requests. A user's selected RPC **may receive their unsigned transaction**, including sensitive account relationships; disclose it.
 - `inspect --offline` has zero network traffic and only performs format/introspection checks.
 - Cloud mode is opt-in for each check/profile, shows the minimum submission payload; default to hashes, read-only features and provenance when full raw transaction is not required.
-- No keypair or secret seed input. Secret CLI account keys must live in OS key storage.
+- No wallet seed/keypair input. One-use Cloud claim secrets must be kept in restricted local storage; the CLI does not hold wallet signing keys.
 - Redact RPC bearer keys, merchant identifiers, account addresses where requested, email and customer documents from logs and crashes. Raw transaction recording is **off** by default.
 - Explicit configurable retention on Cloud; no unannounced training/third-party transfer.
 - Threat feed ingestion validates schema, origin, expiration and retractions; never interpret unauthenticated feed output as protocol truth.
@@ -148,13 +148,13 @@ Both integrations must use maintained reference clients/parsers where practical.
 | Transaction changed after review | message hash, intent hash, expiry, signer recheck | ordering/TOCTOU at execution |
 | Duplicate/fragmented payments | idempotency, history, atomic reservations | global budget requires signer/server enforcement |
 | Fake “SAFE” result | canonical schema, signed Cloud report and pinned signer trust | host can still be compromised |
-| Cloud stolen device credential | OS secure storage, rotation, revocation, per-device quota | compromised endpoint can spend credits |
+| Cloud claim secret stolen | OS-restricted one-shot secret, bound quote, single payment event | compromised host can obtain that one paid report |
 | PQ downgrade | strict TLS group/sig negotiation with fail closed | crypto implementation bugs / future cryptanalysis |
 | Payment intelligence false positive | source provenance, explainability, appeals and correction | incomplete intelligence remains |
 
 ## 10. Abuse and resilience
 
-Use file/JSON parser fuzzing, bounded CPU and memory, RPC deadlines, modest concurrency, log truncation, strict payload caps, per-device rate limiting (Cloud), no shell execution of external payment content, and outbound target allowlists for automatic integrations.
+Use file/JSON parser fuzzing, bounded CPU and memory, RPC deadlines, modest concurrency, log truncation, strict payload caps, anonymous quote and handshake rate limits (Cloud), no shell execution of external payment content, and outbound target allowlists for automatic integrations.
 
 **Never implement a bespoke cryptographic algorithm**; use maintained audited library bindings, test on each target OS, pin dependencies and record known CVEs.
 
