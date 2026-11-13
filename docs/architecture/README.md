@@ -1,4 +1,4 @@
-# HGUET CLI — Architecture specification
+# HGUET CLI — Architecture specification (unreleased)
 
 **Status:** Unreleased design draft · **Date:** 2026-11-13 · **Implementation:** Not released / not implemented  
 **Repository:** `HGUET/hguet` (public, Apache-2.0)  
@@ -6,7 +6,7 @@
 
 > This is the authoritative **proposed architecture** for the open-source CLI. No command, cryptographic guarantee, security detection, production deployment, or audit described below is claimed to exist yet. Implementations must pass the acceptance criteria before the project can be called production-ready.
 
-> **Current architecture decision (2026-11-13):** older sections below that describe long-lived client enrollment, prepaid credits, `topup`, or USDC are **superseded**. The authoritative model is [anonymous SOL pay-per-request](payment-per-request.md) with [complexity-priced Cloud checks](pricing-policy.md) and [public current draft protocol](../../protocol/v1/README.md). SOL/USD is a **current-day cached price** with roughly ±5% market tolerance, while the signed invoice is payable in exact lamports. No mandatory account/balance or client mTLS in current draft. Mainnet uses real SOL; Devnet/Testnet use valueless test SOL and isolated sandbox.
+> **Current architecture decision (2026-11-13):** older sections below that describe long-lived client enrollment, prepaid credits, `topup`, or USDC are **superseded**. The authoritative model is [anonymous SOL pay-per-request](payment-per-request.md) with [complexity-priced Cloud checks](pricing-policy.md) and [public draft protocol](../../protocol/v1/README.md). SOL/USD is a **current-day cached price** with roughly ±5% market tolerance, while the signed invoice is payable in exact lamports. No mandatory account/balance or client mTLS in current draft. Mainnet uses real SOL; Devnet/Testnet use valueless test SOL and isolated sandbox.
 
 ## 1. Product mandate
 
@@ -75,7 +75,7 @@ HGUET/hguet/
 │   ├── hguet-analyzer/         # effects, CPI, permissions, heuristics
 │   ├── hguet-verdict/          # schema, evidence, deterministic aggregation
 │   ├── hguet-protocol/         # PUBLIC cloud wire protocol and versioning
-│   ├── hguet-transport/        # authenticated PQ TLS client, enrollment
+│   ├── hguet-transport/        # authenticated PQ TLS client, one-shot claims
 │   └── hguet-storage/          # config, OS key storage, optional local SQLite
 ├── integrations/              # sample signer/agent/CI integrations
 ├── tests/                     # golden, threat and integration fixtures
@@ -98,7 +98,7 @@ Start implementation as **one Rust binary plus small library crates**; split onl
 | `hguet-analyzer` | instructions, balances, CPI → findings | distinguish known, unknown and unresolved semantics |
 | `hguet-verdict` | evidence + findings → canonical report | provenance and completeness surfaced |
 | `hguet-protocol` | typed client/cloud messages → bytes | publicly inspectable, versioned, size bounded |
-| `hguet-transport` | device identity + cloud endpoint → protected session | reject weak negotiated groups and unauthenticated peers |
+| `hguet-transport` | pinned server identity + Cloud endpoint → authenticated TLS session | reject PQ downgrade, secrets never logged |
 | `hguet-storage` | config, key references, local usage reservations | least privilege, atomic writes, secret redaction |
 
 No crate depends on a private server implementation. The private server may depend on published protocol/schema code from this public repository.
@@ -147,7 +147,7 @@ Aggregation precedence: definitive hard deny wins; otherwise missing mandatory e
 
 The normative **[interoperability specification](interoperability.md)** and [public draft protocol](../../protocol/v1/README.md) define how this open-source CLI securely consumes the closed HGUET Cloud. The server signs its own **CloudAssessment**, not the CLI's final **SecurityVerdict**. A metadata-only Cloud call cannot independently simulate or decode a transaction from a hash; raw transaction disclosure is opt-in.
 
-## 6. Data contracts, system design references
+## 7. Data contracts, system design references
 
 Read these companion specifications:
 
@@ -159,7 +159,7 @@ Read these companion specifications:
 2. [Solana transaction engine](solana-engine.md) — versions, RPC, simulation, account resolution and unsafe cases.
 3. [Intent & policy security model](security.md) — attacker model, authorization, spending, TOCTOU, privacy.
 4. [Verdict schema](verdict-schema.md) — stable JSON structure, precedence, evidence and examples.
-5. [Cloud protocol & PQ transport](cloud-protocol.md) — versioning, transport, enrollment and usage billing.
+5. [Cloud protocol & PQ transport](cloud-protocol.md) — server-authenticated TLS, signed SOL quotes, per-check claims.
 6. [Rust implementation blueprint](implementation-blueprint.md) — crate interfaces, typed pipeline, dependency direction and first tickets.
 7. [Testing, roadmap & release gates](testing-roadmap.md) — repeatable criteria and CI.
 8. [Architectural decisions](decisions.md) — accepted vs deferred choices.
@@ -167,7 +167,7 @@ Read these companion specifications:
 10. [Public protocol draft](../../protocol/v1/README.md) — Protobuf, JSON schema and conformance scenarios.
 11. [Primary technical references](references.md) — external specs and compatibility checklist.
 
-## 7. Project-wide invariants
+## 8. Project-wide invariants
 
 1. Never request seed phrases, wallet private keys or signatures from a hot wallet.
 2. Never sign, send or settle a customer's transaction.
@@ -180,8 +180,8 @@ Read these companion specifications:
 9. Never conflate “recommendation” with “enforcement”; the external signer controls enforcement.
 10. Test every supported transaction format, protocol version and network independently before advertising support.
 
-## 8. Ownership and evolution
+## 9. Ownership and evolution
 
-The public repository owns CLI commands, protocol schemas, wire versioning, free checks and public fixtures. Private `HGUET/server` owns threat feeds, correlations, metering, account service and operations. Shared compatibility is maintained by versioned, publicly specified contracts; both products must pass cross-repository integration tests before deployment.
+The public repository owns CLI commands, protocol schemas, wire versioning, free checks and public fixtures. Private `HGUET/server` owns threat feeds, correlations, SOL settlement verification and operations. Shared compatibility is maintained by versioned, publicly specified contracts; both products must pass cross-repository integration tests before deployment.
 
 **Planned product, not shipped code.** Feature gates and release notes must mark implemented coverage precisely.
