@@ -29,7 +29,11 @@
     "oracle_confidence_bps",
     "lamports_due",
     "issued_at",
-    "expires_at"
+    "expires_at",
+    "pricing_policy_version",
+    "pricing_tier",
+    "complexity",
+    "max_lamports_requested"
   ],
   "properties": {
     "schema_version": {
@@ -156,6 +160,72 @@
       "type": "string",
       "pattern": "^[a-f0-9]{64}$",
       "description": "SHA256 of canonical sorted risk-subject set; paid check cannot expand subjects"
+    },
+    "pricing_policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "pricing_tier": {
+      "enum": [
+        "basic",
+        "standard",
+        "complex",
+        "extended"
+      ]
+    },
+    "complexity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transaction_bytes",
+        "top_level_instructions",
+        "resolved_accounts",
+        "lookup_tables",
+        "distinct_programs",
+        "risk_subjects",
+        "verified_from_raw_transaction"
+      ],
+      "properties": {
+        "transaction_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "top_level_instructions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 128
+        },
+        "resolved_accounts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "lookup_tables": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "distinct_programs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 128
+        },
+        "risk_subjects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "verified_from_raw_transaction": {
+          "type": "boolean"
+        }
+      }
+    },
+    "max_lamports_requested": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 40
     }
   }
 }
