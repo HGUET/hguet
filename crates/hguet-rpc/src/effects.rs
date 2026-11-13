@@ -66,7 +66,7 @@ fn valid_pubkey(value: &str) -> bool {
     bs58::decode(value).into_vec().map(|v| v.len()==32).unwrap_or(false)
 }
 
-fn account_addresses(parsed: &ParsedTransaction, resolution: Option<&LookupResolution>)
+pub(crate) fn account_addresses(parsed: &ParsedTransaction, resolution: Option<&LookupResolution>)
     -> Result<Vec<String>, RpcError>
 {
     if parsed.static_account_keys.len()!=parsed.static_account_count {
