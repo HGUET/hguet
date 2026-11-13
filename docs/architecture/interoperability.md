@@ -36,7 +36,8 @@ AI agent / approved workflow
            |
            +── mode=cloud: authenticated PQ TLS session
                     |
-                    +── CheckRequest(idempotency, hashes, features,
+                    +── PriceQuoteRequest → authenticated PriceQuoteResult
+                    +── CheckRequest(accepted_quote, idempotency, hashes, features,
                     |                disclosure, local evidence, price cap)
                     v
               HGUET SERVER
@@ -130,7 +131,7 @@ A `CheckRequest` must contain enough to uniquely bind:
 - `network/genesis`, `message_sha256`, `wire_sha256` when wire is known, and `intent_sha256` (or explicitly none);
 - `profile` and explicit list of requested capabilities;
 - data-privacy flags, redacted local evidence and/or raw transaction when **explicitly** opted in;
-- accepted price schedule/currency and maximum fee (or pre-authorized policy ceiling).
+- accepted signed price quote ID/schedule and maximum permitted credit fee. First request a quote for network, profile, capability set and disclosure scope; reject expired/mismatched quotes and any amount above caller's configured ceiling.
 
 **Hash only:** the server can look up known program/destination signals only if those **subjects** are explicitly supplied; a bare message hash cannot reveal recipient, token or authority. It may **not** claim independent simulation, decode or intent verification without corresponding bytes/proof.
 
