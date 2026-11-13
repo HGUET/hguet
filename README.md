@@ -94,6 +94,22 @@ Two repositories, one product:
 
 The planned commercial transport is authenticated post-quantum-capable TLS 1.3, built from maintained cryptographic libraries, **not a custom cipher or VPN**. Exact algorithms and mutual authentication must pass implementation and interoperability tests before any security claims.
 
+### Detailed CLI architecture — design v0.1
+
+The full Rust CLI specification is published in **[docs/architecture/README.md](docs/architecture/README.md)**. All components below are planned; the codebase is still pre-alpha.
+
+| Document | What it specifies |
+| --- | --- |
+| [Rust implementation blueprint](docs/architecture/implementation-blueprint.md) | Crate boundaries, typed interfaces, pipeline and build plan |
+| [CLI commands & configuration](docs/architecture/cli-interface.md) | Command syntax, output, registration, USDC credit, local state |
+| [Solana engine](docs/architecture/solana-engine.md) | Legacy/v0/v1, ALT, CPI, simulation, RPC evidence and failures |
+| [Security & threat model](docs/architecture/security.md) | Trusted intent, limits, bypass threats, risk and privacy |
+| [Verdict schema](docs/architecture/verdict-schema.md) | JSON contract and ALLOW/WARN/DENY/UNKNOWN decision rules |
+| [Cloud transport](docs/architecture/cloud-protocol.md) | PQ TLS, binary protocol, accounts and idempotent billing |
+| [Testing and roadmap](docs/architecture/testing-roadmap.md) | Security test matrix, milestones and release criteria |
+| [Architecture decisions](docs/architecture/decisions.md) | Chosen and deferred scope |
+| [Technical references](docs/architecture/references.md) | Official Solana, payment protocol and cryptography references |
+
 ## Roadmap
 
 - [ ] Transaction decoding, Solana simulation, canonical JSON verdict
