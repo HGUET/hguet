@@ -127,7 +127,9 @@ mod tests {
             transaction_sha256:"x".repeat(64),message_sha256:"y".repeat(64),
             required_signatures:1,signature_count:1,
             transaction_signature_status:TransactionSignatureStatus::Unsigned,
-            static_account_count:3,total_address_count:3,instruction_count:1,
+            static_account_count:3,static_account_keys:vec![
+                bs58::encode([9u8;32]).into_string(),bs58::encode([8u8;32]).into_string(),
+                "11111111111111111111111111111111".into()],total_address_count:3,instruction_count:1,
             lookup_table_count:0,unresolved_lookup_addresses:0,address_table_lookups:vec![],
             program_ids:vec!["11111111111111111111111111111111".into()],
             system_transfers:vec![hguet_core::SystemTransfer {
