@@ -26,6 +26,23 @@ def main():
     check(schemas["payment-intent"],intent)
     invalid = dict(intent, max_spend_lamports="0")
     assert list(Draft202012Validator(schemas["payment-intent"]).iter_errors(invalid))
+    # An optional signed v1 field; old SOL-only intent bytes remain valid.
+    synthetic_mint = "4" * 32  # syntactically Base58; Rust checks decoded 32-byte length
+    capped = dict(intent, token_spend_limits=[
+        {"mint":synthetic_mint,"max_debit_raw":"1000"},
+        {"mint":"5" * 32,"max_debit_raw":"0"},
+    ])
+    check(schemas["payment-intent"],capped)
+    for bad_limits in [
+        [{"mint":synthetic_mint,"max_debit_raw":"01"}],
+        [{"mint":synthetic_mint,"max_debit_raw":"-1"}],
+        [{"mint":synthetic_mint,"max_debit_raw":"100","extra":"unknown"}],
+        [{"mint":"invalid!","max_debit_raw":"1"}],
+        [{"mint":synthetic_mint,"max_debit_raw":"1"}] * 2,
+        [{"mint":str(i) * 32,"max_debit_raw":"1"} for i in range(1,18)],
+    ]:
+        invalid = dict(intent, token_spend_limits=bad_limits)
+        assert list(Draft202012Validator(schemas["payment-intent"]).iter_errors(invalid)), bad_limits
     verdict = {
         "schema_version":1,"kind":"security_verdict","decision":"UNKNOWN",
         "network":"devnet","message_sha256":"ab"*32,
