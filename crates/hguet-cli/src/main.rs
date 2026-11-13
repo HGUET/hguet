@@ -261,6 +261,33 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verdict.finding("RPC_TOKEN_DELTA_UNDETERMINED","high",
                         "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred");
                 }
+                if evidence.status=="rpc_succeeded" {
+                    // A trusted RPC request asks for compiled CPI instructions.
+                    // All classifications remain ONE-PROVIDER advisory evidence.
+                    if !effects.cpi.token_instructions.is_empty() {
+                        verdict.coverage.push("rpc_token_cpi_compiled_instruction_decode".into());
+                    }
+                    if effects.cpi.token_instructions.iter().any(|item|
+                        matches!(item.operation.as_str(),
+                            "approve"|"approve_checked"|"revoke"|"set_authority"|
+                            "freeze_account"|"thaw_account"|"close_account")
+                    ) {
+                        verdict.finding("RPC_TOKEN_CPI_AUTHORITY_RISK","high",
+                            "A simulated CPI contains token delegation, authority or account-control instructions; inspect account roles and signer authorization independently");
+                    }
+                    if effects.cpi.token_instructions.iter().any(|item|
+                        matches!(item.operation.as_str(),
+                            "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
+                            "burn"|"burn_checked")
+                    ) {
+                        verdict.finding("RPC_TOKEN_CPI_MOVEMENT","medium",
+                            "Compiled token CPI declares a transfer, mint or burn; declared amounts are not independently verified net balance effects");
+                    }
+                    if effects.cpi.opaque_token_instruction_count>0 {
+                        verdict.finding("RPC_TOKEN_CPI_OPAQUE","high",
+                            "One or more simulated token CPI instructions have unknown, extension-specific or unverified binary semantics; no safe effect can be inferred");
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
