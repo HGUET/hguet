@@ -66,6 +66,7 @@ Proposed versioned messages:
 ClientHello   / ServerHello            # protocol features / capabilities (inside TLS)
 EnrollStart   / EnrollChallenge / EnrollProof / EnrollResult
 AccountGet    / AccountResult
+PriceQuoteRequest / PriceQuoteResult   # signed price quote before any paid check
 TopUpQuote    / TopUpInvoice / TopUpStatus
 CreditBalance / UsageQuery / UsageResult
 CheckRequest  / CheckReceipt
@@ -166,7 +167,7 @@ Rules:
 3. If Cloud is required by profile and unavailable, result is UNKNOWN.
 4. If Cloud optional and unavailable, return clearly marked **local-only coverage**; do not claim it contains live network intelligence.
 5. Cloud risk signals may cause WARN or DENY **only according to explicit, inspectable policy**, with source/age and customer preference.
-6. The final report includes local and Cloud evidence plus signed receipt when Cloud completed.
+6. The final CLI SecurityVerdict includes local checks plus an independently verified signed CloudAssessment and a **separate** signed billing receipt when Cloud completed. Only the assessment itself is server-signed.
 
 ### Privacy notes
 
