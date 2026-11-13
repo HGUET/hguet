@@ -94,6 +94,12 @@ Two repositories, one product:
 
 The planned commercial transport is authenticated post-quantum-capable TLS 1.3, built from maintained cryptographic libraries, **not a custom cipher or VPN**. Exact algorithms and mutual authentication must pass implementation and interoperability tests before any security claims.
 
+### Unified CLI ↔ Cloud contract
+
+**[Interoperability contract](docs/architecture/interoperability.md)** · [Public draft Protobuf wire schema](protocol/v1/hguet.proto) · [Signed CloudAssessment JSON schema](protocol/v1/cloud-assessment.schema.json) · [Conformance cases](protocol/v1/contract-cases.json)
+
+**Trust boundary:** Cloud signs only its own assessment and billing receipt; the CLI independently verifies them and composes the final SecurityVerdict. Server-side intelligence cannot override a local hard DENY. Public protocol files are a **draft**, not released endpoints.
+
 ### Detailed CLI architecture — design v0.1
 
 The full Rust CLI specification is published in **[docs/architecture/README.md](docs/architecture/README.md)**. All components below are planned; the codebase is still pre-alpha.
