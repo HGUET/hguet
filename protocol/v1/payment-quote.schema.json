@@ -20,6 +20,7 @@
     "requested_profile",
     "requested_capabilities",
     "data_scope",
+    "subjects_sha256",
     "claim_secret_sha256",
     "usd_price_micros",
     "sol_usd_price_micros",
@@ -150,6 +151,11 @@
     "expires_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "subjects_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA256 of canonical sorted risk-subject set; paid check cannot expand subjects"
     }
   }
 }
