@@ -119,18 +119,18 @@ Still outstanding: independently corroborated/atomic v0 Address Lookup Table **s
 
 ### Compiled SPL Token CPI decoding — bounded advisory subset
 
-The RPC request explicitly sets \`innerInstructionsEncoding: "json"\` alongside \`innerInstructions: true\`. This requests compiled instruction \`programIdIndex\`, indexed \`accounts\`, and Base58 \`data\` instead of trusting provider-authored \`jsonParsed\` summaries. If a provider supplies only parsed instruction fields, HGUET records **opaque** token CPI evidence rather than trusting that parsed semantic claim.
+The RPC request explicitly sets `innerInstructionsEncoding: "json"` alongside `innerInstructions: true`. This requests compiled instruction `programIdIndex`, indexed `accounts`, and Base58 `data` instead of trusting provider-authored `jsonParsed` summaries. If a provider supplies only parsed instruction fields, HGUET records **opaque** token CPI evidence rather than trusting that parsed semantic claim.
 
-For instructions whose program ID exactly matches the original SPL Token Program or Token-2022, \`effect_analysis.cpi\` now provides:
+For instructions whose program ID exactly matches the original SPL Token Program or Token-2022, `effect_analysis.cpi` now provides:
 
-- \`token_instructions\`: bounded observations, each with parent/inner instruction indexes, token program ID, selected operation, role-specific resolved accounts and optional unsigned raw amount/decimals/authority type/new authority. The declared amount is **not** a verified net effect.
-- \`opaque_token_instruction_count\`: token CPI entries whose binary semantics cannot be decoded (including unknown tags, unexpected binary layouts and missing compiled data).
-- \`token_2022_extension_instruction_count\`: opaque Token-2022 CPI entries with extension or future opcode (>=25); they may contain hooks, transfer fees, withheld balances or other authority effects and must not be treated as ordinary transfers.
-- \`missing_compiled_token_data_count\`: token CPI entries lacking canonical compiled account indices/data; \`jsonParsed\` text never substitutes for binary evidence.
+- `token_instructions`: bounded observations, each with parent/inner instruction indexes, token program ID, selected operation, role-specific resolved accounts and optional unsigned raw amount/decimals/authority type/new authority. The declared amount is **not** a verified net effect.
+- `opaque_token_instruction_count`: token CPI entries whose binary semantics cannot be decoded (including unknown tags, unexpected binary layouts and missing compiled data).
+- `token_2022_extension_instruction_count`: opaque Token-2022 CPI entries with extension or future opcode (25 or higher); they may contain hooks, transfer fees, withheld balances or other authority effects and must not be treated as ordinary transfers.
+- `missing_compiled_token_data_count`: token CPI entries lacking canonical compiled account indices/data; `jsonParsed` text never substitutes for binary evidence.
 
-The decoder recognizes a limited byte-level subset of common SPL Token instructions: \`Transfer\`, \`TransferChecked\`, \`Approve\`, \`ApproveChecked\`, \`Revoke\`, \`SetAuthority\`, \`MintTo\`, \`MintToChecked\`, \`Burn\`, \`BurnChecked\`, \`CloseAccount\`, \`FreezeAccount\`, \`ThawAccount\` and \`SyncNative\`. It does **not** resolve account owners, actual signature authorization, multisig conditions, mint state, Token-2022 extensions, hook effects, confidential flows, or verify that reported CPI was executed on-chain.
+The decoder recognizes a limited byte-level subset of common SPL Token instructions: `Transfer`, `TransferChecked`, `Approve`, `ApproveChecked`, `Revoke`, `SetAuthority`, `MintTo`, `MintToChecked`, `Burn`, `BurnChecked`, `CloseAccount`, `FreezeAccount`, `ThawAccount` and `SyncNative`. It does **not** resolve account owners, actual signature authorization, multisig conditions, mint state, Token-2022 extensions, hook effects, confidential flows, or verify that reported CPI was executed on-chain.
 
-Only on \`rpc_succeeded\`, the CLI can emit \`RPC_TOKEN_CPI_AUTHORITY_RISK\` (approval, authority or account control), \`RPC_TOKEN_CPI_MOVEMENT\` (declared token movement), and \`RPC_TOKEN_CPI_OPAQUE\` (unparsed token semantics). They are advisory findings, **not** conclusive \`DENY\` and never a reason for \`ALLOW\`. A failed simulation cannot prove completion of any CPI. Unknown, unsupported and absent metadata remain unknown.
+Only on `rpc_succeeded`, the CLI can emit `RPC_TOKEN_CPI_AUTHORITY_RISK` (approval, authority or account control), `RPC_TOKEN_CPI_MOVEMENT` (declared token movement), and `RPC_TOKEN_CPI_OPAQUE` (unparsed token semantics). They are advisory findings, **not** conclusive `DENY` and never a reason for `ALLOW`. A failed simulation cannot prove completion of any CPI. Unknown, unsupported and absent metadata remain unknown.
 
 References: [Solana simulation CPI encoding](https://solana.com/docs/rpc/http/simulatetransaction), [Solana transaction metadata](https://solana.com/docs/rpc/json-structures), [SPL Token instruction layout](https://docs.rs/spl-token-interface/latest/spl_token_interface/instruction/enum.TokenInstruction.html), [Token-2022 extensions](https://www.solana-program.com/docs/token-2022).
 
