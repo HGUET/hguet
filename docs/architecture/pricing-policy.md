@@ -1,6 +1,6 @@
 # HGUET — Competitive complexity-based SOL pricing
 
-**Status:** proposed v0.2 tariff policy, **not a published binding offer** (2026-11-13).  
+**Status:** Proposed pre-release tariff policy, **not a published binding offer** (2026-11-13).  
 **Authority:** this public document describes what the CLI is allowed to quote and what the private server must calculate. See [accountless payment architecture](payment-per-request.md).
 
 ## Product decision
