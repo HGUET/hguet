@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hguet.fr/schemas/v1/payment-quote.schema.json",
-  "title": "HGUET signed native SOL invoice price quote v0.2 DRAFT",
+  "title": "HGUET signed native SOL price quote — unreleased draft",
   "description": "Domain HGUET-SOL-QUOTE/v1, JCS canonical bytes, accountless single paid Cloud check.",
   "type": "object",
   "additionalProperties": false,
@@ -16,6 +16,7 @@
     "receiver",
     "memo_reference",
     "message_sha256",
+    "transaction_sha256",
     "intent_sha256",
     "requested_profile",
     "requested_capabilities",
@@ -121,12 +122,12 @@
     },
     "usd_price_micros": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)$",
+      "pattern": "^[1-9][0-9]*$",
       "maxLength": 40
     },
     "sol_usd_price_micros": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)$",
+      "pattern": "^[1-9][0-9]*$",
       "maxLength": 40
     },
     "oracle_source_id": {
@@ -145,7 +146,7 @@
     },
     "lamports_due": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)$",
+      "pattern": "^[1-9][0-9]*$",
       "maxLength": 40
     },
     "issued_at": {
@@ -226,6 +227,18 @@
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)$",
       "maxLength": 40
+    },
+    "transaction_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Original transaction wire hash if provided; bound to paid check."
     }
   }
 }
