@@ -6,7 +6,7 @@
 ## Decision
 
 - **One Cloud check = one native SOL payment.** No registration, no HGUET account, no subscriptions and no stored service balance.
-- **Price is defined in USD** (integer microdollars for precision); the server automatically quotes the precise **SOL amount** from a fresh SOL/USD oracle price. **No USDC token is used** on any cluster.
+- **Price is defined in USD** (integer microdollars for precision); the server automatically quotes the precise **SOL amount** from a current-day cached SOL/USD reference. **No USDC token is used** on any cluster.
 - The customer/agent's **external wallet** signs and sends the service payment; HGUET neither requests wallet secrets nor signs/broadcasts the protected payment.
 - The free CLI's local checks remain free. Only explicitly opted-in Cloud intelligence has a charge. **No fee proportional to the value of the protected transaction**.
 - Mainnet bills real SOL; Devnet and Testnet use **valueless test SOL** and independently isolated sandbox service. Same payment code path, different economics.
@@ -22,7 +22,7 @@ AI agent / operator -> public HGUET CLI
 
 HGUET Server -> signed PriceQuote:
    USD service price (fixed price tier)
-   verified SOL/USD price, source ID and publish timestamp
+   current-day cached SOL/USD reference, source ID and observation timestamp
    exact integer lamports, network + genesis, receiver,
    expiration, unique quote ID and private claim-secret commitment
    message + intent digests, requested features, data disclosure
@@ -47,7 +47,7 @@ CLI -> verifies both, merges findings with local mandatory checks
 
 Use an independently authenticated, explicitly configured **SOL/USD** market-data feed; e.g., an official Pyth SOL/USD feed, not a random token symbol or client-supplied URL. Evaluate freshness from the feed's actual **price-update timestamp** (not just API response time), confidence/quality and publisher availability. A second independent observation can detect extreme divergence; do not pretend two mirrors of the same feed are independent.
 
-*Illustrative initial policy targets, not measured limits:* price age ≤ 60 seconds, maximum relative confidence interval ≤ 1%, and (if independent comparison is configured) ≤ 1% divergence. Reject stale, missing, nonpositive or implausible prices; do not create a payable quote under uncertain market data.
+**Current-day pricing policy:** use a trusted **cached SOL/USD reference** whose actual price-update timestamp is no older than **24 hours**, refreshed at least once daily (preferably every 4–12 hours, out of request path). An approximate deviation up to **5%** against a credible independent market observation is acceptable for these micro-payments; above 5%, suspend quoting and refresh/reconcile. This is a *tolerance*, not a guaranteed oracle accuracy claim. No mandatory live feed lookup per Cloud request. Reject stale, missing, nonpositive or implausible rates. **Never apply ±5% tolerance to the exact lamports due on a signed invoice.** See [competitive complexity-based pricing](pricing-policy.md).
 
 Use checked integer/fixed-point arithmetic:
 
@@ -63,7 +63,11 @@ Example only: tariff **$0.01/check**, market SOL/USD **$100**, invoice **100,000
 
 **Quote validity:** e.g. 90-second TTL; signed quote freezes the lamport amount until expiry. A new price observation does **not** retroactively alter an issued invoice. Expired quotes require requoting before payment; late/ambiguous payments go to claim/refund handling rather than silently lost or credited to another request. No guarantee that finality completes before expiry; distinguish **payment submitted before expiry** versus **finality attained later**, and define a bounded grace/reconciliation policy using onchain block time/slot.
 
-A direct SOL/USD feed makes **USDC unnecessary even as an oracle reference**. `SOL/USDC` is merely one potential market pair, with an additional USDC peg assumption; prefer `SOL/USD` to keep the design independent of the token entirely.
+A cached direct SOL/USD feed makes **USDC unnecessary even as an oracle reference**. `SOL/USDC` is merely one potential market pair, with an additional USDC peg assumption; prefer `SOL/USD` to keep the design independent of the token entirely.
+
+### Complexity-based fee — quote before payment
+
+The initial suggested tariff is **$0.001 basic**, **$0.003 standard**, **$0.006 complex**, and **from $0.010 extended**, subject to operating cost and genuine competitor checks. Tier reflects supported work and request volume (bytes, instructions, resolved accounts, risk subjects, supported program effects and explicit extra RPC/deep lookups), **not transaction value or risk severity**. Price is signed **before** payment and cannot increase after transfer. Metadata-only requests cannot secretly trigger full simulation; unsigned client-declared complexity metrics are not evidence of actual execution. See [pricing-policy.md](pricing-policy.md).
 
 ## 3. Three networks, distinct deployments and receiver addresses
 
@@ -79,7 +83,7 @@ Production/sandbox quote signing keys, receiver addresses, claim records and env
 
 ## 4. Invoice and payment matching
 
-Signed quote includes a unique unpredictable 128-bit quote ID, request/intent digests, price/lamports, receiver, chain identity, expires-at, claim-secret SHA-256 commitment and configured oracle provenance. Use separate domain `HGUET-SOL-QUOTE/v1` and a maintained cryptographic signature; JSON canonicalization follows public schema. The server verifies its own signed quote from durable storage, not untrusted client arguments.
+Signed quote includes a unique unpredictable 128-bit quote ID, request/intent digests, price/lamports, receiver, chain identity, expires-at, claim-secret SHA-256 commitment and configured SOL/USD price-reference provenance and pricing tier/metrics digest. Use separate domain `HGUET-SOL-QUOTE/v1` and a maintained cryptographic signature; JSON canonicalization follows public schema. The server verifies its own signed quote from durable storage, not untrusted client arguments.
 
 **MVP payment format:** native SOL `SystemProgram.transfer` to the server-configured receiver **plus a Memo containing the quote ID** in the same atomic onchain transaction. The CLI can prepare a transaction for an external wallet but **cannot sign with the customer's key**. Not every wallet supports attaching a memo: document a compatible wallet adapter or separately approved unique-invoice-receiver alternative before production.
 
