@@ -1,118 +1,159 @@
 {
   "schema_version": 1,
   "status": "design_targets_not_executed",
+  "design_version": "0.2-SOL-pay-per-check",
   "protocol_major": 1,
   "protocol_minor": 0,
   "cases": [
     {
-      "id": "interop-local-free",
-      "request": "local check with trusted intent",
-      "expected": "does not connect to HGUET Cloud"
+      "id": "local-free",
+      "request": "Local mode / offline inspect",
+      "expected": "zero Cloud calls, no payment or price oracle required"
     },
     {
-      "id": "interop-pq-mtls",
-      "request": "valid enrolled device with required group and ML-DSA-87 certificates",
-      "expected": "may connect after proven TLS interop"
+      "id": "mainnet-sol",
+      "request": "mainnet quote settled in real SOL",
+      "expected": "production environment only, correct genesis/treasury"
     },
     {
-      "id": "interop-downgrade",
-      "request": "classical-only TLS, or no ML-DSA-87 cert under PQ_REQUIRED",
-      "expected": "TLS rejects; no fallback"
+      "id": "devnet-sol",
+      "request": "devnet test SOL payment",
+      "expected": "sandbox Cloud only; never production"
     },
     {
-      "id": "interop-bootstrap",
-      "request": "unenrolled client with pinned PQ-authenticated server",
-      "expected": "enrollment only; check requires mTLS"
+      "id": "testnet-sol",
+      "request": "testnet test SOL payment",
+      "expected": "sandbox Cloud only; tolerate resets and RPC outage"
     },
     {
-      "id": "interop-hash-only",
-      "request": "metadata scope with digest and subjects, no raw tx",
-      "expected": "Cloud cannot claim to simulate transaction or independently verify payment intent"
+      "id": "no-account",
+      "request": "Cloud pay-per-check without an account",
+      "expected": "no registration, credit balance or device certificate"
     },
     {
-      "id": "interop-raw-unconsented",
-      "request": "transaction bytes with consent false",
-      "expected": "reject without paid analysis and no data egress"
+      "id": "oracle-fresh",
+      "request": "trusted fresh SOL/USD quote",
+      "expected": "lamports computed by checked integer ceiling division"
     },
     {
-      "id": "interop-local-deny",
-      "request": "local hard DENY and Cloud says no known threats",
-      "expected": "final CLI verdict DENY"
+      "id": "oracle-stale",
+      "request": "carried-forward old price or stale timestamp",
+      "expected": "no price quote issued"
     },
     {
-      "id": "interop-cloud-invalid-signature",
-      "request": "CloudAssessment signed body modified",
-      "expected": "reject Cloud evidence, UNKNOWN if mandatory"
+      "id": "oracle-quality",
+      "request": "confidence too wide or independent feeds disagree",
+      "expected": "no price quote issued"
     },
     {
-      "id": "interop-mandatory-cloud-down",
-      "request": "strict profile requires Cloud and service unavailable",
-      "expected": "block, no local ALLOW"
+      "id": "oracle-outage",
+      "request": "pricing oracle unavailable",
+      "expected": "no price quote, no unexpected charge"
     },
     {
-      "id": "interop-optional-cloud-down",
-      "request": "Cloud optional and service unavailable",
-      "expected": "explicit local-only coverage, no Cloud claim"
+      "id": "price-example",
+      "request": "USD micros=10000 and SOL/USD micros=100000000",
+      "expected": "exactly 100000 lamports"
     },
     {
-      "id": "interop-retry",
-      "request": "two simultaneous requests same tenant/request ID/body",
-      "expected": "same terminal result and at most one charge"
+      "id": "price-overflow",
+      "request": "huge USD price or near-zero SOL/USD",
+      "expected": "arithmetic rejected safely"
     },
     {
-      "id": "interop-changed-body",
-      "request": "same tenant/request ID but changed payload",
-      "expected": "idempotency conflict without second charge"
+      "id": "price-cap",
+      "request": "computed lamports above client cap",
+      "expected": "reject quote, never auto-pay"
     },
     {
-      "id": "interop-cross-tenant",
-      "request": "other tenant queries same request ID",
-      "expected": "cannot retrieve first tenant's report, invoice or balance"
+      "id": "quote-expired",
+      "request": "payment broadcast after signed quote expiry",
+      "expected": "do not perform paid check; review/refund as appropriate"
     },
     {
-      "id": "interop-pending",
-      "request": "CheckReceipt accepted, CheckResult not terminal",
-      "expected": "CLI does not emit ALLOW based on receipt"
+      "id": "quote-immutability",
+      "request": "SOL/USD changes after signed quote",
+      "expected": "quote amount frozen until expiry; no surprise repricing"
     },
     {
-      "id": "interop-receipt-separation",
-      "request": "valid CloudAssessment and invalid BillingReceipt",
-      "expected": "risk result and billing receipt validation fail independently"
+      "id": "quote-binding",
+      "request": "checked transaction hash/subject set changed after quote",
+      "expected": "reject mismatched paid check"
     },
     {
-      "id": "interop-topup-fake-usdc",
-      "request": "invoice paid with incorrect mint, program or network",
-      "expected": "no service credit"
+      "id": "memo-reference",
+      "request": "correct transfer but no unique memo in same transaction",
+      "expected": "not a valid settlement for this quote"
     },
     {
-      "id": "interop-topup-duplicate",
-      "request": "same finalized chain transfer observed twice",
-      "expected": "exactly one service credit"
+      "id": "wrong-receiver",
+      "request": "same lamports sent to wrong address or donation wallet",
+      "expected": "reject; donation is never a paid invoice"
     },
     {
-      "id": "interop-unknown",
-      "request": "mandatory unsupported token semantics",
-      "expected": "UNKNOWN rather than ALLOW, no override by Cloud"
+      "id": "wrong-cluster",
+      "request": "devnet payment signature presented to mainnet Cloud",
+      "expected": "reject, no account/balance transfer"
     },
     {
-      "id": "interop-v1",
-      "request": "Solana transaction format v1 with inline addresses and fixed config",
-      "expected": "parse according to current v1 format or explicit UNKNOWN if unsupported"
+      "id": "payment-not-finalized",
+      "request": "only unconfirmed or rolled-back RPC observation",
+      "expected": "pending; not settled"
     },
     {
-      "id": "interop-pricing-expired",
-      "request": "Cloud check references an expired or wrong capability quote",
-      "expected": "reject before reservation and do not charge"
+      "id": "payment-replay",
+      "request": "same finalized payment proof for two quotes",
+      "expected": "single claim/check only"
     },
     {
-      "id": "interop-pricing-cap",
-      "request": "server quoted price above CLI configured max credit-unit fee",
-      "expected": "fail before check, do not silently accept revised price"
+      "id": "claim-secret-theft",
+      "request": "unknown claimant uses observed public tx signature",
+      "expected": "reject absent matching 256-bit private claim"
     },
     {
-      "id": "interop-source-provenance",
-      "request": "CloudAssessment missing source evidence digest or altered source provenance",
-      "expected": "reject missing required fields; signature verification fails if sourced evidence changes"
+      "id": "retry-recovery",
+      "request": "client disconnects after finalized payment",
+      "expected": "same claim can resume without second payment"
+    },
+    {
+      "id": "post-payment-outage",
+      "request": "service unavailable after successful SOL transfer",
+      "expected": "retain one-check claim for retry or documented refund"
+    },
+    {
+      "id": "cross-environment",
+      "request": "same public key on mainnet and testnet",
+      "expected": "no shared credentials, claims or finances"
+    },
+    {
+      "id": "privacy",
+      "request": "no consent to send raw protected tx",
+      "expected": "metadata only, no server simulation"
+    },
+    {
+      "id": "risk-signature",
+      "request": "CloudAssessment changed or signed under wrong key",
+      "expected": "reject Cloud evidence and fail according to profile"
+    },
+    {
+      "id": "final-verdict",
+      "request": "server reports no known risk but local hard DENY",
+      "expected": "final CLI SecurityVerdict remains DENY"
+    },
+    {
+      "id": "receipt-separation",
+      "request": "CloudAssessment valid but PaymentReceipt invalid",
+      "expected": "separate verification; do not claim valid receipt"
+    },
+    {
+      "id": "pq-transport",
+      "request": "classical-only TLS group or invalid server identity",
+      "expected": "reject Cloud connection, free local mode still available"
+    },
+    {
+      "id": "sandbox-reset",
+      "request": "devnet/testnet reset or faucet unavailable",
+      "expected": "no production dependency; sandbox states may be reset"
     }
   ]
 }
