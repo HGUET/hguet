@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "design_targets_not_executed",
+  "protocol_major": 1,
+  "protocol_minor": 0,
+  "cases": [
+    {
+      "id": "interop-local-free",
+      "request": "local check with trusted intent",
+      "expected": "does not connect to HGUET Cloud"
+    },
+    {
+      "id": "interop-pq-mtls",
+      "request": "valid enrolled device with required group and ML-DSA-87 certificates",
+      "expected": "may connect after proven TLS interop"
+    },
+    {
+      "id": "interop-downgrade",
+      "request": "classical-only TLS, or no ML-DSA-87 cert under PQ_REQUIRED",
+      "expected": "TLS rejects; no fallback"
+    },
+    {
+      "id": "interop-bootstrap",
+      "request": "unenrolled client with pinned PQ-authenticated server",
+      "expected": "enrollment only; check requires mTLS"
+    },
+    {
+      "id": "interop-hash-only",
+      "request": "metadata scope with digest and subjects, no raw tx",
+      "expected": "Cloud cannot claim to simulate transaction or independently verify payment intent"
+    },
+    {
+      "id": "interop-raw-unconsented",
+      "request": "transaction bytes with consent false",
+      "expected": "reject without paid analysis and no data egress"
+    },
+    {
+      "id": "interop-local-deny",
+      "request": "local hard DENY and Cloud says no known threats",
+      "expected": "final CLI verdict DENY"
+    },
+    {
+      "id": "interop-cloud-invalid-signature",
+      "request": "CloudAssessment signed body modified",
+      "expected": "reject Cloud evidence, UNKNOWN if mandatory"
+    },
+    {
+      "id": "interop-mandatory-cloud-down",
+      "request": "strict profile requires Cloud and service unavailable",
+      "expected": "block, no local ALLOW"
+    },
+    {
+      "id": "interop-optional-cloud-down",
+      "request": "Cloud optional and service unavailable",
+      "expected": "explicit local-only coverage, no Cloud claim"
+    },
+    {
+      "id": "interop-retry",
+      "request": "two simultaneous requests same tenant/request ID/body",
+      "expected": "same terminal result and at most one charge"
+    },
+    {
+      "id": "interop-changed-body",
+      "request": "same tenant/request ID but changed payload",
+      "expected": "idempotency conflict without second charge"
+    },
+    {
+      "id": "interop-cross-tenant",
+      "request": "other tenant queries same request ID",
+      "expected": "cannot retrieve first tenant's report, invoice or balance"
+    },
+    {
+      "id": "interop-pending",
+      "request": "CheckReceipt accepted, CheckResult not terminal",
+      "expected": "CLI does not emit ALLOW based on receipt"
+    },
+    {
+      "id": "interop-receipt-separation",
+      "request": "valid CloudAssessment and invalid BillingReceipt",
+      "expected": "risk result and billing receipt validation fail independently"
+    },
+    {
+      "id": "interop-topup-fake-usdc",
+      "request": "invoice paid with incorrect mint, program or network",
+      "expected": "no service credit"
+    },
+    {
+      "id": "interop-topup-duplicate",
+      "request": "same finalized chain transfer observed twice",
+      "expected": "exactly one service credit"
+    },
+    {
+      "id": "interop-unknown",
+      "request": "mandatory unsupported token semantics",
+      "expected": "UNKNOWN rather than ALLOW, no override by Cloud"
+    },
+    {
+      "id": "interop-v1",
+      "request": "Solana transaction format v1 with inline addresses and fixed config",
+      "expected": "parse according to current v1 format or explicit UNKNOWN if unsupported"
+    }
+  ]
+}
