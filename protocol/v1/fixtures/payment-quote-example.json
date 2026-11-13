@@ -25,5 +25,17 @@
   "oracle_confidence_bps": 20,
   "lamports_due": "100000",
   "issued_at": "2026-11-13T15:00:03Z",
-  "expires_at": "2026-11-13T15:01:33Z"
+  "expires_at": "2026-11-13T15:01:33Z",
+  "pricing_policy_version": "draft-2026-11-13",
+  "pricing_tier": "basic",
+  "complexity": {
+    "transaction_bytes": 420,
+    "top_level_instructions": 2,
+    "resolved_accounts": 8,
+    "lookup_tables": 0,
+    "distinct_programs": 2,
+    "risk_subjects": 2,
+    "verified_from_raw_transaction": false
+  },
+  "max_lamports_requested": "200000"
 }
