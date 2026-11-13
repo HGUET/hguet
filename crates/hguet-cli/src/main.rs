@@ -1208,6 +1208,15 @@ mod signed_token_cap_rpc_tests {
         let codes=findings.iter().map(|x|x.0).collect::<Vec<_>>();
         assert!(codes.contains(&"RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT"));
         assert!(!codes.contains(&"RPC_SIGNED_SOURCE_CPI_OVER_CAP"));
+        // A delegate can perform a valid direct checked transfer, even
+        // though the token account's owner is a different key. Do not
+        // manufacture an owner conflict for this separately observed role.
+        let mut delegated=snapshot.clone();
+        delegated.accounts[0].state.as_mut().unwrap().delegate=Some(key(5));
+        delegated.accounts[0].state.as_mut().unwrap().delegated_amount_raw="10".into();
+        let findings=rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_succeeded",&e,Some(&delegated));
+        assert!(!findings.iter().any(|f|f.0=="RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT"));
         // A matching *later* snapshot is not a permission grant either.
         assert!(rpc_signed_source_scope_findings(
             &scoped_intent(),"rpc_failed",&e,Some(&snapshot)).is_empty());
