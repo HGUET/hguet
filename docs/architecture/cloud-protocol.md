@@ -1,200 +1,107 @@
-# HGUET CLI — Cloud protocol, post-quantum transport and billing
+# HGUET CLI — Cloud transport and paid-check protocol
 
-**Status:** proposed wire contract and security requirements; **no production TLS interoperability is claimed**.
+**Status:** unreleased architecture draft; **no deployed backend or real PQ interoperability is claimed**.
 
-**Interop clarification (2026-11-13):** [Unified interoperability contract](interoperability.md) and [public protocol draft](../../protocol/v1/README.md) are the canonical cross-repository source. The server signs a **CloudAssessment and a separate BillingReceipt**; it does **not** sign the CLI's final composite SecurityVerdict. Hash-only metadata enrichment cannot independently simulate a transaction. All messages here are design requirements, not implemented APIs.
+> Canonical protocol: [Protobuf](../../protocol/v1/hguet.proto), [signed price quote](../../protocol/v1/payment-quote.schema.json), [signed CloudAssessment](../../protocol/v1/cloud-assessment.schema.json), [signed payment receipt](../../protocol/v1/payment-receipt.schema.json), [price rules](pricing-policy.md). This document replaces all earlier account/enrollment/USDC/credit flows.
 
-The **public** repository owns the client, wire schema and compatibility fixtures. The **private** `HGUET/server` repository owns the backend, aggregation, accounts, threat feeds, pricing and operations.
+## 1. Separation of responsibilities
 
-## 1. Network model
-
-```text
-HGUET CLI (Rust)
-  |
-  | TLS 1.3 / mutual authentication after enrollment
-  | REQUIRED hybrid SecP384r1MLKEM1024 key exchange
-  | REQUIRED verified PQ-capable identity policy
-  v
-HGUET private TCP service (Rust)
-  |
-  +-- Enrollment and device identity
-  +-- Account, usage quotas and prepaid balance
-  +-- Simulation/context endpoint and Cloud risk engine
-  +-- Program upgrades / threat-source provenance
-  +-- Verifiable report signing and idempotency
-```
-
-The CLI has one **documented** Cloud endpoint, e.g., `hguet.fr:443` (subject to DNS and host deployment decisions). There is no public REST/GraphQL/HTTP API for commercial checks. The **client still uses ordinary HTTPS RPC** to communicate with a user-selected Solana provider in local mode; the “no HTTP API” decision applies to the HGUET **commercial server**.
-
-Any third-party client able to reproduce a public wire protocol and authenticate with valid credentials may send requests. **Do not claim to cryptographically enforce “official CLI binary only”**. Authorization is by client identity and server policy, not binary name.
-
-## 2. Cryptographic profile
-
-Requirements selected for HGUET:
-
-| Purpose | Required profile / caveat |
-| --- | --- |
-| Protected channel | standard TLS **1.3 only**, not custom encrypted sockets |
-| Hybrid key agreement | **SecP384r1MLKEM1024** as defined in RFC 10024; require negotiated group |
-| Authentication | **ML-DSA-87**, using certificates/handshake supported by a tested provider; mTLS for enrolled devices |
-| Record protection | **AES-256-GCM** via TLS cipher suite with HKDF/key schedule implemented by TLS |
-| Hashing | SHA3-512 is available for app-layer report fingerprints; TLS hash/KDF is determined by negotiated TLS cipher suite, not arbitrarily substituted |
-| Library | maintained OpenSSL 3.5+ bindings are initial candidate; pin exact tested versions |
-| Security policy | reject fallback to classical-only KEM, TLS <1.3, unverified identities or missing required PQ signature support |
-
-RFC 10024 standardizes the hybrid group. Actual **ML-DSA-87 client certificate/handshake support** and cross-platform linkage must be proven with integration tests before the feature can ship. A tested library version, provider configuration, cert chain formats, and key-rotation runbook must be documented.
-
-**Bootstrap challenge:** initial registration has no client cert yet. Embed an independently authenticated/pinned server root or public key distribution trust path in a signed CLI release. Register over already authenticated PQ TLS; create a locally held device identity (secure OS key storage) and request a short-lived enrollment challenge. Only then provision a client certificate for mTLS. Do not use unauthenticated trust-on-first-use against an arbitrary endpoint.
-
-**Do not** invent your own cryptographic primitives or swap a failed PQ handshake for classical TLS. Fail closed with an actionable error. Disable TLS early data/0-RTT for state-changing requests, enforce session replay checks, device revocation and credential expiration.
-
-## 3. Application protocol
-
-The HGUET application protocol is **publicly documented**, although the server is private:
-
-- TCP + authenticated TLS 1.3, using library framing and record protection.
-- Over TLS: length-prefixed binary frames, **4-byte unsigned network-order length**, followed by a versioned Protobuf message (example choice: `prost` codegen).
-- Configured frame upper bound, initially **1 MiB**; larger inputs are rejected before allocation. Individual fields (transaction bytes, evidence, string lengths, arrays) have tighter limits.
-- One request may carry a stable 128-bit request ID and idempotency token; responses echo ID.
-- Messages include protocol major/minor, message type, tenant/device identity, timestamp, deadline, and signed/verified report when applicable.
-- Protocol major mismatch → explicit incompatibility, **not** silent alternate transport.
-- No arbitrary server-issued commands, shell execution or plugin downloads in client transport.
-
-Proposed versioned messages:
+The public Rust CLI runs independently for free and owns the final `SecurityVerdict`. The proprietary Rust server supplies optional risk intelligence and one-off native SOL payment verification. There is **no Cloud user registration, login, device certificate, prepaid service credit, stored user balance, USDC mint or subscription** in the current design.
 
 ```text
-ClientHello   / ServerHello            # protocol features / capabilities (inside TLS)
-EnrollStart   / EnrollChallenge / EnrollProof / EnrollResult
-AccountGet    / AccountResult
-PriceQuoteRequest / PriceQuoteResult   # signed price quote before any paid check
-TopUpQuote    / TopUpInvoice / TopUpStatus
-CreditBalance / UsageQuery / UsageResult
-CheckRequest  / CheckReceipt
-CheckStatus   / CheckResult
-DeviceList    / DeviceRevoke
-Error         / RateLimited / UpgradeRequired
+HGUET CLI: local inspect / trusted intent / policy / user's Solana RPC
+    |
+    | opt-in only: server-authenticated PQ TLS 1.3
+    v
+PriceQuoteRequest (cluster/genesis, hashes, bounded subjects and metrics,
+                  claim commitment, data consent, maximum lamports)
+    |
+    v
+HGUET Server: cached daily SOL/USD + deterministic tier -> signed PriceQuote
+    |
+    v
+Customer-controlled external wallet signs native SOL transfer + quote Memo
+    |
+    v
+PaidCheckRequest (quote ID + claim secret + payment signature + same scope)
+    |
+    v
+Server verifies FINALIZED transfer -> bounded risk intelligence analysis
+    |
+    v
+CheckResult (signed CloudAssessment + separate signed PaymentReceipt)
+    |
+    v
+CLI verifies signatures/binding/coverage -> FINAL SecurityVerdict
 ```
 
-The initial **draft** message schema is now published as [`protocol/v1/hguet.proto`](../../protocol/v1/hguet.proto), with a [signed CloudAssessment JSON Schema](../../protocol/v1/cloud-assessment.schema.json). It must be compiled, reviewed and tagged before claiming wire compatibility. Server implementations will pin a tagged protocol crate version. The listed protocol names are design targets, not implemented endpoints.
+If a paid request is pending or the connection fails, `PaidCheckStatus(quote_id, claim_secret)` retrieves the *same* claim/result without another payment. A pending `CheckReceipt` is **never** an ALLOW/DENY verdict.
 
-## 4. Server risk check request
+## 2. TLS security profile
 
-Minimum Cloud request envelope:
+- Standard **TLS 1.3** over TCP, not custom encryption, a VPN, or public HTTP/REST paid API.
+- Required tested hybrid group **SecP384r1MLKEM1024** (RFC 10024) with **AES-256-GCM** TLS record protection under `TLS_AES_256_GCM_SHA384`.
+- Selected **ML-DSA-87** server authentication with verified certificate path and pinned trust roots/signing keys. Prove end-to-end interoperability on each target OS/TLS provider before advertising PQ support.
+- No mandatory client mTLS: paid access is authorized by **a one-shot private claim secret and verified onchain funds**, not a reusable device identity.
+- Disable 0-RTT for state-changing messages; fail closed on classical-only/downgraded groups, bad pins/identity, unsupported protocol major or missing required algorithms.
+- Initial server trust is shipped through signed releases and authenticated pin/CA rotation; do not rely on first-contact TOFU.
+- HGUET service must not claim that TLS transport encryption hides the payment/transaction content from HGUET itself after it is decrypted.
 
-```json
-{
-  "protocol_version": 1,
-  "request_id": "random-collision-resistant-id",
-  "device_id": "registered-device-id",
-  "mode": "cloud",
-  "network_id": "solana-mainnet",
-  "transaction_message_sha256": "<hex>",
-  "trusted_intent_sha256": "<hex>",
-  "client_local_verdict": "<sanitized local assessment>",
-  "requested_capabilities": ["network_health", "program_risk", "behavioral_intelligence"],
-  "privacy": {
-    "raw_transaction_included": false,
-    "minimum_required_metadata": true
-  }
-}
-```
+## 3. Binary wire framing
 
-This JSON only **illustrates the logical fields**; the transport uses binary messages. Cloud must not falsely claim to simulate a raw transaction unless the client explicitly provides sufficient transaction bytes. If a paid check needs raw bytes, prompt/profile must disclose the submission and compute a new request with an explicit consent flag.
+Use `4-byte unsigned big-endian frame length` plus exactly one **Protobuf Envelope**, maximum **1 MiB**, smaller per-field limits. The proposed `protocol_major=1` is a *wire-schema number*, not product version or published release. Unknown critical types or incompatible major versions produce explicit protocol errors, never silent fallback.
 
-Cloud replies must be bound to the same **message hash, intent hash, network and scope** as the local request. Aggregation must reject mismatched or late responses. Threat signals include evidence source, data age, confidence and revocation/correction metadata.
+Client may be any compatible implementation with valid one-shot payment; a public wire protocol cannot cryptographically ensure the peer is the “official HGUET binary”. Rate limits and paid claim validation enforce service access.
 
-## 5. Identity and account life cycle (CLI only)
+## 4. Quote creation and cost control
 
-```text
-hguet register
-    -> initial PQ TLS + pinned server authentication
-    -> account creation / ownership verification (CLI challenge)
-    -> local device key creation
-    -> certificate enrollment
-hguet login
-    -> confirm active device identity / challenge, no browser session
-hguet device list
-hguet device revoke ID
-hguet logout
-    -> remove local auth session and optionally revoke token
-```
+Server calculates a one-check price **before payment**, based on requested intelligence capabilities, bounded metrics and [published draft complexity tiers](pricing-policy.md). Tariff is denominated in integer USD microdollars, converted to **exact integer lamports** using an authenticated cached SOL/USD observation updated at least daily and no older than 24 hours. Approximate market-reference divergence up to **5%** can be tolerated, but the customer must pay the **exact lamports** in the signed quote.
 
-Account owner email or other contact verification can use a **one-time code entered in CLI**; avoid harvesting personal data beyond what billing/abuse control requires.
+Quote binds: `quote_id`, `environment`, network + verified genesis, message/intent digest, optional original transaction-wire hash, source-subject digest, requested capabilities, raw-data disclosure scope, pricing policy version/tier, metrics, USD price, source FX timestamp, receiver, one-time Memo, expiry, client maximum fee and claim-secret SHA-256 commitment.
 
-- Credentials are device-scoped, rotatable and revocable.
-- Root trust key rotation uses a signed trust-transition and explicit expiry.
-- TLS client certificate does not alone decide charge limits, allowed tenants or API permissions; server checks each request.
-- Encrypt locally cached credentials with OS facilities. No shared secret baked into public GitHub binaries.
-- Redact cloud user IDs, access IDs, top-up invoices and network secrets from logs as appropriate.
+**Pre-quote privacy:** `PriceQuoteRequest.raw_transaction` may contain bytes ONLY if `raw_transaction_consent=true`. This lets the server decode **bounded data locally** to verify transaction format and complexity *before quoting*. A metadata-only request must not claim hidden CPI/effects were verified or that raw data was received. `verified_from_raw_transaction` is **never trusted from a client-supplied boolean**: server sets this flag in the signed quote only after real validation. If raw data was required but not disclosed, the service must offer metadata-only scope or refuse a deep quote, not invent data.
 
-## 6. USDC top-up & usage billing
+## 5. One-shot payment and results
 
-Preferred early flow: **prepaid, pay-per-completed-Cloud-check**, no annual subscription required.
+The customer uses their **own wallet** to create the native SOL System Program transfer of the exact lamports to the configured **commercial** receiver with a unique quote Memo in the same Solana transaction. HGUET does not sign/broadcast customer-protected transfers or accept secret seeds. The public donation wallet is NEVER the paid-service receiver.
 
-```text
-hguet topup 10 --asset USDC
- -> Cloud issues signed quote/invoice: exact base units,
-    official mint, destination, network, expiry and one-time reference
- -> CLI displays invoice text/QR
- -> Customer uses their OWN wallet to sign/send USDC
- -> Cloud verifies confirmation and invoice ownership
- -> Account receives credits once
-hguet balance
-hguet check ... --mode cloud
- -> server verifies authorization + sufficient credit
- -> reserves or atomically consumes charge for request_id
- -> computes decision and returns receipt
- -> same request retried: same receipt, no duplicate charge
-```
+Server verifies finalized execution evidence against the **expected cluster/genesis**, quote Memo, receiver, positive exact lamports, instruction index and event uniqueness. A public transaction signature is not authority to obtain someone else's Cloud result; `PaidCheckRequest` and `PaidCheckStatus` must prove possession of the private 256-bit quote claim secret.
 
-HGUET is receiving **payment for its own security service**, not holding a customer's payment funds to forward to merchants. Confirm legal, tax and consumer/commercial terms before launch.
+Persistent state tracks the one quote, finalized payment, bounded check execution and separate assessment/payment receipt. If infrastructure fails after payment, retain retry/recovery rights or a documented refund path, not a new obligatory payment. Once a signed quote is issued, no post-payment complexity surcharge or market repricing is allowed.
 
-Rules:
+### Signed report domains
 
-- Prices and free limits are server-published and cryptographically authenticated; client never computes final charge.
-- Charge a completed analysis whether its result is ALLOW, WARN or DENY, if that was agreed in the quote.
-- Auth failures, malformed input rejected pre-analysis and genuine server-side failures must not be charged.
-- A completed service `UNKNOWN` due to supported-but-inconclusive evidence is billable **only under a previously authenticated tariff and client price ceiling**; outage, malformed admission, or unfulfilled mandatory service must not be billed.
-- Idempotent handling of retries, timeouts and duplicate transaction **checks**: key by account + request ID + canonical payload hash; reject same ID for a changed payload.
-- Credits never depend on an unauthenticated Solana RPC response alone; top-up deposit and finality policy must be verified authoritatively.
-- Client must display current balance and per-request price before submission where interactive; automation requires predefined pricing/budget ceiling.
-- Billing audit and refunds remain in the private backend.
+- `HGUET-SOL-QUOTE/v1\0<canonical_body>`: commercial price and scope.
+- `HGUET-CLOUD-ASSESSMENT/v1\0<canonical_body>`: Cloud risk findings, coverage and evidence, **bound to the same quote ID**, network/genesis, message/intent/subjects and disclosure scope.
+- `HGUET-SOL-PAYMENT-RECEIPT/v1\0<canonical_body>`: one finalized native SOL settlement event and check.
 
-## 7. Combining local and Cloud intelligence
+Sign independently with reviewed, authenticated keys over canonical JSON (RFC 8785 JCS candidate). The CLI checks signatures itself; a boolean flag claiming signature validity is not evidence. Server **does not sign the final CLI-composed SecurityVerdict**; local hard policy DENY remains authoritative.
 
-1. Always run local deterministic checks first.
-2. If a known hard DENY exists, Cloud may add context but **cannot overrule** it.
-3. If Cloud is required by profile and unavailable, result is UNKNOWN.
-4. If Cloud optional and unavailable, return clearly marked **local-only coverage**; do not claim it contains live network intelligence.
-5. Cloud risk signals may cause WARN or DENY **only according to explicit, inspectable policy**, with source/age and customer preference.
-6. The final CLI SecurityVerdict includes local checks plus an independently verified signed CloudAssessment and a **separate** signed billing receipt when Cloud completed. Only the assessment itself is server-signed.
+## 6. Network environments
 
-### Privacy notes
+| Network | Payment | Cloud role |
+| --- | --- | --- |
+| Mainnet | real SOL | production only |
+| Devnet | test SOL | sandbox only |
+| Testnet | test SOL | sandbox only |
 
-Transport TLS protects the link in transit, **not data from the HGUET service after decryption**. If Cloud analysis receives customer transaction bytes, server can inspect them. Be explicit about retention and provider sharing. HGUET server may query third-party RPC/threat feeds: make external data flows auditable.
+Separate receivers, signing roots, state/claims and security defaults. Verify RPC `getGenesisHash`; never use a test-network transfer to authorize production. Testnet may be unstable and reset.
 
-## 8. Protocol failure matrix
+## 7. Privacy and risk limits
 
-| Event | Behavior |
-| --- | --- |
-| PQ KEM or ML-DSA unsupported | refuse Cloud, explain compatibility; local mode available |
-| Server cert/pin mismatch | hard TLS error, no fallback |
-| Client key revoked | unauthorized; no Cloud check |
-| Expired quote | request fresh quote, never quietly pay |
-| Duplicate request ID with same body | return same receipt/result |
-| Duplicate request ID with altered body | conflict, reject |
-| Payment credit insufficient | Cloud auth/payment error, local unchanged |
-| Mid-check disconnect | query status by request ID, no repeated charge |
-| Cloud stale feeds | label evidence stale; UNKNOWN if required |
-| Schema major mismatch | explicit upgrade required |
+The metadata-only service can check declared program IDs and subjects but not infer transaction effects from a hash. A customer who opts into sending a raw transaction must be told if HGUET will forward it to third-party RPC providers. Local free mode sends no data to HGUET Cloud. No persistent client account or reusable identity exists to guarantee cross-session spending enforcement; such protection requires separately authenticated policy/signer integration.
 
-## 9. Operational guarantees to test
+Treat unknown Token-2022 extension, CPI effect, RPC failure, stale mandatory source or unsupported transaction format as **UNKNOWN** under strict mandatory coverage. Server Cloud risk may inform WARN/DENY according to explicit policy but **cannot override** a known local DENY.
 
-- Successful **real** TLS handshake with configured group and signature algorithms on Linux, Windows and macOS test images.
-- Packet inspection shows no plaintext check/intent data on wire.
-- Negotiated group/cipher/certificate chain logged as non-secret diagnostic metadata.
-- Tampered cert, expired key, downgraded group, client without key or replay → rejection.
-- Multi-node idempotency stress test yields exactly one charge per paid request.
-- Subscription-less free local checks function while Cloud is disconnected.
+## 8. Testing / production blockers
 
-References: [architecture](README.md), [security](security.md), [verdict](verdict-schema.md), [sources](references.md).
+- Protobuf schema compilation; JSON Schema/fixtures; cross-repo content pinning.
+- Real PQ TLS handshake, group/certificate/cipher verification and downgrade tests across supported platforms.
+- Exact USD-to-lamports integer math, 24h FX age/5% reference policy, deterministic complexity-tier limits.
+- Quote signature/fee cap, raw-prequote consent, checked input hashes, zero-lamport rejection.
+- Finalized SOL settlement, Memo matching, wrong receiver, one-event/one-claim uniqueness, timeout/retry/refund.
+- Quote ID/message/network/subject binding through both signed CloudAssessment and separate PaymentReceipt.
+- Privacy, anonymous quote DDoS controls, credential/claim secrecy and signer enforcement.
+- End-to-end Rust client/server tests and real Solana Devnet tests **before** any paid production launch.
+
+This document specifies the desired system; it **does not claim** those tests have been run. See [public interoperability](interoperability.md), [security](security.md), [CLI commands](cli-interface.md).
