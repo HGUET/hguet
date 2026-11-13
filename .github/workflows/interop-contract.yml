@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y protobuf-compiler
-          python -m pip install 'jsonschema>=4,<5'
+          python -m pip install 'jsonschema[format]>=4,<5'
       - name: Compile public draft Protobuf schema
         run: |
           protoc --proto_path=protocol/v1 --descriptor_set_out=/tmp/hguet-protocol.desc protocol/v1/hguet.proto
