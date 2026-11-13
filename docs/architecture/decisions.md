@@ -1,41 +1,41 @@
-# HGUET CLI — Architecture decisions (ADRs)
+# HGUET CLI — Architecture decisions (unreleased)
 
-**Status: approved design direction, implementation pending.** These decisions summarize the user-selected product model and deliberately reject unnecessary infrastructure.
+**Status:** current design decisions, **no product release**. Superseded proposals must not be implemented alongside current architecture.
 
-| ID | Decision | Rationale | Consequence |
-| --- | --- | --- | --- |
-| ADR-001 | One free, open-source Rust CLI | useful distribution, auditability, integrations | Apache-2.0; no required Cloud subscription |
-| ADR-002 | Closed-source, paid Cloud in `HGUET/server` | differentiated continuously maintained intelligence | public versioned client protocol; private analytics |
-| ADR-003 | No wallet or custody functionality | reduce risk, complexity and regulatory exposure | never sign/broadcast or request wallet keys |
-| ADR-004 | CLI-first registration, payment and usage | no web cabinet | Cloud account commands available in CLI |
-| ADR-005 | Local simulation via user's RPC | avoid free-mode dependency on our infrastructure | local ≠ offline; disclose RPC data exposure |
-| ADR-006 | Check intent + transaction effects, not only RPC success | meaningful value for autonomous payments | trusted intent provenance is mandatory for strict decisions |
-| ADR-007 | Native Rust executable with JSON output | convenient for agents and CI | documented exit codes, deterministic schema |
-| ADR-008 | PQ-capable TLS 1.3, no custom cipher, no VPN | robust transport without reinventing cryptography | prove negotiated KEM and mTLS in interop tests |
-| ADR-009 | Commercial API reachable by authenticated CLI clients | users do not call HTTP API directly | cannot prove peer is “official binary”; device credentials authorize calls |
-| ADR-010 | No proprietary protocol-only “security by obscurity” | open CLI must be inspectable | public versioned schema and code |
-| ADR-011 | Security rules are deterministic first | auditable and reproducible | ML-assisted heuristics, if any, remain advisory |
-| ADR-012 | Hard boundaries before powerful capabilities | eliminate silent bypass claims | client signer must enforce the verdict externally |
+| ADR | Current choice | Engineering consequence |
+| --- | --- | --- |
+| CLI-001 | Open-source Rust CLI; independent free local mode | no HGUET account or Cloud dependency for local analysis |
+| CLI-002 | Assembly of final `SecurityVerdict` in public CLI | Cloud signs only its own `CloudAssessment` |
+| CLI-003 | Trusted PaymentIntent from independently configured authority | agent-provided intent alone cannot justify ALLOW |
+| CLI-004 | Optional Cloud = **one SOL payment per one security check** | no user registration, credit balance, top-up or USDC |
+| CLI-005 | External customer wallet signs separate service payment | HGUET never receives customer private keys or signs protected payment |
+| CLI-006 | USD reference tariff, **cached SOL/USD**, exact signed lamports | 24h price age ceiling, ~5% reference divergence tolerance, no postpay surcharge |
+| CLI-007 | Deterministic complexity tiers and source-limited scope | price based on work, not amount at risk or verdict |
+| CLI-008 | Three Solana clusters, isolated production/sandbox | Mainnet real SOL, Devnet/Testnet valueless test SOL |
+| CLI-009 | Server-authenticated hybrid PQ-capable TLS 1.3 | exact group/identity interoperability required before claims, no mandatory client mTLS |
+| CLI-010 | Versioned public Protobuf and signed JSON contracts | private server pins exact public commit, does not fork contract |
+| CLI-011 | One-use random claim secret + onchain finalized settlement | private report retrieval without reusable user identity |
+| CLI-012 | No automatic Cloud escalation | opt-in disclosure and external payment signer approval |
+| CLI-013 | No custody, no protected-transaction signing/broadcast | customer wallet/signer must enforce advisory result |
+| CLI-014 | No `ALLOW` for missing mandatory evidence | hard local DENY > mandatory UNKNOWN > WARN > ALLOW |
 
-## Deferred
+## Superseded proposals
 
-- Onchain smart-account enforcement and Solana smart contracts: **not in scope** for the first HGUET product.
-- Wallet signing and settlement services: **not planned**.
-- Global irrevocable budgets from a standalone local CLI: **cannot be guaranteed**.
-- Dynamic AI interpretation of payment intent as an authority: **not accepted**.
-- Running a universal Solana threat monitor locally: **not required**; optional Cloud enhancement.
-- Storing private analytics, paid threat feeds or commercial backend in this public repository: **rejected**.
+- Device registration, account login, client mTLS, membership, prepaid USDC and service credits.
+- Separate web billing cabinet or subscription.
+- A server-signed *final composite* SecurityVerdict.
+- Pricing proportional to the protected transaction's monetary value.
+- A per-request high-frequency SOL/USDC oracle lookup.
 
-## Open engineering decisions
+## Deferred engineering choices
 
-- Exact maintained modular Solana crates and a tested minimum supported Rust version.
-- Native TLS library, OpenSSL provider and platform packaging matrix for PQ mTLS.
-- Cloud protobuf message versioning and deprecation window after interoperability tests.
-- Independent security review scope, adversarial benchmark and pricing model.
-- Final license/third-party dependency notices; current repository LICENSE must remain authoritative.
+- A reviewed wallet adapter that can prepare System transfer + quote Memo as an unsigned external-wallet operation.
+- Optional persistent pseudonymous signer-bound history (not anonymous global tracking); no enforceable global spending caps without a controlled signer.
+- Onchain escrow, account-abstraction enforcement and batch billing.
+- Commercially licensed threat feeds and network partnerships; never imply access without contract.
+- Pin and test exact TLS provider, native library versions, report signature and key rotation.
+- Exact published price, minimum viable SOL invoice, refunds and fee economics after Devnet proof.
 
 ## Change control
 
-Any change that weakens the above trust guarantees requires a dedicated architecture review, threat-model update, tests and a user-approved change to product scope. No silently added custody, mandatory Cloud mode or proprietary CLI logic.
-
-For rationale and dependencies, see [README](README.md), [security](security.md), [cloud protocol](cloud-protocol.md).
+The [public protocol](../../protocol/v1/README.md) and [shared interoperability specification](interoperability.md) define current consumer behavior. A protocol change requires a matching fixture/CI update and explicit re-pin in `HGUET/server`. Protocol-number `v1` is **not** the HGUET product version. No product version until first real release.
