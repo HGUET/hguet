@@ -499,11 +499,34 @@ fn execute(v:Args)->(serde_json::Value,i32){
             _=>{}
         }
     }
-    if verified_intent.is_some() {
-        if let Some(ref direct)=offline_direct_analysis {
-            if signed_sol_intent_cannot_cap_direct_tokens(direct) {
-                verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
-                    "The independently verified PaymentIntent caps native SOL lamports only; it has no per-mint token amount caps, so direct token movement, allowances and opaque token instructions are not covered by an enforceable token-spend limit");
+    let mut signed_token_spend_review=None;
+    if let Some(ref intent)=verified_intent {
+        match &intent.token_spend_limits {
+            None=>{
+                if let Some(ref direct)=offline_direct_analysis {
+                    if signed_sol_intent_cannot_cap_direct_tokens(direct) {
+                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
+                            "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed per-mint debit limits");
+                    }
+                }
+            }
+            Some(caps)=>{
+                // verify_intent already ran this same bounded direct-wire check,
+                // but preserve an auditable per-mint summary in the CLI response.
+                // A failure here is never treated as a successfully signed cap.
+                match hguet_core::review_declared_token_limits(&parsed,caps) {
+                    Ok(review)=>{
+                        verdict.coverage.push("signed_direct_token_debit_limits".into());
+                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE","high",
+                            "Signed per-mint limits bound recognized direct checked token debit declarations only. CPI, fees, unknown program side effects and total gross spending are NOT enforceable from the original wire alone");
+                        signed_token_spend_review=Some(review);
+                    }
+                    Err(err)=>{
+                        verdict.decision=Decision::Deny;
+                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_INVALID","critical",err);
+                        return (json!({"inspection":parsed,"verdict":verdict}),20);
+                    }
+                }
             }
         }
     }
@@ -605,18 +628,24 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verdict.finding("RPC_SIMULATION_ONLY","medium",
                         "RPC simulation completed, but it is advisory and not evidence of total spending or future onchain success");
                 }
-                return (json!({"inspection":parsed,"rpc_analysis":evidence,"verdict":verdict}),30)
+                return (json!({"inspection":parsed,"rpc_analysis":evidence,
+                    "signed_token_spend_review":signed_token_spend_review,
+                    "verdict":verdict}),30)
             }
             Err(err)=>{
                 verdict.simulation_status="rpc_unavailable".into();
                 verdict.finding(err.code(),"high",
                     "Solana RPC evidence unavailable or inconsistent; no successful execution should be inferred");
-                return (json!({"inspection":parsed,"verdict":verdict}),30)
+                return (json!({"inspection":parsed,
+                    "signed_token_spend_review":signed_token_spend_review,
+                    "verdict":verdict}),30)
             }
         }
     }
     verdict.finding("NO_SIMULATION","high","Wire inspection does not prove transfers, CPI effects, execution or wallet authorization");
-    (json!({"inspection":parsed,"verdict":verdict}),if v.command=="inspect"{0}else{30})
+    (json!({"inspection":parsed,
+        "signed_token_spend_review":signed_token_spend_review,
+        "verdict":verdict}),if v.command=="inspect"{0}else{30})
 }
 fn main(){
     match parse_args(){
