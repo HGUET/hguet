@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HGUET public v0.2 protocol static schema checks (not live payment tests)."""
+"""HGUET unreleased public protocol: static schema checks only, not live payments."""
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -93,6 +93,16 @@ def main():
     assert tier_for_metrics(policy, dict(quote["complexity"], risk_subjects=13),
                             quote["requested_capabilities"])["id"] == "extended"
     assert tier_for_metrics(policy, quote["complexity"], ["independent_rpc_simulation"])["id"] == "extended"
+    cloud_example = load("fixtures/cloud-assessment-example.json")
+    assert cloud_example["quote_id"] == quote["quote_id"]
+    assert cloud_example["environment"] == quote["environment"]
+    assert cloud_example["network"] == quote["network"]
+    assert cloud_example["message_sha256"] == quote["message_sha256"]
+    assert cloud_example["intent_sha256"] == quote["intent_sha256"]
+    assert cloud_example["subjects_sha256"] == quote["subjects_sha256"]
+    assert cloud_example["transaction_sha256"] == quote["transaction_sha256"]
+    assert "tenant_scope" not in cloud_example and "request_id" not in cloud_example
+    assert quote["transaction_sha256"] is not None
     assert quote["quote_id"] == receipt["quote_id"]
     assert quote["network"] == receipt["network"]
     assert quote["environment"] == receipt["environment"]
@@ -100,6 +110,16 @@ def main():
     assert quote["lamports_due"] == receipt["lamports_paid"]
     assert quote["receiver"] == receipt["receiver"]
 
+    invalid = deepcopy(quote); invalid["lamports_due"] = "0"
+    must_reject(quote_schema, invalid, "zero lamport invoice")
+    invalid = deepcopy(quote); invalid["sol_usd_price_micros"] = "0"
+    must_reject(quote_schema, invalid, "zero reference price")
+    invalid = deepcopy(receipt); invalid["lamports_paid"] = "0"
+    must_reject(receipt_schema, invalid, "zero payment")
+    invalid = deepcopy(cloud_example); invalid.pop("quote_id")
+    must_reject(cloud, invalid, "cloud assessment unbound from quote")
+    invalid = deepcopy(cloud_example); invalid["tenant_scope"] = "legacy_tenant"
+    must_reject(cloud, invalid, "stale tenant based schema")
     invalid = deepcopy(quote); invalid["asset"] = "USDC"
     must_reject(quote_schema, invalid, "USDC payment")
     invalid = deepcopy(quote); invalid["message_sha256"] = "bad"
