@@ -187,23 +187,30 @@ fn token_cpi_findings(
 fn token_2022_extension_findings(
     status: &str,
     items: &[hguet_rpc::Token2022ExtensionObservation],
+    token_instructions: &[hguet_rpc::TokenCpiInstruction],
 ) -> Vec<(&'static str, &'static str, &'static str)> {
     if status!="rpc_succeeded" { return Vec::new(); }
+    // SetAuthority is a *base* opcode (6). It also modifies Token-2022
+    // extension authorities, so inspect it alongside extension prefixes.
+    const TOKEN_2022: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+    let changes = |kinds: &[u8]| token_instructions.iter().any(|item|
+        item.program_id == TOKEN_2022 && item.operation=="set_authority" &&
+        item.authority_type.is_some_and(|kind| kinds.contains(&kind)));
     let mut findings=Vec::new();
-    if items.iter().any(|item|item.family=="transfer_fee") {
+    if items.iter().any(|item|item.family=="transfer_fee") || changes(&[4,5]) {
         findings.push(("RPC_TOKEN_2022_TRANSFER_FEE","high",
-            "Token-2022 CPI references transfer-fee configuration, expected fees, or withheld fee operations; fee state and net receipts have not been verified"));
+            "Token-2022 CPI references transfer-fee configuration, authority rotation, expected fees or withheld-fee operations; fee state and net receipts are unverified"));
     }
-    if items.iter().any(|item|item.family=="transfer_hook") {
+    if items.iter().any(|item|item.family=="transfer_hook") || changes(&[10]) {
         findings.push(("RPC_TOKEN_2022_TRANSFER_HOOK","high",
-            "Token-2022 CPI references transfer-hook configuration; hook execution and downstream program effects are not independently verified"));
+            "Token-2022 CPI references transfer-hook configuration or authority rotation; hook execution and downstream effects are not independently verified"));
     }
-    if items.iter().any(|item|item.family=="permanent_delegate") {
+    if items.iter().any(|item|item.family=="permanent_delegate") || changes(&[8]) {
         findings.push(("RPC_TOKEN_2022_PERMANENT_DELEGATE","high",
-            "Token-2022 CPI references permanent-delegate initialization; this authority may move or burn tokens outside ordinary account-owner consent"));
+            "Token-2022 CPI references permanent-delegate initialization or authority rotation; this mint-wide authority may move or burn tokens without a token-account owner signature"));
     }
     if items.iter().any(|item|matches!(item.family,
-        "confidential_transfer"|"confidential_transfer_fee"|"confidential_mint_burn")) {
+        "confidential_transfer"|"confidential_transfer_fee"|"confidential_mint_burn")) || changes(&[9,11]) {
         findings.push(("RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS","high",
             "Token-2022 CPI references confidential token operations; ordinary balance snapshots cannot establish all hidden movements"));
     }
@@ -332,6 +339,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 for (code,severity,message) in token_2022_extension_findings(
                     &evidence.status,
                     &effects.cpi.token_2022_extension_observations,
+                    &effects.cpi.token_instructions,
                 ) {
                     verdict.finding(code,severity,message);
                 }
@@ -439,7 +447,7 @@ mod token_2022_extension_tests {
             observation("transfer_fee"),observation("transfer_hook"),
             observation("permanent_delegate"),observation("confidential_transfer_fee"),
         ];
-        let codes=token_2022_extension_findings("rpc_succeeded",&items)
+        let codes=token_2022_extension_findings("rpc_succeeded",&items,&[])
             .into_iter().map(|v|v.0).collect::<Vec<_>>();
         assert_eq!(codes,vec![
             "RPC_TOKEN_2022_TRANSFER_FEE","RPC_TOKEN_2022_TRANSFER_HOOK",
@@ -448,12 +456,38 @@ mod token_2022_extension_tests {
     #[test]
     fn failures_and_missing_extensions_do_not_invent_warnings() {
         assert!(token_2022_extension_findings("rpc_failed",
-            &[observation("transfer_fee")]).is_empty());
+            &[observation("transfer_fee")],&[]).is_empty());
         assert!(token_2022_extension_findings("rpc_unavailable",
-            &[observation("transfer_hook")]).is_empty());
+            &[observation("transfer_hook")],&[]).is_empty());
         assert!(token_2022_extension_findings("rpc_succeeded",
-            &[observation("unknown_extension")]).is_empty());
-        assert!(token_2022_extension_findings("rpc_succeeded",&[]).is_empty());
+            &[observation("unknown_extension")],&[]).is_empty());
+        assert!(token_2022_extension_findings("rpc_succeeded",&[],&[]).is_empty());
+    }
+    fn set_authority(program_id: &str, authority_type:u8) -> hguet_rpc::TokenCpiInstruction {
+        hguet_rpc::TokenCpiInstruction {
+            parent_instruction_index:0,inner_instruction_index:0,
+            program_id:program_id.into(),operation:"set_authority".into(),
+            source_account:None,destination_account:None,mint:None,
+            authority:None,delegate:None,amount_raw:None,decimals:None,
+            authority_type:Some(authority_type),new_authority:None,
+        }
+    }
+    #[test]
+    fn set_authority_rotations_of_token_2022_extensions_raise_specific_risks() {
+        let token2022="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+        let codes=token_2022_extension_findings("rpc_succeeded",&[],&[
+            set_authority(token2022,4),set_authority(token2022,8),
+            set_authority(token2022,10),set_authority(token2022,11),
+        ]).into_iter().map(|v|v.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["RPC_TOKEN_2022_TRANSFER_FEE",
+            "RPC_TOKEN_2022_TRANSFER_HOOK",
+            "RPC_TOKEN_2022_PERMANENT_DELEGATE",
+            "RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS"]);
+        let legacy="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+        assert!(token_2022_extension_findings("rpc_succeeded",&[],
+            &[set_authority(legacy,8)]).is_empty());
+        assert!(token_2022_extension_findings("rpc_failed",&[],
+            &[set_authority(token2022,8)]).is_empty());
     }
 }
 
