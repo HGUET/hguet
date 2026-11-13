@@ -2,6 +2,7 @@
 //! *later*, single-provider token-account snapshot. Never treats a matching
 //! owner/delegate as authorization at the simulation bank or transaction time.
 use crate::{
+    mint_rpc::MintRpcSnapshot,
     token_account_rpc::TokenAccountRpcSnapshot,
     token_semantics::{TOKEN_PROGRAM,TOKEN_2022_PROGRAM},
     RpcError,
@@ -19,13 +20,15 @@ pub struct SourceAuthorityObservation {
     pub declared_token_program:String,
     pub declared_authority:String,
     pub declared_debit_raw:String,
-    /// observed_owner, observed_delegate, unmatched, unobserved
+    /// observed_owner, observed_delegate, observed_permanent_delegate, unmatched, unobserved
     pub authority_relationship:&'static str,
     /// token_2022, legacy_token, missing, other_program, unobserved
     pub account_observation:&'static str,
     pub context_slot:Option<u64>,
     pub observed_token_owner:Option<String>,
     pub observed_delegate:Option<String>,
+    pub observed_mint_permanent_delegate:Option<String>,
+    pub mint_permanent_delegate_matches_authority:Option<bool>,
     pub program_matches_wire:Option<bool>,
     pub mint_matches_signed_scope:Option<bool>,
     pub delegate_allowance_covers_declared:Option<bool>,
@@ -39,6 +42,7 @@ pub struct SourceAuthorityObservation {
 pub struct SourceAuthorityReview {
     pub simulation_slot:u64,
     pub token_account_context_slot:Option<u64>,
+    pub mint_context_slot:Option<u64>,
     pub atomic_with_simulation:bool,
     pub sources:Vec<SourceAuthorityObservation>,
     pub authorization_proven:bool,
@@ -48,6 +52,17 @@ pub struct SourceAuthorityReview {
 pub fn correlate_signed_source_authority(
     source_review:&TokenSourceLimitReview,
     snapshot:Option<&TokenAccountRpcSnapshot>,
+    simulation_slot:u64,
+)->Result<SourceAuthorityReview,RpcError>{
+    correlate_signed_source_authority_with_mints(
+        source_review,snapshot,None,simulation_slot)
+}
+/// The mint permanent delegate is a third Token-2022 authority role.
+/// It is read from yet another non-atomic single-provider snapshot.
+pub fn correlate_signed_source_authority_with_mints(
+    source_review:&TokenSourceLimitReview,
+    snapshot:Option<&TokenAccountRpcSnapshot>,
+    mints:Option<&MintRpcSnapshot>,
     simulation_slot:u64,
 )->Result<SourceAuthorityReview,RpcError>{
     if simulation_slot==0||source_review.debits.len()>MAX_SOURCES {
@@ -64,6 +79,20 @@ pub fn correlate_signed_source_authority(
             return Err(RpcError::InvalidResponse);
         }
     }
+    if let Some(m)=mints {
+        if m.simulation_slot!=simulation_slot || m.context_slot<simulation_slot ||
+            m.atomic_with_simulation {return Err(RpcError::InvalidResponse);}
+        if m.accounts.len()>16 {return Err(RpcError::TooLarge);}
+        let mut seen=BTreeSet::new();
+        for account in &m.accounts {
+            if !seen.insert(&account.address) {return Err(RpcError::InvalidResponse);}
+            if let Some(state)=&account.state {
+                if account.status!="token_2022" || state.mint_address!=account.address {
+                    return Err(RpcError::InvalidResponse);
+                }
+            }
+        }
+    }
     let mut out=Vec::with_capacity(source_review.debits.len());
     for source in &source_review.debits {
         let mut observation=SourceAuthorityObservation {
@@ -76,12 +105,23 @@ pub fn correlate_signed_source_authority(
             account_observation:"unobserved",
             context_slot:snapshot.map(|s|s.context_slot),
             observed_token_owner:None,observed_delegate:None,
+            observed_mint_permanent_delegate:None,
+            mint_permanent_delegate_matches_authority:None,
             program_matches_wire:None,mint_matches_signed_scope:None,
             delegate_allowance_covers_declared:None,
             later_account_balance_covers_declared:None,
             frozen_at_observation:None,restricted_or_opaque_extensions:None,
             authorization_proven:false,
         };
+        if source.token_program==TOKEN_2022_PROGRAM {
+            if let Some(mint)=mints.and_then(|m|m.accounts.iter()
+                .find(|item|item.address==source.mint && item.status=="token_2022"))
+                .and_then(|item|item.state.as_ref()) {
+                observation.observed_mint_permanent_delegate=mint.permanent_delegate.clone();
+                observation.mint_permanent_delegate_matches_authority=Some(
+                    mint.permanent_delegate.as_deref()==Some(source.declared_authority.as_str()));
+            }
+        }
         let Some(account)=snapshot.and_then(|s|s.accounts.iter()
             .find(|a|a.address==source.source_token_account)) else {
             out.push(observation);
@@ -133,6 +173,8 @@ pub fn correlate_signed_source_authority(
                     .map_err(|_|RpcError::InvalidResponse)?;
                 observation.delegate_allowance_covers_declared=
                     Some(u128::from(delegated)>=declared);
+            } else if observation.mint_permanent_delegate_matches_authority==Some(true) {
+                observation.authority_relationship="observed_permanent_delegate";
             } else {
                 observation.authority_relationship="unmatched";
             }
@@ -144,9 +186,10 @@ pub fn correlate_signed_source_authority(
     Ok(SourceAuthorityReview{
         simulation_slot,
         token_account_context_slot:snapshot.map(|s|s.context_slot),
+        mint_context_slot:mints.map(|m|m.context_slot),
         atomic_with_simulation:false,
         sources:out,authorization_proven:false,total_spending_proven:false,
-        limitation:"The signed source/mint/required-signer roles are original-wire declarations. Token account owners, delegates, delegated amounts, flags and balances are later single-provider reads at minimum simulation slot, NOT the execution bank. Account state may have changed, address identity may be RPC-authored, legacy/multisig/PDA authorization and CPI effects remain unverified. Neither matching owner nor delegate proves authority to spend or supports ALLOW.",
+        limitation:"The signed source/mint/required-signer roles are original-wire declarations. Token account owner/delegate/amount and Token-2022 mint permanent-delegate fields come from separately slotted, single-provider RPC reads, NOT the execution bank. State may have changed; legacy/multisig/PDA authority, CPI and hook effects remain unverified. Neither matching owner, account delegate nor mint permanent delegate proves permission at execution or supports ALLOW.",
     })
 }
 
