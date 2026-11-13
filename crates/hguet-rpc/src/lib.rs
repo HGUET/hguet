@@ -365,6 +365,24 @@ mod tests {
         assert!(!r.effect_analysis.missing_fields.is_empty());
     }
 
+    #[test]
+    fn failed_simulation_with_token_snapshots_does_not_fetch_mints() {
+        let mut f=fake(DEVNET_GENESIS,json!({"InstructionError":[0,"Custom"]}));
+        let mint=bs58::encode([4u8;32]).into_string();
+        f.simulation=json!({"context":{"slot":700},"value":{
+            "err":{"InstructionError":[0,"Custom"]},
+            "preTokenBalances":[{"accountIndex":0,"mint":mint,
+                "uiTokenAmount":{"amount":"10","decimals":6}}],
+            "postTokenBalances":[{"accountIndex":0,"mint":mint,
+                "uiTokenAmount":{"amount":"9","decimals":6}}],
+            "innerInstructions":[]
+        }});
+        let r=simulate_with(&f,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
+        assert_eq!(r.status,"rpc_failed");
+        assert!(r.mint_snapshot.is_none());
+        assert_eq!(f.calls.get(),2); // genesis + simulation only, no mint read
+        assert!(!f.requests.borrow().iter().any(|x|x["id"]==4));
+    }
     #[test] fn network_genesis_checked_before_any_simulation() {
         let fake=fake(MAINNET_GENESIS,Value::Null);
         let err=simulate_with(&fake,"https://example.org","devnet",&legacy_unsigned()).unwrap_err();
