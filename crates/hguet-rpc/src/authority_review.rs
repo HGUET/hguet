@@ -4,6 +4,7 @@
 use crate::{
     mint_rpc::MintRpcSnapshot,
     token_account_rpc::TokenAccountRpcSnapshot,
+    source_account_rpc::SignedSourceAccountRpcSnapshot,
     token_semantics::{TOKEN_PROGRAM,TOKEN_2022_PROGRAM},
     RpcError,
 };
@@ -42,6 +43,7 @@ pub struct SourceAuthorityObservation {
 pub struct SourceAuthorityReview {
     pub simulation_slot:u64,
     pub token_account_context_slot:Option<u64>,
+    pub missing_signed_source_context_slot:Option<u64>,
     pub mint_context_slot:Option<u64>,
     pub atomic_with_simulation:bool,
     pub sources:Vec<SourceAuthorityObservation>,
@@ -65,6 +67,18 @@ pub fn correlate_signed_source_authority_with_mints(
     mints:Option<&MintRpcSnapshot>,
     simulation_slot:u64,
 )->Result<SourceAuthorityReview,RpcError>{
+    correlate_signed_source_authority_with_additional_sources(
+        source_review,snapshot,None,mints,simulation_slot)
+}
+/// Optional signed-only source reads complement (never overwrite) balance
+/// metadata account reads. Each observation retains its own RPC context slot.
+pub fn correlate_signed_source_authority_with_additional_sources(
+    source_review:&TokenSourceLimitReview,
+    snapshot:Option<&TokenAccountRpcSnapshot>,
+    additional:Option<&SignedSourceAccountRpcSnapshot>,
+    mints:Option<&MintRpcSnapshot>,
+    simulation_slot:u64,
+)->Result<SourceAuthorityReview,RpcError>{
     if simulation_slot==0||source_review.debits.len()>MAX_SOURCES {
         return Err(RpcError::InvalidResponse);
     }
@@ -77,6 +91,20 @@ pub fn correlate_signed_source_authority_with_mints(
         let mut seen=BTreeSet::new();
         if s.accounts.iter().any(|a|!seen.insert(&a.address)) {
             return Err(RpcError::InvalidResponse);
+        }
+    }
+    if let Some(extra)=additional {
+        if extra.simulation_slot!=simulation_slot ||
+           extra.context_slot<simulation_slot || extra.atomic_with_simulation ||
+           extra.accounts.len()>MAX_SOURCES {
+            return Err(RpcError::InvalidResponse);
+        }
+        let mut seen=BTreeSet::new();
+        for account in &extra.accounts {
+            if !seen.insert(&account.address) {return Err(RpcError::InvalidResponse);}
+            if snapshot.is_some_and(|s|s.accounts.iter().any(|a|a.address==account.address)) {
+                return Err(RpcError::InvalidResponse);
+            }
         }
     }
     if let Some(m)=mints {
@@ -103,7 +131,7 @@ pub fn correlate_signed_source_authority_with_mints(
             declared_debit_raw:source.declared_raw.clone(),
             authority_relationship:"unobserved",
             account_observation:"unobserved",
-            context_slot:snapshot.map(|s|s.context_slot),
+            context_slot:None,
             observed_token_owner:None,observed_delegate:None,
             observed_mint_permanent_delegate:None,
             mint_permanent_delegate_matches_authority:None,
@@ -122,16 +150,35 @@ pub fn correlate_signed_source_authority_with_mints(
                     mint.permanent_delegate.as_deref()==Some(source.declared_authority.as_str()));
             }
         }
-        let Some(account)=snapshot.and_then(|s|s.accounts.iter()
-            .find(|a|a.address==source.source_token_account)) else {
-            out.push(observation);
-            continue;
+        let from_balances=snapshot.and_then(|s|s.accounts.iter()
+            .find(|a|a.address==source.source_token_account));
+        let from_signed=additional.and_then(|s|s.accounts.iter()
+            .find(|a|a.address==source.source_token_account));
+        let (status,state,address,slot) = match (from_balances,from_signed) {
+            (Some(_),Some(_))=>return Err(RpcError::InvalidResponse),
+            (Some(account),None)=>(
+                account.status.as_str(),account.state.as_ref(),
+                account.address.as_str(),snapshot.map(|s|s.context_slot),
+            ),
+            (None,Some(account))=>{
+                if account.signed_mint!=source.mint ||
+                    account.declared_token_program!=source.token_program {
+                    return Err(RpcError::InvalidResponse);
+                }
+                (account.status,account.state.as_ref(),account.address.as_str(),
+                    additional.map(|s|s.context_slot))
+            },
+            (None,None)=>{
+                out.push(observation);
+                continue;
+            }
         };
-        observation.account_observation=match account.status.as_str(){
+        observation.context_slot=slot;
+        observation.account_observation=match status {
             "token_2022"=>"token_2022",
             "legacy_token"=>"legacy_token",
             "missing"=>"missing",
-            "not_token_2022"=>"other_program",
+            "not_token_2022"|"other_program"=>"other_program",
             _=>return Err(RpcError::InvalidResponse),
         };
         let expected_program=match source.token_program.as_str(){
@@ -139,14 +186,14 @@ pub fn correlate_signed_source_authority_with_mints(
             TOKEN_2022_PROGRAM=>"token_2022",
             _=>return Err(RpcError::InvalidResponse),
         };
-        observation.program_matches_wire=match account.status.as_str(){
-            "token_2022"|"legacy_token"=>Some(account.status==expected_program),
+        observation.program_matches_wire=match status {
+            "token_2022"|"legacy_token"=>Some(status==expected_program),
             "missing"=>None,
             _=>Some(false),
         };
-        if let Some(state)=account.state.as_ref(){
-            if !matches!(account.status.as_str(),"token_2022"|"legacy_token") ||
-                state.token_account!=account.address {
+        if let Some(state)=state {
+            if !matches!(status,"token_2022"|"legacy_token") ||
+                state.token_account!=address {
                 return Err(RpcError::InvalidResponse);
             }
             let declared=source.declared_raw.parse::<u128>()
@@ -178,7 +225,7 @@ pub fn correlate_signed_source_authority_with_mints(
             } else {
                 observation.authority_relationship="unmatched";
             }
-        } else if matches!(account.status.as_str(),"token_2022"|"legacy_token") {
+        } else if matches!(status,"token_2022"|"legacy_token") {
             return Err(RpcError::InvalidResponse);
         }
         out.push(observation);
@@ -186,10 +233,11 @@ pub fn correlate_signed_source_authority_with_mints(
     Ok(SourceAuthorityReview{
         simulation_slot,
         token_account_context_slot:snapshot.map(|s|s.context_slot),
+        missing_signed_source_context_slot:additional.map(|s|s.context_slot),
         mint_context_slot:mints.map(|m|m.context_slot),
         atomic_with_simulation:false,
         sources:out,authorization_proven:false,total_spending_proven:false,
-        limitation:"The signed source/mint/required-signer roles are original-wire declarations. Token account owner/delegate/amount and Token-2022 mint permanent-delegate fields come from separately slotted, single-provider RPC reads, NOT the execution bank. State may have changed; legacy/multisig/PDA authority, CPI and hook effects remain unverified. Neither matching owner, account delegate nor mint permanent delegate proves permission at execution or supports ALLOW.",
+        limitation:"Signed source/mint/required-signer roles are original-wire declarations. Balance-derived token accounts, extra signed-only source accounts and Token-2022 mint permanent-delegate fields can come from three separate single-provider RPC reads at different slots, NOT the execution bank. State may have changed; multisig/PDA authority, CPI and hook effects remain unverified. Neither matching owner, account delegate nor mint permanent delegate proves permission at execution or supports ALLOW.",
     })
 }
 
