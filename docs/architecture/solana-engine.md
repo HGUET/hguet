@@ -50,7 +50,11 @@ The protected transaction can carry independently signed `token_source_limits` t
 
 The CLI exposes `signed_source_authority_evidence`, separate from `rpc_analysis.effect_graph`, preserving the simulation, account snapshot and optional mint snapshot slots with `atomic_with_simulation=false`. Both `authorization_proven` and `total_spending_proven` remain `false`: the separate RPC read does not establish account ownership, delegate allowance or signature authorization at the simulated execution bank. CPI-only sources remain unresolved. Direct checked-token source addresses absent from simulated token balances are now fetched **only if covered by an independently verified signed `token_source_limits` intent**, in one separate bounded read to the same selected provider (at most 32 used addresses). The extra signed-source snapshot is not silently merged into RPC balance metadata; it retains its own slot and missing/other-program statuses. Neither a later account observation nor an observed owner/delegate establishes execution-time authorization. No `ALLOW` is emitted.
 
-## 2. Solana formats and canonical identity
+### CPI token source account coverage — RPC-only provenance
+
+After an explicitly opted-in successful simulation, the CLI can select source accounts from bounded, compiled SPL Token/Token-2022 CPI decoder output. Only source-role operations are included; unknown CPI program effects and ambiguous mint account authority operations remain gaps. A single additional `getMultipleAccounts` batch reads up to **32 missing CPI sources** (excluding accounts already observed in the balance-derived or signed-source-only account snapshot). It uses the same untrusted RPC and a `minContextSlot` no lower than earlier observations. The new `cpi_source_account_snapshot` and `cpi_source_coverage` remain separate from the original wire and from prior account snapshots. Per-instruction source, program, declared mint (when available), amount, account observation origin and slot are preserved. A later observed mint is not backfilled into unchecked CPI `Transfer`. Owner/delegate matches do not authenticate runtime authority, and neither `authorization_proven` nor `total_gross_token_spending_proven` is set to true. CPI source account coverage therefore improves observability, **not** transaction-wide authorization.
+
+
 
 Current official Solana docs describe **legacy**, **v0**, and **v1** transaction formats; v1 has different size and account/resource-limit semantics. The implementation must be version-aware.
 
