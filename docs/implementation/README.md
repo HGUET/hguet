@@ -7,15 +7,16 @@ Run:
 cargo test --workspace
 cargo run -p hguet -- --help
 cargo run -p hguet -- inspect transaction.bin --offline --json
+cargo run -p hguet -- inspect tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline --json
 cargo run -p hguet -- check transaction.bin --network devnet --mode local \
   --intent signed-intent.json --trusted-key PINNED_PUBKEY --json
 ```
 
-The `inspect` command parses **legacy and v0** Solana wire structure with strict size/index/bound checks. Address Lookup Table addresses are **not resolved**. `v1` wire transactions have a different layout and are explicitly **UNSUPPORTED** (UNKNOWN). No wallet signing, remote simulation, transaction-signature verification, token effects or Cloud calls are implemented.
+The `inspect` command now parses **legacy, v0 and v1** Solana wire structures using format-specific layouts. The v1 decoder reads its explicit resource config (including the **total** priority fee in lamports), fixed-width instruction headers and trailing signature array. It verifies any **nonzero Ed25519 transaction signatures** against the exact wire message, while accepting zero-filled unsigned placeholders in pre-signature workflows. v0 Address Lookup Table addresses remain **unresolved** until trusted RPC resolution is implemented. The decoder identifies top-level native **System Program Transfer** instructions and their integer lamports as a *lower bound* only. It cannot infer CPI, token movements, non-transfer System operations or the full amount of funds at risk. No RPC simulation, blockhash validity, wallet signing or Cloud calls are implemented.
 
 `check` verifies **Ed25519 signed payment intent** using a separately configured trusted public key. Signed message = ASCII `HGUET-PAYMENT-INTENT`, one zero byte, and the exact UTF-8 JSON bytes contained inside the Base64 `payload_b64`; it is intentionally NOT reserialized before checking the signature. This prevents JSON formatting ambiguity. After strict signature verification, the payload must bind the parsed **Solana message SHA-256**, network and validity window.
 
-**Important:** The prototype does not compute actual transfer lamports, simulate transaction effects, or apply the signed `max_spend_lamports` to decoded instruction effects. Therefore even a valid signed intent yields **UNKNOWN**, never ALLOW. A malformed transaction or invalid intent yields **DENY** (or CLI input error) and cannot authorize spending. The caller's signer still owns enforcement.
+**Important:** Signed `max_spend_lamports` is now checked against the **sum of decoded top-level native SOL Transfer instructions**; exceeding that lower bound causes `DENY`. This is not a proof that total spending is within the limit because CPI and other program effects remain unknown. A valid signed intent still yields **UNKNOWN**, never ALLOW. Nonzero invalid Ed25519 signatures cause `DENY` in `check`; missing signatures may be legitimate before signing and remain informational. A malformed transaction or invalid intent is rejected, and the customer-controlled signer retains enforcement responsibility.
 
 `SecurityVerdict` is returned as `{"inspection":..., "verdict":...}`; the JSON Schema validates **the nested `verdict` object**. CLI exit code `30` means UNKNOWN for `check`, `20` DENY, `40` malformed input; successful informational `inspect` returns `0` but does not imply security approval.
 
