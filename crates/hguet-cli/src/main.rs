@@ -217,6 +217,45 @@ fn token_2022_extension_findings(
     findings
 }
 
+/// A mint-state lookup happens in a separate one-provider read, not at the
+/// simulated execution bank. These observations can warn but never authorize.
+fn mint_snapshot_findings(
+    snapshot: &hguet_rpc::MintRpcSnapshot,
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    let mut findings=vec![("RPC_MINT_STATE_NON_ATOMIC","medium",
+        "Token-2022 mint state was read after simulation in a separate RPC call; matching or later slots are not an atomic execution-state proof")];
+    if snapshot.accounts.iter().any(|item|item.status=="missing") {
+        findings.push(("RPC_MINT_STATE_MISSING","high",
+            "At least one candidate mint account was absent from the selected RPC snapshot; mint constraints remain unknown"));
+    }
+    let states=snapshot.accounts.iter().filter_map(|item|item.state.as_ref()).collect::<Vec<_>>();
+    if states.iter().any(|s|s.fee_config.is_some()) {
+        findings.push(("RPC_MINT_TRANSFER_FEE_CONFIG","high",
+            "Token-2022 mint snapshot reports transfer-fee configuration; old/new epoch fees and mutable authority must be assessed before estimating net token receipt"));
+    }
+    if states.iter().any(|s|s.hook.as_ref().is_some_and(|h|h.program_id.is_some())) {
+        findings.push(("RPC_MINT_TRANSFER_HOOK_ACTIVE","high",
+            "Token-2022 mint snapshot reports an active transfer-hook program; downstream hook code and execution effects remain unverified"));
+    }
+    if states.iter().any(|s|s.permanent_delegate.is_some()) {
+        findings.push(("RPC_MINT_PERMANENT_DELEGATE_ACTIVE","high",
+            "Token-2022 mint snapshot reports a non-null permanent delegate with mint-wide token control; holder authorization alone may not restrict its actions"));
+    }
+    if states.iter().any(|s|s.confidential_extension_present) {
+        findings.push(("RPC_MINT_CONFIDENTIAL_EXTENSION","high",
+            "Token-2022 mint snapshot includes confidential extension state; ordinary balance snapshots do not establish complete asset effects"));
+    }
+    if states.iter().any(|s|s.unknown_extension_count>0) {
+        findings.push(("RPC_MINT_UNKNOWN_EXTENSION","high",
+            "One or more Token-2022 mint TLV extension IDs are unknown to this decoder; full program effects cannot be inferred"));
+    }
+    if states.iter().any(|s|s.extensions.iter().any(|x|!x.layout_checked)) {
+        findings.push(("RPC_MINT_OPAQUE_EXTENSION_STATE","high",
+            "One or more known or unknown mint extension payloads have not been semantically decoded; presence alone cannot prove safe transfers"));
+    }
+    findings
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -343,6 +382,12 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 ) {
                     verdict.finding(code,severity,message);
                 }
+                if let Some(ref mint_snapshot) = evidence.mint_snapshot {
+                    verdict.coverage.push("rpc_token_2022_mint_state_non_atomic".into());
+                    for (code,severity,message) in mint_snapshot_findings(mint_snapshot) {
+                        verdict.finding(code,severity,message);
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
@@ -426,6 +471,66 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod mint_snapshot_tests {
+    use super::*;
+    use hguet_rpc::{MintAccountObservation, MintRpcSnapshot, MintExtension,
+        Token2022MintState, MintTransferFeeConfig, MintTransferHook, FeeSchedule};
+
+    fn sample() -> MintRpcSnapshot {
+        let schedule=FeeSchedule{epoch:"1".into(),maximum_fee_raw:"5".into(),basis_points:10};
+        MintRpcSnapshot {
+            context_slot:501,simulation_slot:500,atomic_with_simulation:false,
+            accounts:vec![MintAccountObservation {
+                address:"mint".into(),status:"token_2022".into(),
+                state:Some(Token2022MintState {
+                    mint_address:"mint".into(),supply_raw:"1000".into(),
+                    decimals:9,extensions:vec![
+                        MintExtension{type_id:1,family:"transfer_fee_config",
+                            payload_bytes:108,layout_checked:true},
+                        MintExtension{type_id:4,family:"confidential_transfer_mint",
+                            payload_bytes:65,layout_checked:false},
+                    ],
+                    fee_config:Some(MintTransferFeeConfig {
+                        config_authority:None,withdraw_withheld_authority:None,
+                        withheld_raw:"0".into(),older:schedule.clone(),newer:schedule,
+                    }),
+                    hook:Some(MintTransferHook{
+                        update_authority:None,program_id:Some("hook".into()),
+                    }),
+                    permanent_delegate:Some("delegate".into()),
+                    unknown_extension_count:1,confidential_extension_present:true,
+                    limitations:"single-provider".into(),
+                }),
+            }],
+            limitation:"non-atomic".into(),
+        }
+    }
+    #[test]
+    fn every_active_mint_risk_is_advisory_and_non_atomic() {
+        let findings=mint_snapshot_findings(&sample());
+        let codes=findings.iter().map(|(code,_,_)|*code).collect::<Vec<_>>();
+        assert!(codes.contains(&"RPC_MINT_STATE_NON_ATOMIC"));
+        assert!(codes.contains(&"RPC_MINT_TRANSFER_FEE_CONFIG"));
+        assert!(codes.contains(&"RPC_MINT_TRANSFER_HOOK_ACTIVE"));
+        assert!(codes.contains(&"RPC_MINT_PERMANENT_DELEGATE_ACTIVE"));
+        assert!(codes.contains(&"RPC_MINT_CONFIDENTIAL_EXTENSION"));
+        assert!(codes.contains(&"RPC_MINT_UNKNOWN_EXTENSION"));
+        assert!(codes.contains(&"RPC_MINT_OPAQUE_EXTENSION_STATE"));
+        assert!(!codes.contains(&"ALLOW"));
+    }
+    #[test]
+    fn missing_mints_never_imply_no_active_risk() {
+        let mut sample=sample();
+        sample.accounts=vec![MintAccountObservation {
+            address:"missing".into(),status:"missing".into(),state:None,
+        }];
+        let codes=mint_snapshot_findings(&sample)
+            .into_iter().map(|(code,_,_)|code).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["RPC_MINT_STATE_NON_ATOMIC","RPC_MINT_STATE_MISSING"]);
     }
 }
 
