@@ -40,6 +40,32 @@ jobs:
         run: |
           python -m pip install 'jsonschema[format]>=4,<5'
           python scripts/validate_json_contracts.py
+      - name: Verify restrictive offline local policy and hard DENY
+        run: |
+          cargo run -p hguet -- policy validate tests/fixtures/policy-devnet-deny.toml --json > /tmp/policy-valid.json
+          python - <<'PY'
+          import json
+          with open('/tmp/policy-valid.json',encoding='utf-8') as f:
+              value=json.load(f)
+          assert value['status']=='valid' and value['network']=='devnet'
+          assert value['cloud_network_access'] is False
+          PY
+          # A local hard DENY must happen even before an untrusted signed intent
+          # can provide an authorization. Intentionally no real intent file here.
+          set +e
+          cargo run -p hguet -- check tests/fixtures/v1-system-transfer.base64 --encoding base64 --mode local --network devnet --intent tests/fixtures/nonexistent-intent.json --policy tests/fixtures/policy-devnet-deny.toml --json > /tmp/policy-deny.json
+          status=$?
+          set -e
+          test "$status" -eq 20
+          python - <<'PY'
+          import json
+          with open('/tmp/policy-deny.json',encoding='utf-8') as f:
+              report=json.load(f)
+          assert report['verdict']['decision']=='DENY'
+          assert any(x['code']=='POLICY_SOL_TRANSFER_CAP' for x in report['verdict']['findings'])
+          assert report['inspection']['declared_system_transfer_lamports']=='500'
+          print('PASS: offline policy hard DENY, independent of unsigned intent or Cloud')
+          PY
       - name: End-to-end offline CLI JSON smoke
         run: |
           cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json > /tmp/hguet-inspect.json
