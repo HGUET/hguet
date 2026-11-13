@@ -9,7 +9,7 @@ This directory is the **canonical public contract** shared by `HGUET/hguet` (Rus
 - [hguet.proto](hguet.proto) — TLS-framed Protobuf: `PriceQuoteRequest`, `PriceQuoteResult`, `PaidCheckRequest`, `PaidCheckStatus`, pending `CheckReceipt`, terminal `CheckResult`.
 - [payment-quote.schema.json](payment-quote.schema.json) — JCS-canonical signed SOL/USD quote; **USD tariff is a price reference, not a token transfer**.
 - [payment-receipt.schema.json](payment-receipt.schema.json) — separately signed receipt for **one native SOL payment, one Cloud check**.
-- [cloud-assessment.schema.json](cloud-assessment.schema.json) — source-attributed, separately signed Cloud risk assessment. The CLI composes the **final** SecurityVerdict.
+- [cloud-assessment.schema.json](cloud-assessment.schema.json) — source-attributed, separately signed Cloud risk assessment bound by quote ID (not by an obsolete tenant/account). The CLI composes the **final** SecurityVerdict.
 - [contract-cases.json](contract-cases.json) — 30 **planned** interoperability scenarios, not completed integration tests.
 - [fixtures/payment-quote-example.json](fixtures/payment-quote-example.json), [fixtures/payment-receipt-example.json](fixtures/payment-receipt-example.json), [fixtures/cloud-assessment-example.json](fixtures/cloud-assessment-example.json) — synthetic only, never production treasury or current market data.
 - [Authoritative payment spec](../../docs/architecture/payment-per-request.md) and [CLI/server compatibility](../../docs/architecture/interoperability.md).
@@ -49,3 +49,9 @@ CLI local check (free)
 - Replay, wrong cluster, wrong receiver, changed message, expired quote or wrong claim secret fail closed; network delays remain pending and can be recovered.
 
 **No released protocol version exists yet.** The private server must pin this exact public draft while in development and run cross-repository fixtures before production.
+## Contract corrections from joint audit
+
+- `PriceQuoteRequest` can include **raw transaction bytes with explicit consent** before payment, only to validate a bounded complexity tier and wire/message digest. It must never silently send raw data or run expensive unquoted network analysis.
+- `PaymentQuote`, `CloudAssessment`, and `PaymentReceipt` bind the **same one-use `quote_id`**, message digest, network/genesis, environment and optional original wire digest. The server cannot authenticate a previous tenant in this accountless design.
+- `verified_from_raw_transaction` is accepted only when the server actually decoded a consented raw transaction; a client-provided boolean is not evidence.
+- Signed payment amounts and USD/SOL price numerators must be **strictly positive integers**; a 0-lamport receipt cannot be a completed paid check.
