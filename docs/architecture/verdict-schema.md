@@ -2,6 +2,15 @@
 
 **Design only.** Proposed JSON schema `schema_version=1`; version control will stabilize it before implementation. A JSON output is an **evidence-bearing advisory opinion**, never a transaction authorization on its own.
 
+## Relationship to CloudAssessment
+
+**[Unified interoperability contract](interoperability.md)** distinguishes two independently verified artifacts:
+
+1. **SecurityVerdict (this document)** — final JSON produced by the **CLI** after combining mandatory local checks with any optional Cloud facts. This *composite JSON is not server-signed*.
+2. **CloudAssessment** — signed, server-issued *enrichment* with network/program/behavior findings, whose canonical schema lives in [protocol/v1/cloud-assessment.schema.json](../../protocol/v1/cloud-assessment.schema.json). BillingReceipt has its own signature and key/nonce domain.
+
+A valid Cloud signature authenticates only the CloudAssessment, not a guarantee that the overall payment is safe. Local hard DENY remains DENY. Invalid/expired/mismatched Cloud evidence is discarded, and Cloud-required profiles return UNKNOWN.
+
 ## 1. Decision semantics
 
 | Status | Meaning | Default signer behavior |
@@ -84,7 +93,7 @@ This payload is **illustrative** and NOT a real HGUET check:
   },
   "provenance": {
     "sources": ["user-rpc-1", "trusted-local-intent"],
-    "cloud_report_signature": null
+    "cloud_assessment_signature": null
   },
   "limits": [
     "Simulation is a snapshot; network state may change before execution",
@@ -137,11 +146,11 @@ No raw proprietary feed or tenant data should leak by default. A customer must s
 
 ## 5. Signature design
 
-For enriched signed reports:
+For signed **CloudAssessment** reports (not the final CLI SecurityVerdict):
 
 1. Define exact canonical byte encoding (e.g., canonical JSON/JCS or protobuf canonical subset with explicit rules).
 2. Exclude the signature field from the signed body.
-3. Domain-separate `HGUET-VERDICT/v1` and include original message hash, intent hash, network, profile, decision, issued-at, expiry and evidence hash.
+3. Domain-separate `HGUET-CLOUD-ASSESSMENT/v1` and include original message hash, intent hash, network, profile, decision, issued-at, expiry and evidence hash.
 4. Sign with a server-held, rotated key; prefer ML-DSA-87 for the post-quantum profile once end-to-end implementation is verified.
 5. Publish server verification keys and rotation records through an authenticated pinned-key chain.
 6. Client verifies signature and freshness before indicating `report_signature_verified=true`.
