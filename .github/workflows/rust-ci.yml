@@ -1,0 +1,28 @@
+name: Unreleased Rust CLI build and tests
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Build workspace (no prebuilt artifacts)
+        run: cargo build --workspace
+      - name: Test offline parser and signed intent
+        run: cargo test --workspace
+      - name: Lint implementation
+        run: cargo clippy --workspace --all-targets
+      - name: Verify Rust CLI help
+        run: cargo run -p hguet -- --help
+      - name: Validate public schema and illustrative fixtures
+        run: |
+          python -m pip install 'jsonschema[format]>=4,<5'
+          python scripts/validate_json_contracts.py

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/payment-intent.schema.json",
+  "title": "HGUET PaymentIntent payload — unreleased draft",
+  "description": "Exact UTF-8 JSON payload bytes are signed with Ed25519 over HGUET-PAYMENT-INTENT + NUL + payload. The signature and untrusted claimed signer are outside this payload, in signed-payment-intent.schema.json. The user configures the trusted public key independently. Verification proves the intent author signed the bytes; not that the Solana transfer is safe, simulated, or below declared spend cap.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "intent_id",
+    "network",
+    "message_sha256",
+    "not_before_unix",
+    "expires_at_unix",
+    "allowed_program_ids",
+    "max_spend_lamports"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "hguet_payment_intent"
+    },
+    "intent_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "network": {
+      "enum": [
+        "mainnet",
+        "devnet",
+        "testnet"
+      ]
+    },
+    "message_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "not_before_unix": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expires_at_unix": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "allowed_program_ids": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 32,
+        "maxLength": 44
+      }
+    },
+    "max_spend_lamports": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "maxLength": 20
+    }
+  }
+}
