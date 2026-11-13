@@ -77,16 +77,13 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
     if values.len()!=rows.len(){return Err(RpcError::InvalidResponse);}
     let mut accounts=Vec::with_capacity(rows.len());
     for (row,value) in rows.iter().zip(values) {
-        let matching_mint_state_observed=mints.is_some_and(|snapshot|
-            snapshot.accounts.iter().any(|mint|mint.address==row.mint&&
-                mint.status=="token_2022"&&mint.state.is_some()));
         let mut observation=TokenAccountObservation{
             address:row.token_account.clone(),
             simulation_reported_mint:row.mint.clone(),
             status:String::new(),state:None,
             mint_matches_simulation_report:None,
             authority_matches_simulation_report:None,
-            matching_mint_state_observed,
+            matching_mint_state_observed:false,
         };
         if value.is_null() {
             observation.status="missing".into();
@@ -116,6 +113,12 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
         let bytes=STANDARD.decode(encoded).map_err(|_|RpcError::InvalidResponse)?;
         let state=parse_token_2022_account(&row.token_account,owner,&bytes)?;
         observation.mint_matches_simulation_report=Some(state.mint==row.mint);
+        // Never correlate a later account to the *reported* mint when its own
+        // decoded mint differs; that would create a false mint-state link.
+        observation.matching_mint_state_observed=mints.is_some_and(|snapshot|
+            snapshot.accounts.iter().any(|mint|
+                mint.address==state.mint && mint.address==row.mint &&
+                mint.status=="token_2022" && mint.state.is_some()));
         observation.authority_matches_simulation_report=
             row.owner.as_ref().map(|reported|state.token_authority==*reported);
         observation.status="token_2022".into();
