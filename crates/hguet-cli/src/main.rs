@@ -256,6 +256,74 @@ fn mint_snapshot_findings(
     findings
 }
 
+/// Token-account and mint-state reads are *separate* single-RPC snapshots.
+/// They cannot prove a pre-sign or execution-state authorization.
+fn token_account_snapshot_findings(
+    snapshot: &hguet_rpc::TokenAccountRpcSnapshot,
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    let mut findings=vec![("RPC_TOKEN_ACCOUNT_NON_ATOMIC","medium",
+        "Token-2022 holding account state was read separately after simulation; minimum slot does not guarantee an atomic execution snapshot")];
+    if snapshot.accounts.iter().any(|x|x.status=="missing") {
+        findings.push(("RPC_TOKEN_ACCOUNT_MISSING","high",
+            "At least one token holding account was absent from a later RPC snapshot; balances and authorities are unresolved"));
+    }
+    if snapshot.accounts.iter().any(|x|x.mint_matches_simulation_report==Some(false)) {
+        findings.push(("RPC_TOKEN_ACCOUNT_MINT_MISMATCH","high",
+            "A token account mint in the later RPC snapshot differs from simulated balance metadata; this may be stale or inconsistent provider evidence"));
+    }
+    if snapshot.accounts.iter().any(|x|x.authority_matches_simulation_report==Some(false)) {
+        findings.push(("RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH","high",
+            "Token account authority differs between later account state and simulated balance metadata; neither view can establish signer authorization"));
+    }
+    let states=snapshot.accounts.iter().filter_map(|x|x.state.as_ref()).collect::<Vec<_>>();
+    if snapshot.accounts.iter().any(|x|x.state.is_some()&&!x.matching_mint_state_observed) {
+        findings.push(("RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED","high",
+            "Token account was read but its referenced mint was not confirmed as a Token-2022 mint in the separate mint snapshot"));
+    }
+    if states.iter().any(|s|s.account_state=="frozen") {
+        findings.push(("RPC_TOKEN_ACCOUNT_FROZEN","high",
+            "A token holding account is frozen in the later snapshot; transferability and delivery must not be assumed"));
+    }
+    if states.iter().any(|s|s.delegate.is_some()) {
+        findings.push(("RPC_TOKEN_ACCOUNT_DELEGATE","high",
+            "A token holding account has a delegate authority; delegated allowances and authorization are not independently enforced"));
+    }
+    if states.iter().any(|s|s.close_authority.is_some()) {
+        findings.push(("RPC_TOKEN_ACCOUNT_CLOSE_AUTHORITY","medium",
+            "A separate close authority is configured on a token account; account closure permissions may differ from holder permissions"));
+    }
+    if states.iter().any(|s|s.transfer_fee_withheld_raw.as_deref()
+        .is_some_and(|amount|amount!="0")) {
+        findings.push(("RPC_TOKEN_ACCOUNT_WITHHELD_FEES","high",
+            "Token-2022 account snapshot contains nonzero withheld transfer fees; the gross and net token movements are not fully attributed"));
+    }
+    if states.iter().any(|s|s.requires_incoming_memo==Some(true)) {
+        findings.push(("RPC_TOKEN_ACCOUNT_MEMO_REQUIRED","medium",
+            "Token-2022 account requires incoming transfer memos; no transaction-wide memo compliance has been proven"));
+    }
+    if states.iter().any(|s|s.cpi_guard_locked==Some(true)) {
+        findings.push(("RPC_TOKEN_ACCOUNT_CPI_GUARD","medium",
+            "Token-2022 account has CPI Guard enabled; some cross-program operations may be restricted"));
+    }
+    if states.iter().any(|s|s.transfer_hook_transferring==Some(true)) {
+        findings.push(("RPC_TOKEN_ACCOUNT_HOOK_TRANSFERRING","high",
+            "Token account reports an in-progress transfer hook flag; hook state and execution cannot be independently confirmed"));
+    }
+    if states.iter().any(|s|s.non_transferable_account) {
+        findings.push(("RPC_TOKEN_ACCOUNT_NON_TRANSFERABLE","high",
+            "Token account carries NonTransferableAccount extension; token delivery and onward transfer assumptions require independent checks"));
+    }
+    if states.iter().any(|s|s.confidential_extension_present) {
+        findings.push(("RPC_TOKEN_ACCOUNT_CONFIDENTIAL","high",
+            "Token account has confidential extensions; public token balance snapshots may omit relevant encrypted flows"));
+    }
+    if states.iter().any(|s|s.unknown_extension_count>0||s.opaque_extension_count>0) {
+        findings.push(("RPC_TOKEN_ACCOUNT_OPAQUE_EXTENSION","high",
+            "Token account carries unsupported or unknown TLV extension payloads; HGUET cannot claim complete token semantics"));
+    }
+    findings
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -388,6 +456,12 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         verdict.finding(code,severity,message);
                     }
                 }
+                if let Some(ref account_snapshot) = evidence.token_account_snapshot {
+                    verdict.coverage.push("rpc_token_2022_account_state_non_atomic".into());
+                    for (code,severity,message) in token_account_snapshot_findings(account_snapshot) {
+                        verdict.finding(code,severity,message);
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
@@ -474,6 +548,85 @@ fn main(){
     }
 }
 
+#[cfg(test)]
+mod token_account_snapshot_tests {
+    use super::*;
+    use hguet_rpc::{
+        TokenAccountRpcSnapshot,TokenAccountObservation,
+        Token2022AccountState,TokenAccountExtension,
+    };
+    fn sample() -> TokenAccountRpcSnapshot {
+        TokenAccountRpcSnapshot {
+            context_slot:600,simulation_slot:500,atomic_with_simulation:false,
+            accounts:vec![TokenAccountObservation {
+                address:"token-account".into(),
+                simulation_reported_mint:"mint".into(),
+                status:"token_2022".into(),
+                state:Some(Token2022AccountState {
+                    token_account:"token-account".into(),
+                    mint:"other-mint".into(),
+                    token_authority:"new-authority".into(),
+                    amount_raw:"400".into(),
+                    delegate:Some("delegate".into()),
+                    delegated_amount_raw:"50".into(),
+                    account_state:"frozen",
+                    native_reserve_lamports:None,
+                    close_authority:Some("closer".into()),
+                    transfer_fee_withheld_raw:Some("5".into()),
+                    requires_incoming_memo:Some(true),
+                    cpi_guard_locked:Some(true),
+                    transfer_hook_transferring:Some(true),
+                    immutable_owner:false,non_transferable_account:true,
+                    confidential_extension_present:true,
+                    opaque_extension_count:1,unknown_extension_count:1,
+                    extensions:vec![TokenAccountExtension {
+                        type_id:65000,family:"unknown_extension",
+                        payload_bytes:3,layout_checked:false,
+                    }],
+                    limitation:"single-provider".into(),
+                }),
+                mint_matches_simulation_report:Some(false),
+                authority_matches_simulation_report:Some(false),
+                matching_mint_state_observed:false,
+            }],
+            limitation:"non-atomic".into(),
+        }
+    }
+    #[test]
+    fn suspicious_token_account_attributes_create_high_risk_advisory_findings(){
+        let codes=token_account_snapshot_findings(&sample())
+            .into_iter().map(|(code,_,_)|code).collect::<Vec<_>>();
+        for expected in [
+            "RPC_TOKEN_ACCOUNT_NON_ATOMIC",
+            "RPC_TOKEN_ACCOUNT_MINT_MISMATCH",
+            "RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH",
+            "RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED",
+            "RPC_TOKEN_ACCOUNT_FROZEN","RPC_TOKEN_ACCOUNT_DELEGATE",
+            "RPC_TOKEN_ACCOUNT_CLOSE_AUTHORITY",
+            "RPC_TOKEN_ACCOUNT_WITHHELD_FEES",
+            "RPC_TOKEN_ACCOUNT_MEMO_REQUIRED",
+            "RPC_TOKEN_ACCOUNT_CPI_GUARD",
+            "RPC_TOKEN_ACCOUNT_HOOK_TRANSFERRING",
+            "RPC_TOKEN_ACCOUNT_NON_TRANSFERABLE",
+            "RPC_TOKEN_ACCOUNT_CONFIDENTIAL",
+            "RPC_TOKEN_ACCOUNT_OPAQUE_EXTENSION",
+        ] {
+            assert!(codes.contains(&expected),"missing {expected}");
+        }
+        assert!(!codes.contains(&"ALLOW"));
+    }
+    #[test]
+    fn missing_account_does_not_get_decoded_as_zero_or_trusted(){
+        let mut snap=sample();
+        snap.accounts[0].status="missing".into();
+        snap.accounts[0].state=None;
+        snap.accounts[0].mint_matches_simulation_report=None;
+        snap.accounts[0].authority_matches_simulation_report=None;
+        let codes=token_account_snapshot_findings(&snap).into_iter()
+            .map(|(code,_,_)|code).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["RPC_TOKEN_ACCOUNT_NON_ATOMIC","RPC_TOKEN_ACCOUNT_MISSING"]);
+    }
+}
 #[cfg(test)]
 mod mint_snapshot_tests {
     use super::*;
