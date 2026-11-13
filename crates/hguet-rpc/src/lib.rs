@@ -353,6 +353,7 @@ mod tests {
         assert_eq!(requests[1]["params"][1]["sigVerify"],false);
         assert_eq!(requests[1]["params"][1]["replaceRecentBlockhash"],true);
         assert_eq!(requests[1]["params"][1]["innerInstructions"],true);
+        assert_eq!(requests[1]["params"][1]["innerInstructionsEncoding"],"json");
     }
     #[test] fn rpc_errors_and_onchain_simulation_errors_are_not_false_success() {
         let bad=fake(DEVNET_GENESIS,json!({"InstructionError":[0,"Custom"]}));
