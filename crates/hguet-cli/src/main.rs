@@ -791,6 +791,100 @@ fn main(){
 }
 
 #[cfg(test)]
+mod signed_token_cap_rpc_tests {
+    use super::*;
+    use hguet_core::TokenSpendLimit;
+    use hguet_rpc::{SimulationEffects,CpiObservation,TokenBalanceDelta,TokenCpiInstruction};
+    fn key(i:u8)->String{bs58::encode([i;32]).into_string()}
+    fn intent()->PaymentIntentPayload {
+        PaymentIntentPayload {
+            schema_version:1,kind:"hguet_payment_intent".into(),
+            intent_id:"synthetic".into(),network:"devnet".into(),
+            message_sha256:"a".repeat(64),not_before_unix:1,
+            expires_at_unix:4102444800,allowed_program_ids:vec![],
+            max_spend_lamports:"1000".into(),
+            token_spend_limits:Some(vec![TokenSpendLimit {
+                mint:key(2),max_debit_raw:"100".into(),
+            }]),
+        }
+    }
+    fn checked(mint:u8,amount:&str)->TokenCpiInstruction {
+        TokenCpiInstruction {
+            parent_instruction_index:0,inner_instruction_index:0,
+            program_id:"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".into(),
+            operation:"transfer_checked".into(),
+            source_account:Some(key(3)),destination_account:Some(key(4)),
+            mint:Some(key(mint)),authority:Some(key(5)),delegate:None,
+            amount_raw:Some(amount.into()),decimals:Some(6),
+            authority_type:None,new_authority:None,
+        }
+    }
+    fn delta(mint:u8,loss:&str)->TokenBalanceDelta{
+        TokenBalanceDelta{
+            account_index:0,token_account:key(3),mint:key(mint),
+            owner:Some(key(5)),decimals:6,
+            before_raw_amount:Some("1000".into()),
+            after_raw_amount:Some("900".into()),
+            delta_raw_amount:Some(loss.into()),complete_pair:true,
+        }
+    }
+    fn effects(cpi:Vec<TokenCpiInstruction>,balance:Vec<TokenBalanceDelta>)
+        ->SimulationEffects{
+        SimulationEffects {
+            lamport_deltas:None,token_deltas:Some(balance),
+            cpi:CpiObservation {
+                captured:true,group_count:Some(1),instruction_count:Some(cpi.len()),
+                invoked_program_ids:vec![],token_instructions:cpi,
+                token_2022_extension_observations:vec![],
+                opaque_token_instruction_count:0,
+                token_2022_extension_instruction_count:0,
+                missing_compiled_token_data_count:0,
+                requires_semantic_review:true,limitations:vec![],
+            },
+            simulated_fee_lamports:None,observed_fields:vec![],
+            missing_fields:vec![],warnings:vec![],
+            security_coverage:"partial_untrusted_rpc".into(),
+        }
+    }
+    fn codes(intent:&PaymentIntentPayload,effects:&SimulationEffects)->Vec<&'static str>{
+        rpc_signed_token_cap_findings(intent,"rpc_succeeded",effects)
+            .into_iter().map(|item|item.0).collect()
+    }
+    #[test]
+    fn cpi_sum_and_simulated_losses_over_mint_cap_are_advisory(){
+        let e=effects(vec![checked(2,"65"),checked(2,"45")],
+            vec![delta(2,"-110")]);
+        let findings=codes(&intent(),&e);
+        assert!(findings.contains(&"RPC_SIGNED_TOKEN_CPI_OVER_CAP"));
+        assert!(findings.contains(&"RPC_SIGNED_TOKEN_NET_LOSS_OVER_CAP"));
+        assert!(!findings.contains(&"RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS"));
+        let matched=effects(vec![checked(2,"60"),checked(2,"40")],
+            vec![delta(2,"-90")]);
+        assert!(codes(&intent(),&matched).is_empty());
+    }
+    #[test]
+    fn rpc_unlisted_token_and_incomplete_cpi_are_never_approved(){
+        let mut e=effects(vec![checked(6,"5")],vec![delta(6,"-5")]);
+        e.cpi.opaque_token_instruction_count=1;
+        let findings=codes(&intent(),&e);
+        assert!(findings.contains(&"RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS"));
+        assert!(findings.contains(&"RPC_SIGNED_TOKEN_CAP_INCOMPLETE"));
+        e.cpi.opaque_token_instruction_count=0;
+        e.cpi.captured=false;
+        assert!(codes(&intent(),&e).contains(&"RPC_SIGNED_TOKEN_CAP_INCOMPLETE"));
+    }
+    #[test]
+    fn no_verified_caps_or_failed_simulation_cannot_claim_rpc_violation(){
+        let e=effects(vec![checked(2,"1000")],vec![delta(2,"-1000")]);
+        assert!(rpc_signed_token_cap_findings(&intent(),"rpc_failed",&e).is_empty());
+        let mut legacy=intent();
+        legacy.token_spend_limits=None;
+        assert!(codes(&legacy,&e).is_empty());
+        assert!(rpc_signed_token_cap_findings(&intent(),"rpc_unavailable",&e).is_empty());
+    }
+}
+
+#[cfg(test)]
 mod wire_direct_token_tests {
     use super::*;
     use hguet_rpc::{
