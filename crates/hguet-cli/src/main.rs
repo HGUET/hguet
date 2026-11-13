@@ -201,6 +201,25 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 verdict.simulation_status=evidence.status.clone();
                 verdict.coverage.push("solana_rpc_genesis_verified".into());
                 verdict.coverage.push("solana_rpc_simulation_single_provider".into());
+                let effects=&evidence.effect_analysis;
+                if effects.lamport_deltas.is_some() {
+                    verdict.coverage.push("rpc_paired_native_balance_snapshots".into());
+                }
+                if effects.token_deltas.is_some() {
+                    verdict.coverage.push("rpc_paired_token_balance_snapshots".into());
+                }
+                if effects.cpi.captured {
+                    verdict.coverage.push("rpc_cpi_recording".into());
+                }
+                if !effects.missing_fields.is_empty() {
+                    verdict.finding("RPC_EFFECT_EVIDENCE_INCOMPLETE","high",
+                        "Solana RPC omitted balance/token/CPI fields: missing observations do not imply zero transfers");
+                }
+                if effects.token_deltas.as_ref().is_some_and(|items|
+                    items.iter().any(|delta| !delta.complete_pair)) {
+                    verdict.finding("RPC_TOKEN_DELTA_UNDETERMINED","high",
+                        "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred");
+                }
                 if evidence.status=="rpc_failed" {
                     verdict.finding("RPC_SIMULATION_FAILED","high",
                         "The selected Solana RPC reported a failed simulation; execution is not validated");
