@@ -199,6 +199,24 @@ For each token account, HGUET reports whether the later snapshot's base mint and
 
 References: [Solana getMultipleAccounts](https://solana.com/docs/rpc/http/getmultipleaccounts), [official Token Account base struct](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/state/struct.Account.html), [Token-2022 extension identifiers](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/enum.ExtensionType.html), [Transfer Fee Account](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/transfer_fee/struct.TransferFeeAmount.html), [CPI Guard](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/cpi_guard/struct.CpiGuard.html).
 
+## Effect Correlation Engine — deterministic advisory graph
+
+The opt-in RPC response now includes `rpc_analysis.effect_graph` after strict transaction parsing, simulation metadata checks and any optional mint/token-account lookups. It is a **bounded in-memory evidence index**, not a blockchain graph database, execution trace proof, exact-spend ledger, or policy ALLOW engine.
+
+The graph has namespaced `nodes` (`account`, `mint`, `authority`, `program`, `asset`), `edges` with explicit source/target, relation, amount when genuinely available, optional mint, top-level/CPI instruction indexes, RPC slot and attribution category. Deterministic node order and explicit hard limits (512 nodes / 1,024 edges) prevent unbounded output; the existing bounded RPC parsers also limit source input.
+
+Evidence provenance is **not merged**:
+- `original_wire` / `declared_only`: explicitly decoded top-level System transfers and program identities from the original transaction. These are declarations, not executed transfers.
+- `rpc_paired_balances` / `rpc_token_balances` with `rpc_observed`: native and token **net** deltas from complete simulated balance pairs; partial token rows remain partial and never assume zeros.
+- `rpc_compiled_cpi` / `rpc_observed`: selected token transfers, mint/burn and authority/delegation instructions, retaining parent and inner CPI indexes and their declared raw amounts. Their **causal attribution to net balance differences is unknown**: intermediate movements, Token-2022 fees, hooks, multiple instructions and compensating flows cannot be recovered by matching quantities.
+- `rpc_later_mint_account` and `rpc_later_token_account` / `later_non_atomic_state`: mint→hook/delegate and holding→mint/owner/delegate links from separate snapshot calls. Each edge retains the separate context slot. Even matching slots do not prove an atomic transaction-bank snapshot.
+
+The graph also carries `sources` (with slot and explicit non-atomic flags), `evidence_gaps` (e.g. missing paired snapshots, opaque CPI, unresolved lookup addresses, missing state, cross-slot state), and `alerts` (e.g. CPI gross-vs-net attribution unproven, mint/authority disagreement, delegated privileges and hook/fee changes). The invariants `execution_proven=false`, `spend_limit_enforced=false` and `security_coverage="partial_untrusted_rpc"` do not change when all graph edges are populated.
+
+Only on successful simulation, the CLI can add `RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED`, `RPC_EFFECT_GRAPH_IDENTITY_CONFLICT` and `RPC_EFFECT_GRAPH_OPAQUE_CPI` advisory findings. A failed simulation creates **wire-declaration-only** edges; it never fabricates simulated effects. A successful simulation stays `UNKNOWN` rather than `ALLOW`, including if no graph alert appears.
+
+Next steps: independent/atomic state validation, direct **top-level** SPL Token instruction decoding, richer CPI effect coverage, accounting for multiple transfers and fees, cross-provider checks, and signer-side enforcement of a separately pinned payment policy.
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
