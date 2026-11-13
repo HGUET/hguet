@@ -37,5 +37,6 @@
     "risk_subjects": 2,
     "verified_from_raw_transaction": false
   },
-  "max_lamports_requested": "200000"
+  "max_lamports_requested": "200000",
+  "transaction_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
