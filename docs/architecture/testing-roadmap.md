@@ -19,6 +19,10 @@
 
 Do not start private Cloud before a useful and well-tested **free M1–M4** milestone exists.
 
+### Cross-repository interoperability gate
+
+Both projects must consume the single public [protocol v1 draft](../../protocol/v1/README.md) and execute [contract conformance scenarios](../../protocol/v1/contract-cases.json). Mandatory negative tests include Cloud-signed assessment versus CLI-composed SecurityVerdict, hash-only capability restrictions, receipt/idempotency boundaries, TLS algorithm downgrade, account/tenant mixups and Cloud outage behavior. **The presence of draft fixtures does not mean these tests have run.**
+
 ## 2. Test matrix
 
 ### Parsing and input safety
