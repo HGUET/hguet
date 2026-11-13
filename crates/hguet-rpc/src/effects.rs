@@ -308,9 +308,16 @@ pub fn inspect_simulation_effects(
             observed.push("simulated_fee".into());Some(amount.to_string())
         }
     };
-    if !validate_loaded_addresses(body,parsed,lookup)? {
-        missing.push("loaded_addresses_confirmation".into());
-    } else {
+    let loaded_confirmed=validate_loaded_addresses(body,parsed,lookup)?;
+    if parsed.unresolved_lookup_addresses>0 {
+        if loaded_confirmed {
+            observed.push("loaded_addresses_confirmation".into());
+        } else {
+            missing.push("loaded_addresses_confirmation".into());
+        }
+    } else if loaded_confirmed {
+        // For legacy and v1, no ALT resolution is required. Omission of this
+        // optional metadata is not an incomplete security check on its own.
         observed.push("loaded_addresses_confirmation".into());
     }
     if lamports.is_none() || tokens.is_none() || !cpi.captured {
@@ -372,6 +379,7 @@ mod tests {
         assert!(result.token_deltas.is_none());
         assert!(!result.cpi.captured);
         assert!(result.missing_fields.contains(&"paired_token_balance_snapshots".to_owned()));
+        assert!(!result.missing_fields.contains(&"loaded_addresses_confirmation".to_owned()));
     }
     #[test] fn newly_created_token_account_is_not_implicitly_zero() {
         let data=json!({"preTokenBalances":[],"postTokenBalances":[row(1,"5000")]});
