@@ -88,6 +88,8 @@ The server signs a **canonical assessment payload**, with data sufficient for th
   "capabilities_unavailable": [],
   "risk_snapshot_id": "<opaque>",
   "ruleset_version": "<version>",
+  "evidence_digest": "<lowercase 64-hex evidence manifest digest>",
+  "sources": [{"source_id": "example", "kind": "solana_rpc", "observed_at": "<UTC RFC3339>", "evidence_sha256": "<lowercase 64-hex>"}],
   "findings": [],
   "coverage": {"required": [], "passed": [], "unknown": []},
   "issued_at": "<UTC RFC3339>",
@@ -97,6 +99,7 @@ The server signs a **canonical assessment payload**, with data sufficient for th
 
 - Serialize this body using a **chosen canonical encoding**. Proposed target: RFC 8785 JCS JSON with a strict fixed schema, rejected duplicate keys/unknown critical fields, bounded size.
 - Sign `ASCII("HGUET-CLOUD-ASSESSMENT/v1") || 0x00 || canonical_body_bytes` with the tested ML-DSA-87 report key. Key ID and signature are carried **outside** the canonical body. This signature binds claims and inputs; it cannot prove their accuracy.
+- The signed payload covers source IDs/timestamps and a digest of a retained evidence manifest; source provenance is not proof of source accuracy.
 - Server identity and report key are separately verified via authenticated distribution/rotation. Client recomputes hashes, checks time window and account/request binding **before** reporting `signature_verified=true`.
 - Signed billing receipt is separate from signed risk assessment (a completed check and its charge are independently auditable).
 - Never copy a server-supplied verdict into local final `decision` without local coverage/aggregation.
