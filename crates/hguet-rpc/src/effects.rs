@@ -2,7 +2,7 @@
 //! These are observations from one user-selected RPC, NOT independent proof of
 //! execution, sender authorization, total debit, or safe signing.
 //! Missing data is missing coverage, NEVER zero balance / no CPI / no tokens.
-use crate::{alt::LookupResolution, RpcError};
+use crate::{alt::LookupResolution, token_semantics::{decode_token_cpi, is_token_program, TokenCpiDecode, TokenCpiInstruction}, RpcError};
 use hguet_core::ParsedTransaction;
 use serde::Serialize;
 use serde_json::Value;
@@ -40,6 +40,10 @@ pub struct CpiObservation {
     pub group_count: Option<usize>,
     pub instruction_count: Option<usize>,
     pub invoked_program_ids: Vec<String>,
+    pub token_instructions: Vec<TokenCpiInstruction>,
+    pub opaque_token_instruction_count: usize,
+    pub token_2022_extension_instruction_count: usize,
+    pub missing_compiled_token_data_count: usize,
     pub requires_semantic_review: bool,
     pub limitations: Vec<String>,
 }
@@ -248,7 +252,12 @@ pub fn inspect_simulation_effects(
             missing.push("cpi_recording".into());
             CpiObservation {
                 captured:false,group_count:None,instruction_count:None,
-                invoked_program_ids:vec![],requires_semantic_review:true,
+                invoked_program_ids:vec![],
+                token_instructions:vec![],
+                opaque_token_instruction_count:0,
+                token_2022_extension_instruction_count:0,
+                missing_compiled_token_data_count:0,
+                requires_semantic_review:true,
                 limitations:vec!["CPI recording missing; unknown effects cannot be ruled out".into()]
             }
         }
@@ -257,6 +266,10 @@ pub fn inspect_simulation_effects(
             let mut count=0usize;
             let mut seen=BTreeSet::new();
             let mut programs=BTreeSet::new();
+            let mut token_instructions=Vec::new();
+            let mut opaque_token_instruction_count=0usize;
+            let mut token_2022_extension_instruction_count=0usize;
+            let mut missing_compiled_token_data_count=0usize;
             for group in groups {
                 let group=group.as_object().ok_or(RpcError::InvalidResponse)?;
                 let index=group.get("index").and_then(Value::as_u64)
@@ -270,7 +283,7 @@ pub fn inspect_simulation_effects(
                 if count>MAX_CPI_ITEMS || items.iter().any(|x|!x.is_object()) {
                     return Err(RpcError::InvalidResponse);
                 }
-                for ix in items {
+                for (inner_index,ix) in items.iter().enumerate() {
                     let indexed=if let Some(id)=ix.get("programIdIndex") {
                         let index=id.as_u64().and_then(|n|usize::try_from(n).ok())
                             .ok_or(RpcError::InvalidResponse)?;
@@ -287,6 +300,19 @@ pub fn inspect_simulation_effects(
                         (None,Some(n))=>n,
                         (None,None)=>return Err(RpcError::InvalidResponse)
                     };
+                    if is_token_program(program) {
+                        match decode_token_cpi(
+                            program, ix.as_object().ok_or(RpcError::InvalidResponse)?,
+                            &keys, index, inner_index
+                        )? {
+                            TokenCpiDecode::Recognized(item) => token_instructions.push(item),
+                            TokenCpiDecode::Opaque { extension, missing_compiled } => {
+                                opaque_token_instruction_count+=1;
+                                if extension { token_2022_extension_instruction_count+=1; }
+                                if missing_compiled { missing_compiled_token_data_count+=1; }
+                            }
+                        }
+                    }
                     programs.insert(program.to_owned());
                 }
             }
@@ -294,8 +320,12 @@ pub fn inspect_simulation_effects(
             CpiObservation {
                 captured:true,group_count:Some(groups.len()),instruction_count:Some(count),
                 invoked_program_ids:programs.into_iter().collect(),
+                token_instructions,
+                opaque_token_instruction_count,
+                token_2022_extension_instruction_count,
+                missing_compiled_token_data_count,
                 requires_semantic_review:count>0,
-                limitations:vec!["CPI list is provided by one RPC, not semantically decoded into verified token/native effects".into()]
+                limitations:vec!["Selected token CPI instruction arguments are decoded from one RPC; semantics, token extensions, hooks and actual execution remain unverified".into()]
             }
         }
     };
