@@ -217,6 +217,20 @@ Only on successful simulation, the CLI can add `RPC_EFFECT_GRAPH_CPI_UNATTRIBUTE
 
 Next steps: independent/atomic state validation, direct **top-level** SPL Token instruction decoding, richer CPI effect coverage, accounting for multiple transfers and fees, cross-provider checks, and signer-side enforcement of a separately pinned payment policy.
 
+## Direct SPL Token / Token-2022 instruction decoding (implemented, advisory)
+
+The original-wire parser in `hguet-core` now preserves every bounded compiled top-level instruction as `inspection.compiled_top_level_instructions`, including its instruction index, indexed program/account roles and Base58-encoded original instruction bytes. This is wire **declaration evidence**, not RPC simulation output, signature authorization or verified execution.
+
+The shared binary decoder in `hguet-rpc/src/direct_token.rs` recognizes common Token Program and Token-2022 **base** opcodes: `Transfer`, `TransferChecked`, `Approve`, `ApproveChecked`, `Revoke`, `SetAuthority`, `MintTo`, `MintToChecked`, `Burn`, `BurnChecked`, `CloseAccount`, `FreezeAccount`, `ThawAccount` and `SyncNative`. Unknown/unsupported opcodes, including state-dependent Token-2022 extensions, remain **opaque** with optional extension-family hints. Unchecked `Transfer` has no mint argument; HGUET never invents its mint or decimals.
+
+The CLI now emits offline wire-declaration warnings `WIRE_TOKEN_DIRECT_MOVEMENT`, `WIRE_TOKEN_DIRECT_UNCHECKED_TRANSFER`, `WIRE_TOKEN_DIRECT_AUTHORITY_RISK` and `WIRE_TOKEN_DIRECT_OPAQUE`. They do **not** depend on simulation succeeding, and none alone grants or enforces a spend cap. If lookup accounts are unresolved, the offline check reports `WIRE_TOKEN_DIRECT_ALT_UNRESOLVED` rather than manufacturing program/account roles. When RPC ALT resolution is explicitly opted in, the structured `rpc_analysis.direct_token_analysis` marks resolved program and account identities as dependent on one provider (`program_address_from_lookup`, `account_addresses_from_lookup`). Those IDs must not be silently upgraded to independently verified trust.
+
+The Effect Correlation Graph adds `wire_declared_token_transfer`, `wire_declared_token_mint`, `wire_declared_token_burn`, `wire_declared_token_approval` and authority-control links with `source="original_wire"`, `attribution="declared_only"`, **no RPC slot**, and an original top-level instruction index. They remain separate from `cpi_declared_token_transfer` and `simulated_token_net_delta`. Direct wire declarations still appear in the graph when `simulateTransaction` fails; no CPI/net effect is thereby invented. The graph flags unsupported direct token payloads, unchecked-mint ambiguity and ALT trust dependencies.
+
+Security boundary: decoding original bytes does **not** establish that a token account belongs to the correct mint/program, that a delegate is authorized, that the transaction will execute as simulated, or that its total SOL/token debit is below a signed limit. Transaction-local signature checks, independently verified PaymentIntent, user-controlled policy, RPC effects and any future signer-side controls remain distinct. `ALLOW` is not implemented.
+
+Primary references: [official SPL Token instruction interface](https://github.com/solana-program/token/blob/main/interface/src/instruction.rs), [Solana token transfer guidance](https://solana.com/docs/tokens/basics/transfer-tokens), [Solana v0 ALT semantics](https://solana.com/docs/core/transactions/versioned-transactions).
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
