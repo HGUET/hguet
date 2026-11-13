@@ -128,7 +128,7 @@ mod tests {
             required_signatures:1,signature_count:1,
             transaction_signature_status:TransactionSignatureStatus::Unsigned,
             static_account_count:3,total_address_count:3,instruction_count:1,
-            lookup_table_count:0,unresolved_lookup_addresses:0,
+            lookup_table_count:0,unresolved_lookup_addresses:0,address_table_lookups:vec![],
             program_ids:vec!["11111111111111111111111111111111".into()],
             system_transfers:vec![hguet_core::SystemTransfer {
                 instruction_index:0,source:bs58::encode([9u8;32]).into_string(),
