@@ -1,0 +1,224 @@
+// HGUET public wire contract, DRAFT v0.1. This file is not an implemented service.
+// External TCP framing: uint32 big-endian byte length + one protobuf Envelope.
+// Enforce at most 1 MiB framed payload, strict per-field validation, and TLS 1.3.
+// The private HGUET/server MUST consume this public schema, never fork it.
+// All request_id fields are 16-byte unpredictable IDs, scoped to the authenticated
+// tenant derived from the mTLS session; never from untrusted client metadata.
+syntax = "proto3";
+package hguet.protocol.v1;
+
+enum ResultCode {
+  RESULT_UNSPECIFIED = 0;
+  RESULT_OK = 1;
+  RESULT_PENDING = 2;
+  RESULT_REJECTED = 3;
+  RESULT_FAILED = 4;
+}
+enum ErrorCode {
+  ERROR_UNSPECIFIED = 0;
+  ERROR_PROTOCOL_UNSUPPORTED = 1;
+  ERROR_UNAUTHENTICATED = 2;
+  ERROR_DEVICE_REVOKED = 3;
+  ERROR_FORBIDDEN = 4;
+  ERROR_INSUFFICIENT_CREDIT = 5;
+  ERROR_RATE_LIMITED = 6;
+  ERROR_BAD_REQUEST = 7;
+  ERROR_IDEMPOTENCY_CONFLICT = 8;
+  ERROR_UNSUPPORTED_NETWORK = 9;
+  ERROR_MISSING_CONSENT = 10;
+  ERROR_UNAVAILABLE = 11;
+  ERROR_PRICE_EXCEEDED = 12;
+  ERROR_UNKNOWN_CRITICAL_FIELD = 13;
+}
+enum DataScope {
+  DATA_SCOPE_UNSPECIFIED = 0;
+  DATA_SCOPE_METADATA_ONLY = 1;
+  DATA_SCOPE_RAW_TRANSACTION = 2;
+}
+message Envelope {
+  uint32 protocol_major = 1;     // draft contract: 1
+  uint32 protocol_minor = 2;     // draft contract: 0
+  bytes request_id = 3;          // exactly 16 bytes
+  oneof payload {
+    ClientHello client_hello = 10;
+    ServerHello server_hello = 11;
+    EnrollStart enroll_start = 12;
+    EnrollChallenge enroll_challenge = 13;
+    EnrollProof enroll_proof = 14;
+    EnrollResult enroll_result = 15;
+    AccountGet account_get = 16;
+    AccountResult account_result = 17;
+    DeviceList device_list = 18;
+    DeviceListResult device_list_result = 19;
+    DeviceRevoke device_revoke = 20;
+    DeviceRevokeResult device_revoke_result = 21;
+    TopUpQuote topup_quote = 22;
+    TopUpInvoice topup_invoice = 23;
+    TopUpStatus topup_status = 24;
+    TopUpStatusResult topup_status_result = 25;
+    CreditBalance credit_balance = 26;
+    CreditBalanceResult credit_balance_result = 27;
+    UsageQuery usage_query = 28;
+    UsageResult usage_result = 29;
+    CheckRequest check_request = 30;
+    CheckReceipt check_receipt = 31;
+    CheckStatus check_status = 32;
+    CheckResult check_result = 33;
+    ProtocolError error = 34;
+  }
+}
+message ClientHello {
+  repeated uint32 supported_majors = 1;
+  uint32 max_minor = 2;
+  repeated string requested_capabilities = 3;
+  string cli_release = 4;
+}
+message ServerHello {
+  uint32 selected_major = 1;
+  uint32 selected_minor = 2;
+  repeated string available_capabilities = 3;
+  string server_release = 4;
+}
+message EnrollStart {
+  string contact = 1;                   // optional, subject to data minimization
+  bytes device_public_key = 2;         // never a private key
+  string key_algorithm = 3;            // exact server-accepted scheme
+}
+message EnrollChallenge {
+  bytes challenge = 1;
+  uint64 expires_unix_ms = 2;
+  string challenge_kind = 3;
+}
+message EnrollProof {
+  bytes challenge_response = 1;
+  bytes device_key_proof = 2;
+}
+message EnrollResult {
+  ResultCode result = 1;
+  string device_id = 2;
+  bytes device_certificate = 3;
+  uint64 expires_unix_ms = 4;
+}
+message AccountGet {}
+message AccountResult {
+  ResultCode result = 1;
+  string account_status = 2;
+  string tenant_display_name = 3;     // not authority for any other message
+}
+message DeviceList {}
+message DeviceInfo {
+  string device_id = 1;
+  string label = 2;
+  bool revoked = 3;
+  uint64 expires_unix_ms = 4;
+}
+message DeviceListResult { repeated DeviceInfo devices = 1; }
+message DeviceRevoke { string device_id = 1; }
+message DeviceRevokeResult { ResultCode result = 1; }
+message TopUpQuote {
+  string asset = 1;                    // "USDC", enforced mint/network on server
+  string requested_amount = 2;        // integer decimal base units, not float
+}
+message TopUpInvoice {
+  ResultCode result = 1;
+  string invoice_id = 2;
+  string network = 3;
+  string genesis_hash = 4;
+  string token_program = 5;
+  string mint_address = 6;
+  string destination = 7;
+  string base_units = 8;               // decimal integer
+  string reference = 9;
+  uint64 expires_unix_ms = 10;
+  string quoted_credit_units = 11;     // decimal integer
+  string terms_version = 12;
+  SignedPayload server_invoice_signature = 13;
+}
+message TopUpStatus { string invoice_id = 1; }
+message TopUpStatusResult {
+  ResultCode result = 1;
+  string state = 2;
+  string settled_credit_units = 3;
+}
+message CreditBalance {}
+message CreditBalanceResult {
+  ResultCode result = 1;
+  string available_credit_units = 2;
+  string reserved_credit_units = 3;
+  string ledger_snapshot_id = 4;
+}
+message UsageQuery {
+  uint64 since_unix_ms = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+}
+message UsageEvent {
+  bytes request_id = 1;
+  string charge_units = 2;
+  uint64 completed_unix_ms = 3;
+  string feature_set = 4;
+}
+message UsageResult {
+  repeated UsageEvent events = 1;
+  string next_page_token = 2;
+}
+message Subject {
+  string category = 1;                 // program, mint, recipient, merchant
+  string network = 2;
+  string subject_id = 3;
+}
+message ClientEvidence {
+  bytes canonical_local_evidence_json = 1; // redacted, untrusted until rechecked
+  repeated Subject subjects = 2;
+  string local_decision = 3;           // context only, not server authorization
+}
+message CheckRequest {
+  string network = 1;                 // explicit solana cluster
+  string genesis_hash = 2;            // checked against source when possible
+  bytes message_sha256 = 3;           // exactly 32 bytes
+  bytes transaction_sha256 = 4;       // 32 bytes if wire available
+  bytes intent_sha256 = 5;            // 32 bytes or absent
+  string profile = 6;                 // strict, review, explore
+  repeated string requested_capabilities = 7;
+  DataScope scope = 8;
+  bytes raw_transaction = 9;          // only for RAW_TRANSACTION scope
+  bool raw_transaction_consent = 10;  // required with raw_transaction
+  ClientEvidence evidence = 11;
+  string accepted_price_schedule = 12;
+  string maximum_charge_units = 13;   // decimal integer; max user-authorized fee
+}
+message CheckReceipt {
+  ResultCode result = 1;              // accepted or in progress, NOT a verdict
+  bytes request_id = 2;
+  string current_state = 3;
+  string reserved_credit_units = 4;
+}
+message CheckStatus {
+  bytes original_request_id = 1;      // same tenant, same logical paid check
+}
+message SignedPayload {
+  bytes canonical_payload = 1;        // canonical JCS JSON, or future tagged format
+  bytes signature = 2;                // ML-DSA-87 if deployed under strict profile
+  string key_id = 3;
+  string signing_algorithm = 4;
+}
+message BillingReceipt {
+  bytes request_id = 1;
+  string price_schedule = 2;
+  string charged_credit_units = 3;
+  string balance_credit_units = 4;
+  string charge_state = 5;            // charged_once/released/not_billed
+  SignedPayload signed_receipt = 6;   // separate from signed assessment
+}
+message CheckResult {
+  ResultCode result = 1;              // terminal only
+  bytes request_id = 2;
+  SignedPayload signed_cloud_assessment = 3;
+  BillingReceipt billing_receipt = 4;
+}
+message ProtocolError {
+  ErrorCode code = 1;
+  string safe_message = 2;
+  bool retryable = 3;
+  uint32 retry_after_seconds = 4;
+}
