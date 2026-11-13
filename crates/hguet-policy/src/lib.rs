@@ -132,6 +132,7 @@ mod tests {
                 "11111111111111111111111111111111".into()],total_address_count:3,instruction_count:1,
             lookup_table_count:0,unresolved_lookup_addresses:0,address_table_lookups:vec![],
             program_ids:vec!["11111111111111111111111111111111".into()],
+            compiled_top_level_instructions:vec![],
             system_transfers:vec![hguet_core::SystemTransfer {
                 instruction_index:0,source:bs58::encode([9u8;32]).into_string(),
                 destination:bs58::encode([8u8;32]).into_string(),lamports:"500".into()
