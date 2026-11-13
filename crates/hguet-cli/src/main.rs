@@ -157,6 +157,94 @@ fn rpc_intent_risks(
 /// Compare a selected, untrusted RPC simulation against independently signed
 /// per-mint limits. This is anomaly detection only: neither a CPI instruction
 /// list nor a net balance snapshot proves actual gross source debits.
+/// Source-scoped signed intent versus a *later*, single-RPC token-account
+/// snapshot and provider-authored CPI declarations. These cannot prove who
+/// owned a token account at execution or establish aggregate gross spending.
+fn rpc_signed_source_scope_findings(
+    intent:&PaymentIntentPayload,
+    status:&str,
+    effects:&hguet_rpc::SimulationEffects,
+    snapshot:Option<&hguet_rpc::TokenAccountRpcSnapshot>,
+)->Vec<(&'static str,&'static str,&'static str)> {
+    if status!="rpc_succeeded" {return vec![];}
+    let Some(scopes)=intent.token_source_limits.as_ref() else {return vec![];};
+    let mut lookup=std::collections::BTreeMap::new();
+    for scope in scopes {
+        lookup.insert(scope.source_token_account.as_str(),scope);
+    }
+    let mut outside=false;
+    let mut above=false;
+    let mut uncertain=!effects.cpi.captured||
+        effects.cpi.opaque_token_instruction_count>0||
+        !effects.cpi.token_2022_extension_observations.is_empty();
+    let mut totals=std::collections::BTreeMap::<&str,u128>::new();
+    for ix in &effects.cpi.token_instructions {
+        if matches!(ix.operation.as_str(),"transfer_checked"|"burn_checked") {
+            match (ix.source_account.as_deref(),ix.mint.as_deref(),
+                ix.authority.as_deref(),ix.amount_raw.as_deref()) {
+                (Some(source),Some(mint),Some(authority),Some(raw))=>{
+                    match lookup.get(source) {
+                        Some(scope) if scope.mint==mint&&scope.authority==authority=>{
+                            match (scope.max_debit_raw.parse::<u64>(),raw.parse::<u64>()) {
+                                (Ok(cap),Ok(amount))=>{
+                                    let sum=totals.entry(source).or_default();
+                                    if let Some(new)=sum.checked_add(u128::from(amount)) {
+                                        *sum=new;
+                                        if new>u128::from(cap){above=true;}
+                                    } else {uncertain=true;}
+                                },
+                                _=>{uncertain=true;}
+                            }
+                        }
+                        _=>{outside=true;}
+                    }
+                },
+                _=>{uncertain=true;}
+            }
+        } else if matches!(ix.operation.as_str(),
+            "transfer"|"burn"|"approve"|"approve_checked"|
+            "revoke"|"set_authority"|"close_account"|
+            "freeze_account"|"thaw_account") {
+            uncertain=true;
+        }
+    }
+    let mut account_conflict=false;
+    for scope in scopes {
+        let Some(observed)=snapshot.and_then(|s|s.accounts.iter().find(
+            |item|item.address==scope.source_token_account)) else {
+            uncertain=true;
+            continue;
+        };
+        match observed.state.as_ref() {
+            Some(state) if observed.status=="token_2022"=>{
+                if state.mint!=scope.mint || state.token_authority!=scope.authority {
+                    account_conflict=true;
+                }
+                if !observed.matching_mint_state_observed {uncertain=true;}
+            }
+            _=>{uncertain=true;}
+        }
+    }
+    let mut findings=Vec::new();
+    if outside {
+        findings.push(("RPC_SIGNED_SOURCE_CPI_OUTSIDE_SCOPE","high",
+            "Selected RPC reports checked CPI debits whose source/mint/authority roles do not match the independently signed source scope; independent execution evidence is absent"));
+    }
+    if above {
+        findings.push(("RPC_SIGNED_SOURCE_CPI_OVER_CAP","high",
+            "Selected RPC reports source-scoped checked CPI debit amounts above an independently signed raw cap; these are not proven gross onchain debits"));
+    }
+    if account_conflict {
+        findings.push(("RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT","high",
+            "A separately read Token-2022 account reports a mint or owner authority different from its signed source scope; delegate and historical states remain unverified"));
+    }
+    if uncertain {
+        findings.push(("RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE","high",
+            "Source account or CPI evidence is missing, opaque, legacy-token-only, or not paired with its mint; single-provider non-atomic snapshots cannot certify signer authority"));
+    }
+    findings
+}
+
 fn rpc_signed_token_cap_findings(
     intent:&PaymentIntentPayload,
     status:&str,
@@ -716,6 +804,13 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     if intent.token_spend_limits.is_some() {
                         for (code,severity,message) in rpc_signed_token_cap_findings(
                             intent,&evidence.status,effects) {
+                            verdict.finding(code,severity,message);
+                        }
+                    }
+                    if intent.token_source_limits.is_some() {
+                        for (code,severity,message) in rpc_signed_source_scope_findings(
+                            intent,&evidence.status,effects,evidence.token_account_snapshot.as_ref()
+                        ) {
                             verdict.finding(code,severity,message);
                         }
                     }
