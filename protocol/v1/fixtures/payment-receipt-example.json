@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "native_sol_payment_receipt",
+  "quote_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment": "sandbox",
+  "network": "devnet",
+  "genesis_hash": "SYNTHETIC_DEVNET_GENESIS_DO_NOT_USE",
+  "message_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "payment_signature": "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+  "payment_instruction_index": 0,
+  "lamports_paid": "100000",
+  "receiver": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "settled_slot": 123456,
+  "settled_commitment": "finalized",
+  "analysis_state": "completed",
+  "cloud_assessment_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "issued_at": "2026-11-13T15:02:00Z"
+}
