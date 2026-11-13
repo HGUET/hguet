@@ -205,6 +205,34 @@ mod tests {
         assert_eq!(r.accounts[0].status,"token_2022");
     }
     #[test]
+    fn a_reported_mint_is_not_a_verified_link_when_account_bytes_disagree(){
+        use crate::mint_rpc::{MintAccountObservation,MintRpcSnapshot};
+        use crate::mint_state::Token2022MintState;
+        let reported=bs58::encode([2u8;32]).into_string();
+        let snapshot=MintRpcSnapshot {
+            context_slot:510,simulation_slot:500,atomic_with_simulation:false,
+            accounts:vec![MintAccountObservation {
+                address:reported.clone(),status:"token_2022".into(),
+                state:Some(Token2022MintState {
+                    mint_address:reported,supply_raw:"0".into(),decimals:6,
+                    extensions:vec![],fee_config:None,hook:None,permanent_delegate:None,
+                    unknown_extension_count:0,confidential_extension_present:false,
+                    limitations:"fixture".into(),
+                }),
+            }],
+            limitation:"fixture".into(),
+        };
+        let correct=Fake{slot:520,response:json!([account(2,3)]),calls:Cell::new(0)};
+        let matched=fetch_candidate_token_accounts(&correct,"https://example.org",500,
+            &effects(vec![row(1,2,Some(3))]),Some(&snapshot)).unwrap().unwrap();
+        assert!(matched.accounts[0].matching_mint_state_observed);
+        let wrong=Fake{slot:521,response:json!([account(4,3)]),calls:Cell::new(0)};
+        let mismatched=fetch_candidate_token_accounts(&wrong,"https://example.org",500,
+            &effects(vec![row(1,2,Some(3))]),Some(&snapshot)).unwrap().unwrap();
+        assert!(!mismatched.accounts[0].matching_mint_state_observed);
+        assert_eq!(mismatched.accounts[0].mint_matches_simulation_report,Some(false));
+    }
+    #[test]
     fn missing_and_non_token2022_accounts_are_not_decoded_as_token2022(){
         let f=Fake{slot:500,response:json!([null,{"owner":"11111111111111111111111111111111",
             "executable":false}]),calls:Cell::new(0)};
