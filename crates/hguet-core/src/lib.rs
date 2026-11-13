@@ -1,6 +1,7 @@
 //! Deterministic offline Solana wire inspection and independently signed intent verification.
-//! This crate DOES NOT simulate execution, resolve ALTs, validate transaction signatures,
-//! or authorize spending. Never turn a parsed transaction into ALLOW.
+//! This crate checks supported original-wire formats and transaction Ed25519
+//! signatures, but DOES NOT simulate execution, resolve ALTs, authenticate
+//! token-account ownership or authorize spending. Never turn a parsed transaction into ALLOW.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
