@@ -46,6 +46,7 @@ fn canonical_raw(s:&str)->Option<u64>{
 
 #[derive(Debug,Clone)]
 pub(crate) struct CheckedDirectDebit {
+    pub token_program:String,
     pub mint:String,
     pub source_token_account:String,
     pub authority:String,
@@ -111,6 +112,7 @@ pub(crate) fn checked_direct_debits(parsed:&ParsedTransaction)
         let key=|role:usize|parsed.static_account_keys.get(ix.account_indices[role])
             .ok_or_else(||"direct token account index outside message".to_string()).cloned();
         result.push(CheckedDirectDebit {
+            token_program:program.clone(),
             mint:key(mint_role)?,source_token_account:key(0)?,authority:key(auth_role)?,
             amount_raw:amount,
             account_count:ix.account_indices.len(),exact_single_authority_count:expected_count,
