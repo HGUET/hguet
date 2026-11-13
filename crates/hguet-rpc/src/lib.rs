@@ -11,6 +11,7 @@
 //! - no wallet keys, seeds, accounts, balances, or Cloud requests.
 mod alt;
 mod effects;
+mod effect_graph;
 mod extension_semantics;
 mod mint_state;
 mod mint_rpc;
@@ -25,6 +26,7 @@ pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
 pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
+pub use effect_graph::{EffectGraph,EffectNode,EffectEdge,GraphSourceSlot};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -168,6 +170,7 @@ pub struct SimulationEvidence {
     pub effect_analysis: SimulationEffects,
     pub mint_snapshot: Option<MintRpcSnapshot>,
     pub token_account_snapshot: Option<TokenAccountRpcSnapshot>,
+    pub effect_graph: EffectGraph,
     pub limitation: String,
 }
 
@@ -248,6 +251,10 @@ pub fn simulate_with<T: JsonRpcTransport>(
         token_account_rpc::fetch_candidate_token_accounts(
             transport,endpoint,slot,&effect_analysis,mint_snapshot.as_ref())?
     } else { None };
+    let effect_graph=effect_graph::correlate_effects(
+        &decoded,status,slot,&effect_analysis,
+        mint_snapshot.as_ref(),token_account_snapshot.as_ref(),
+    )?;
     Ok(SimulationEvidence {
         network: network.into(),
         verified_genesis_hash: genesis,
@@ -265,6 +272,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
         effect_analysis,
         mint_snapshot,
         token_account_snapshot,
+        effect_graph,
         limitation: "Single-provider RPC simulation is advisory, uses replacement blockhash and does not verify resulting onchain execution, CPI completeness, authorization, or future account state".into(),
     })
 }
