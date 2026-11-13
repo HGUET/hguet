@@ -24,6 +24,8 @@
 
 **Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0 wire-structure** parsing, bounded input, SHA-256 message/transaction hashes, independent pinned-key **Ed25519 PaymentIntent verification**, an explicit UNKNOWN/DENY SecurityVerdict and real CI build/unit/JSON smoke checks.
 
+**Future server address:** `vps-d0669a91.vps.ovh.net:443` is currently the hardcoded default for *future* opt-in Cloud use. `hguet config show --json` displays it offline. Cloud transport remains disabled until authenticated TLS and the signed-protocol workflow are implemented.
+
 **Not working yet:** Solana v1 decoding, address-lookup resolution, onchain simulation, CPI/token effects, spending-cap enforcement, Cloud networking, SOL settlement and signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
 
 ```sh
