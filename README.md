@@ -26,15 +26,19 @@
 
 **Local restrictive policy now works:** the `hguet-policy` Rust crate and `hguet policy validate TRUSTED.toml` enforce optional user-controlled network/program/SOL-recipient restrictions and direct native transfer cap violations. This can return **DENY**, never ALLOW. More in the [implementation guide](docs/implementation/README.md).
 
+**Read-only Solana RPC Engine (opt-in):** `hguet-rpc` now supports explicit user-selected HTTPS RPC, network validation through `getGenesisHash`, and bounded `simulateTransaction` reports. Response status and slot are marked as single-provider advisory evidence: even successful simulation returns `UNKNOWN`, never `ALLOW`. CLI local/offline and HGUET Cloud do **not** automatically contact an RPC provider. [Implementation and privacy details](docs/implementation/README.md).
+
 **Future server address:** `vps-d0669a91.vps.ovh.net:443` is currently the hardcoded default for *future* opt-in Cloud use. `hguet config show --json` displays it offline. Cloud transport remains disabled until authenticated TLS and the signed-protocol workflow are implemented.
 
-**Not working yet:** v0 address-lookup resolution, RPC simulation, runtime CPI/Token-2022 effects, **full** spend-cap enforcement (including program-internal transfers and transaction fees), Cloud networking, SOL settlement or signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
+**Not working yet:** v0 address-lookup resolution, trustworthy multi-provider/slot-aligned state and balance delta analysis, complete CPI/Token-2022 effects, **full** spend-cap enforcement (including program-internal transfers and network fees), Cloud networking, SOL settlement or signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
 
 ```sh
 cargo test --workspace
 cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json
 cargo run -p hguet -- inspect tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline --json
 cargo run -p hguet -- policy validate tests/fixtures/policy-devnet-deny.toml --json
+# Explicitly opt-in to external RPC only with a trusted intent and acceptable privacy:
+# cargo run -p hguet -- check TX.bin --mode local --network devnet --intent SIGNED.json --trusted-key PINNED_KEY --rpc-url https://api.devnet.solana.com --json
 ```
 
 The synthetic sample deliberately contains placeholder signatures and is **not a valid authorized payment**. See the [implementation README](docs/implementation/README.md) and [actual Rust CI](https://github.com/HGUET/hguet/actions/workflows/rust-ci.yml). No HGUET product release has been published.
