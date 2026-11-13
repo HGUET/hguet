@@ -59,7 +59,7 @@ lamports_due      = ceil(usd_price_micros * 1_000_000_000 / sol_usd_micros)
 
 Use `u128` or arbitrary-precision checked integer intermediates, no `f64` in financial computation. Reject 0 lamports, overflow, very small amounts below the separately approved minimum viable invoice, or price above the caller's **maximum allowed lamports**. Service fees and Solana transaction fees are distinct and displayed separately where possible.
 
-Example only: tariff **$0.01/check**, market SOL/USD **$100**, invoice **100,000 lamports = 0.0001 SOL**. These values are mathematical illustrations, not today's exchange rate or published HGUET pricing.
+Example only: tariff **$0.001/check**, market SOL/USD **$100**, invoice **10,000 lamports = 0.00001 SOL**. These values are mathematical illustrations, not today's exchange rate or published HGUET pricing.
 
 **Quote validity:** e.g. 90-second TTL; signed quote freezes the lamport amount until expiry. A new price observation does **not** retroactively alter an issued invoice. Expired quotes require requoting before payment; late/ambiguous payments go to claim/refund handling rather than silently lost or credited to another request. No guarantee that finality completes before expiry; distinguish **payment submitted before expiry** versus **finality attained later**, and define a bounded grace/reconciliation policy using onchain block time/slot.
 
