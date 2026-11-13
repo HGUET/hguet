@@ -582,7 +582,8 @@ mod tests {
             &d,&e,None,None).unwrap_err(),RpcError::InvalidResponse);
         let e=effects(vec![],Some(vec![]));
         let mut p=intent(Some(2),"100",&[(2,3,"100")]);
-        p.token_source_limits.as_mut().unwrap().push(p.token_source_limits.as_ref().unwrap()[0].clone());
+        let duplicate=p.token_source_limits.as_ref().unwrap()[0].clone();
+        p.token_source_limits.as_mut().unwrap().push(duplicate);
         assert_eq!(analyze_aggregate_token_spending("rpc_succeeded",600,
             &d,&e,None,Some(&p)).unwrap_err(),RpcError::InvalidResponse);
     }
