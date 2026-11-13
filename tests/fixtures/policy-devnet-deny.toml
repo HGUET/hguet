@@ -1,0 +1,9 @@
+# Synthetic negative test: a Devnet native SOL transfer of 500 lamports
+# must be DENY under this 499-lamport upper bound.
+# This is NOT a recommended production policy.
+version = 1
+network = "devnet"
+max_declared_system_transfer_lamports = "499"
+
+denied_program_ids = []
+denied_sol_recipients = []
