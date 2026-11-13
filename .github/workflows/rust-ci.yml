@@ -66,6 +66,26 @@ jobs:
           assert report['inspection']['declared_system_transfer_lamports']=='500'
           print('PASS: offline policy hard DENY, independent of unsigned intent or Cloud')
           PY
+          # Explicit RPC configured, but hard policy DENY must short-circuit
+          # without contacting the unresolvable provider.
+          set +e
+          cargo run -p hguet -- check tests/fixtures/v1-system-transfer.base64 \
+            --encoding base64 --mode local --network devnet \
+            --intent tests/fixtures/nonexistent-intent.json \
+            --policy tests/fixtures/policy-devnet-deny.toml \
+            --rpc-url https://never-connect.invalid --json > /tmp/hguet-no-rpc.json
+          status=$?
+          set -e
+          test "$status" -eq 20
+          python - <<'PY'
+          import json
+          with open('/tmp/hguet-no-rpc.json',encoding='utf-8') as f:
+              value=json.load(f)
+          assert value['verdict']['decision']=='DENY'
+          assert value['verdict']['simulation_status']=='not_performed'
+          assert any(x['code']=='POLICY_SOL_TRANSFER_CAP' for x in value['verdict']['findings'])
+          print('PASS: known hard DENY is resolved before external RPC disclosure')
+          PY
       - name: RPC opt-in admission rejects plain HTTP before any network I/O
         run: |
           set +e
