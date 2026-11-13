@@ -66,6 +66,21 @@ jobs:
           assert report['inspection']['declared_system_transfer_lamports']=='500'
           print('PASS: offline policy hard DENY, independent of unsigned intent or Cloud')
           PY
+      - name: RPC opt-in admission rejects plain HTTP before any network I/O
+        run: |
+          set +e
+          cargo run -p hguet -- check tests/fixtures/v1-system-transfer.base64             --encoding base64 --network devnet --mode local             --intent tests/fixtures/no-intent.json             --rpc-url http://api.devnet.solana.com             --json > /tmp/hguet-bad-rpc.out 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 40
+          grep -q 'RPC endpoint must be an explicit HTTPS URL' /tmp/hguet-bad-rpc.out
+          # Offline mode and active RPC are mutually exclusive, even with HTTPS.
+          set +e
+          cargo run -p hguet -- check tests/fixtures/v1-system-transfer.base64             --encoding base64 --network devnet --mode local --offline             --intent tests/fixtures/no-intent.json             --rpc-url https://api.devnet.solana.com             --json > /tmp/hguet-offline-rpc.out 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 40
+          grep -q -- '--rpc-url requires check command without --offline' /tmp/hguet-offline-rpc.out
       - name: End-to-end offline CLI JSON smoke
         run: |
           cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json > /tmp/hguet-inspect.json
