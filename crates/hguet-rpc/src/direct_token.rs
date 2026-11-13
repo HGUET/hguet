@@ -97,7 +97,7 @@ pub fn inspect_direct_tokens(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hguet_core::{parse_transaction,CompiledTopLevelInstruction};
+    use hguet_core::{parse_transaction,solana_engine::CompiledTopLevelInstruction};
     use crate::token_semantics::{TOKEN_PROGRAM,TOKEN_2022_PROGRAM};
     fn key(n:u8)->String{bs58::encode([n;32]).into_string()}
     fn legacy(program:&str,data:&[u8],accounts:&[u8])->Vec<u8>{
