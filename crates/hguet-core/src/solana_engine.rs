@@ -30,6 +30,17 @@ pub struct SystemTransfer {
     pub lamports: String,
 }
 
+/// Exact compiled top-level instruction from the ORIGINAL wire message.
+#[derive(Debug, Clone, Serialize)]
+pub struct CompiledTopLevelInstruction {
+    pub instruction_index: usize,
+    pub program_index: usize,
+    pub account_indices: Vec<usize>,
+    /// Canonical Base58 representation of original instruction data bytes.
+    /// No account role or transaction effect is inferred here.
+    pub data_base58: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct V1Resources {
     pub config_mask: u32,
@@ -63,6 +74,7 @@ pub struct ParsedTransaction {
     pub unresolved_lookup_addresses: usize,
     pub address_table_lookups: Vec<AddressTableLookup>,
     pub program_ids: Vec<String>,
+    pub compiled_top_level_instructions: Vec<CompiledTopLevelInstruction>,
     pub system_transfers: Vec<SystemTransfer>,
     /// This is a lower bound for explicitly decoded System Program Transfer instructions.
     /// It is NEVER a proof of total spending or of execution effects.
@@ -269,6 +281,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     }
 
     let mut programs = Vec::with_capacity(instruction_data.len());
+    let mut compiled_top_level_instructions=Vec::with_capacity(instruction_data.len());
     let mut system_transfers = Vec::new();
     let mut declared: u128 = 0;
     let mut unknown_effects = false;
@@ -276,6 +289,11 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         if ins.program >= total || ins.accounts.iter().any(|n| *n >= total) {
             return Err("compiled instruction references an out-of-range account".into());
         }
+        compiled_top_level_instructions.push(CompiledTopLevelInstruction {
+            instruction_index:i,program_index:ins.program,
+            account_indices:ins.accounts.clone(),
+            data_base58:bs58::encode(&ins.data).into_string(),
+        });
         let program = if ins.program < key_count {
             key(&key_bytes, ins.program)
         } else {
@@ -338,7 +356,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         total_address_count: total,
         instruction_count: instruction_data.len(),
         lookup_table_count: lookup_count, unresolved_lookup_addresses: unresolved,
-        address_table_lookups, program_ids: programs, system_transfers,
+        address_table_lookups, program_ids: programs, compiled_top_level_instructions, system_transfers,
         declared_system_transfer_lamports: declared.to_string(),
         resource_config, limitations,
     })
