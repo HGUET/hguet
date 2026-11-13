@@ -10,6 +10,7 @@ fn usage() -> &'static str {
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--encoding binary|base64|base58] [--json]\n\
+  hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet --help\n\
   hguet --version\n\
@@ -42,6 +43,21 @@ fn parse_args() -> Result<Args, String> {
         }
         return Ok(Args{command:"config-show".into(),file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
             intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:true});
+    }
+    if cmd=="policy" {
+        if a.next().as_deref()!=Some("validate") {
+            return Err("only policy validate FILE is supported".into());
+        }
+        let file=a.next().ok_or("missing policy file")?;
+        if file.starts_with('-') { return Err("invalid policy file path".into()); }
+        if let Some(opt)=a.next() {
+            if opt!="--json" || a.next().is_some() {
+                return Err("unexpected policy validation option".into());
+            }
+        }
+        return Ok(Args { command:"policy-validate".into(),file,
+            network:"mainnet".into(),encoding:"binary".into(),intent:None,
+            trusted_key:None,policy:None,mode:"local".into(),offline:true });
     }
     if cmd!="inspect" && cmd!="check" { return Err("unknown command".into()); }
     let file=a.next().ok_or("missing transaction path")?;
@@ -175,6 +191,21 @@ fn main(){
     match parse_args(){
         Ok(v) if v.command=="--help" || v.command=="-h"=>{
             println!("{}",usage());process::exit(0)
+        }
+        Ok(v) if v.command=="policy-validate"=>{
+            let result=limited_file(&v.file,65_536)
+                .and_then(|bytes| String::from_utf8(bytes).map_err(|_|"policy must be UTF-8".into()))
+                .and_then(|text| LocalPolicy::parse_and_validate(&text));
+            match result {
+                Ok(policy)=> {
+                    println!("{}",json!({"status":"valid","network":policy.network,"mode":"restrictive_only","cloud_network_access":false}));
+                    process::exit(0)
+                }
+                Err(error)=> {
+                    println!("{}",json!({"status":"invalid","code":"BAD_POLICY","error":error}));
+                    process::exit(40)
+                }
+            }
         }
         Ok(v) if v.command=="config-show"=>{
             println!("{}",serde_json::to_string_pretty(&cloud_config::describe()).expect("JSON serialization"));
