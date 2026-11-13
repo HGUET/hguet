@@ -102,6 +102,8 @@ The planned commercial transport is authenticated post-quantum-capable TLS 1.3, 
 
 ## Current Cloud direction — unreleased design
 
+> **Release status:** No HGUET releases have been published. Documentation describes the current design proposal; numbers in `protocol/v1` are internal wire-schema identifiers, not product versions.
+
 **No registration, no balances, no USDC.** HGUET's optional Cloud is designed as **one security check paid directly in native SOL**, quoted in USD using a cached current-day SOL/USD reference (approximately ±5% tolerance in the market reference, **exact lamports in the signed invoice**). A Basic metadata check has a **proposed** USD reference price of $0.001; more instructions, accounts, sources and computational depth increase the pre-agreed quoted price. Pricing is a draft, not a live offer.
 
 - [Complexity-based pricing policy](docs/architecture/pricing-policy.md)
