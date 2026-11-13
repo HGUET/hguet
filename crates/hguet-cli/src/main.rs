@@ -1,6 +1,6 @@
 mod cloud_config;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus};
+use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, PaymentIntentPayload, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus};
 use serde_json::json;
 use hguet_policy::LocalPolicy;
 use hguet_rpc::{simulate_with, validate_endpoint, HttpsTransport};
@@ -114,6 +114,45 @@ fn read_transaction(path:&str,enc:&str)->Result<Vec<u8>,String>{
         _=>Err("unrecognized encoding".into())
     }
 }
+
+#[derive(Debug, PartialEq, Eq)]
+enum RpcIntentRisk {
+    CpiProgramOutsideAllowlist,
+    FeePayerNetOutflowExceedsCap,
+}
+
+/// Compare *optional single-provider observations* to a separately verified
+/// PaymentIntent. These findings are advisory, never grounds for ALLOW or a
+/// conclusive DENY: the provider may omit, distort or simulate incomplete data.
+fn rpc_intent_risks(
+    intent: &PaymentIntentPayload,
+    simulation_status: &str,
+    cpi_captured: bool,
+    cpi_program_ids: &[String],
+    fee_payer_balances: Option<(u64, u64)>,
+) -> Vec<RpcIntentRisk> {
+    if simulation_status != "rpc_succeeded" {
+        return Vec::new();
+    }
+    let mut risks = Vec::new();
+    if cpi_captured && cpi_program_ids.iter().any(|id| !intent.allowed_program_ids.contains(id)) {
+        risks.push(RpcIntentRisk::CpiProgramOutsideAllowlist);
+    }
+    if let Some((before, after)) = fee_payer_balances {
+        // Fee-payer account 0 may also receive funds and pays network fees.
+        // A net loss above the cap is suspicious but is NOT an exact spend total.
+        if let (Some(net_loss), Ok(limit)) = (
+            before.checked_sub(after),
+            intent.max_spend_lamports.parse::<u64>(),
+        ) {
+            if net_loss > limit {
+                risks.push(RpcIntentRisk::FeePayerNetOutflowExceedsCap);
+            }
+        }
+    }
+    risks
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -164,6 +203,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
             return (json!({"inspection":parsed,"verdict":verdict}),20);
         }
     }
+    let mut verified_intent: Option<PaymentIntentPayload> = None;
     if v.command=="check" {
         match (&v.intent,&v.trusted_key) {
             (Some(path),Some(key))=>{
@@ -174,7 +214,8 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verify_intent(&signed,key,&v.network,&parsed,now)
                 ));
                 match result {
-                    Ok(_)=>{
+                    Ok(payload)=>{
+                        verified_intent = Some(payload);
                         verdict.intent_status="signature_verified".into();
                         verdict.coverage.push("independently_pinned_intent_signature".into());
                     }
@@ -219,6 +260,34 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     items.iter().any(|delta| !delta.complete_pair)) {
                     verdict.finding("RPC_TOKEN_DELTA_UNDETERMINED","high",
                         "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred");
+                }
+                if let Some(ref intent) = verified_intent {
+                    // Only compare provider observations to independently
+                    // verified intent; an agent-supplied intent is not trusted.
+                    let payer_balances = effects.lamport_deltas.as_ref()
+                        .and_then(|rows| rows.iter().find(|row| row.account_index == 0))
+                        .and_then(|row| Some((
+                            row.before_lamports.parse::<u64>().ok()?,
+                            row.after_lamports.parse::<u64>().ok()?,
+                        )));
+                    for risk in rpc_intent_risks(
+                        intent,
+                        &evidence.status,
+                        effects.cpi.captured,
+                        &effects.cpi.invoked_program_ids,
+                        payer_balances,
+                    ) {
+                        match risk {
+                            RpcIntentRisk::CpiProgramOutsideAllowlist => {
+                                verdict.finding("RPC_CPI_OUTSIDE_SIGNED_INTENT", "high",
+                                    "Simulated inner instructions invoke a program absent from the independently signed intent allowlist; this single-provider observation needs review");
+                            }
+                            RpcIntentRisk::FeePayerNetOutflowExceedsCap => {
+                                verdict.finding("RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP", "high",
+                                    "Simulated fee-payer net lamport loss exceeds the signed SOL cap; net loss includes fees and is not a verified total spend");
+                            }
+                        }
+                    }
                 }
                 if evidence.status=="rpc_failed" {
                     verdict.finding("RPC_SIMULATION_FAILED","high",
@@ -275,5 +344,62 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod rpc_intent_tests {
+    use super::*;
+
+    fn signed_intent() -> PaymentIntentPayload {
+        PaymentIntentPayload {
+            schema_version: 1,
+            kind: "hguet_payment_intent".into(),
+            intent_id: "test-intent".into(),
+            network: "devnet".into(),
+            message_sha256: "a".repeat(64),
+            not_before_unix: 100,
+            expires_at_unix: 200,
+            allowed_program_ids: vec![bs58::encode([1u8; 32]).into_string()],
+            max_spend_lamports: "100".into(),
+        }
+    }
+
+    #[test]
+    fn matched_rpc_evidence_does_not_create_intent_risk() {
+        let intent = signed_intent();
+        assert!(rpc_intent_risks(
+            &intent, "rpc_succeeded", true, &intent.allowed_program_ids, Some((1_000, 900)),
+        ).is_empty());
+        assert!(rpc_intent_risks(
+            &intent, "rpc_succeeded", true, &intent.allowed_program_ids, Some((900, 1_000)),
+        ).is_empty());
+    }
+
+    #[test]
+    fn observed_cpi_and_payer_net_loss_are_advisory_risks() {
+        let intent = signed_intent();
+        let unlisted = bs58::encode([2u8; 32]).into_string();
+        assert_eq!(rpc_intent_risks(
+            &intent, "rpc_succeeded", true, &[unlisted], Some((1_000, 899)),
+        ), vec![
+            RpcIntentRisk::CpiProgramOutsideAllowlist,
+            RpcIntentRisk::FeePayerNetOutflowExceedsCap,
+        ]);
+    }
+
+    #[test]
+    fn absent_or_failed_rpc_evidence_never_invents_mismatch() {
+        let intent = signed_intent();
+        let unlisted = bs58::encode([2u8; 32]).into_string();
+        assert!(rpc_intent_risks(
+            &intent, "rpc_failed", true, &[unlisted.clone()], Some((1_000, 100)),
+        ).is_empty());
+        assert!(rpc_intent_risks(
+            &intent, "rpc_succeeded", false, &[unlisted], None,
+        ).is_empty());
+        assert!(rpc_intent_risks(
+            &intent, "rpc_succeeded", false, &[], None,
+        ).is_empty());
     }
 }
