@@ -1273,6 +1273,7 @@ mod rpc_intent_tests {
             allowed_program_ids: vec![bs58::encode([1u8; 32]).into_string()],
             max_spend_lamports: "100".into(),
             token_spend_limits:None,
+            token_source_limits:None,
         }
     }
 
