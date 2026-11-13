@@ -145,11 +145,11 @@ The parser additionally labels Token-2022 CPI instruction **prefixes** from bina
 
 Even when some exact fields are parsed, `opaque_token_instruction_count` and `token_2022_extension_instruction_count` still include these extensions: their state-dependent semantics have **not** been validated. In particular, no mint TLV extension inventory is fetched, no transfer-hook program is authenticated or re-executed, and no fee formula is checked against live mint state. An extension can exist on a mint **without any extension instruction appearing in simulated CPI**; absence of these observations is never proof of absence of fees/hooks/delegates.
 
-After a successful advisory RPC simulation, the CLI may emit:
+After a successful advisory RPC simulation, the CLI may emit these findings for extension instructions **or for corresponding extension-authority rotations in a Token-2022 `SetAuthority` CPI** (authority types `4`/`5` for transfer fees, `8` for permanent delegate, `10` for transfer hook, and `9`/`11` for confidential authorities):
 
-- `RPC_TOKEN_2022_TRANSFER_FEE`: transfer fees, withheld-fee operations or fee configuration mentioned in CPI.
-- `RPC_TOKEN_2022_TRANSFER_HOOK`: hook initialization/update instructions mentioned in CPI.
-- `RPC_TOKEN_2022_PERMANENT_DELEGATE`: an instruction to initialize mint-wide delegate authority mentioned in CPI.
+- `RPC_TOKEN_2022_TRANSFER_FEE`: transfer-fee operations, configuration or authority rotation mentioned in CPI.
+- `RPC_TOKEN_2022_TRANSFER_HOOK`: hook initialization/update or hook-authority rotation mentioned in CPI.
+- `RPC_TOKEN_2022_PERMANENT_DELEGATE`: initialization or rotation of a mint-wide delegate mentioned in CPI.
 - `RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS`: confidential transfer, confidential fee or mint/burn extension CPI families mentioned in CPI.
 
 All findings remain high-risk advisory hints, return `UNKNOWN`, do **not** broadcast or sign, and do not authorize a transaction. To enforce actual payment constraints, future work needs authenticated mint/account data, full extension state validation, transaction-level direct + CPI effects, independent provider comparisons, and customer-controlled signer integration.
