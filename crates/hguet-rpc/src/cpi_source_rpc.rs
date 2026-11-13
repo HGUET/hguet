@@ -318,7 +318,10 @@ pub fn correlate_cpi_source_coverage(
             _=>return Err(RpcError::InvalidResponse),
         };
         let account_status=match status {
-            "token_2022"|"legacy_token"|"missing"|"unobserved"=>status,
+            "token_2022"=>"token_2022",
+            "legacy_token"=>"legacy_token",
+            "missing"=>"missing",
+            "unobserved"=>"unobserved",
             "other_program"|"not_token_2022"=>"other_program",
             _=>return Err(RpcError::InvalidResponse),
         };
