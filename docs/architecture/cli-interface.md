@@ -1,6 +1,6 @@
 # HGUET CLI — Commands, configuration and accountless Cloud UX
 
-**Status:** v0.2 design, **not implemented**. This replaces the old `register/login/topup/balance/usage` design. See [SOL payment specification](payment-per-request.md).
+**Status:** Unreleased design draft, **not implemented**. This replaces the old `register/login/topup/balance/usage` design. See [SOL payment specification](payment-per-request.md).
 
 ## Supported command grammar (proposed)
 
