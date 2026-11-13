@@ -56,8 +56,10 @@ impl SecurityVerdict {
 
 pub mod solana_engine;
 mod token_limits;
+mod source_limits;
 #[cfg(test)] mod token_intent_tests;
 pub use token_limits::{review_declared_token_limits,DeclaredMintDebit,TokenSpendLimitReview};
+pub use source_limits::{review_declared_source_limits,DeclaredSourceDebit,TokenSourceLimitReview};
 pub use solana_engine::{
     parse_transaction, ParsedTransaction, SystemTransfer, TransactionSignatureStatus, V1Resources,
 };
@@ -81,6 +83,17 @@ pub struct TokenSpendLimit {
     pub mint:String,
     pub max_debit_raw:String,
 }
+/// Optional signed account-scoped direct token-debit limit. The authority
+/// is a required signer in the transaction header, NOT a verified token
+/// account owner. Multi-signature token authorities remain unsupported.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TokenSourceLimit {
+    pub mint:String,
+    pub source_token_account:String,
+    pub authority:String,
+    pub max_debit_raw:String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PaymentIntentPayload {
@@ -97,6 +110,11 @@ pub struct PaymentIntentPayload {
     /// legacy SOL-only intent semantics and exact-byte signature compatibility.
     #[serde(default, skip_serializing_if="Option::is_none")]
     pub token_spend_limits: Option<Vec<TokenSpendLimit>>,
+    /// Optional independent source/required-signer scopes. If supplied,
+    /// every direct token debit must satisfy the named source scope,
+    /// independently of any mint-wide limits also supplied.
+    #[serde(default, skip_serializing_if="Option::is_none")]
+    pub token_source_limits: Option<Vec<TokenSourceLimit>>,
 }
 
 fn decode_fixed_b58<const N: usize>(s: &str, what: &str) -> Result<[u8; N], String> {
@@ -167,6 +185,9 @@ pub fn verify_intent(
     if let Some(ref limits)=intent.token_spend_limits {
         token_limits::review_declared_token_limits(parsed,limits)?;
     }
+    if let Some(ref sources)=intent.token_source_limits {
+        source_limits::review_declared_source_limits(parsed,sources)?;
+    }
     // Verified intent is NOT proof of total spending, fees or execution success.
     Ok(intent)
 }
@@ -212,6 +233,7 @@ mod tests {
             not_before_unix:1,expires_at_unix:4102444800,
             allowed_program_ids:vec![], max_spend_lamports:"1000".into(),
             token_spend_limits:None,
+            token_source_limits:None,
         };
         let b=serde_json::to_vec(&payload).unwrap();
         let mut msg=INTENT_DOMAIN.to_vec();msg.extend(&b);
