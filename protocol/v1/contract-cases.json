@@ -51,8 +51,8 @@
     },
     {
       "id": "price-example",
-      "request": "USD micros=10000 and SOL/USD micros=100000000",
-      "expected": "exactly 100000 lamports"
+      "request": "USD micros=1000 and SOL/USD micros=100000000",
+      "expected": "exactly 10000 lamports for illustrative Basic $0.001 at $100/SOL"
     },
     {
       "id": "price-overflow",
