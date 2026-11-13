@@ -1,3 +1,4 @@
+mod cloud_config;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent};
 use serde_json::json;
@@ -8,6 +9,7 @@ fn usage() -> &'static str {
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]\n\
+  hguet config show [--json]\n\
   hguet --help\n\
   hguet --version\n\
 Cloud/payment commands are NOT implemented. Never send real SOL to a demonstration."
@@ -29,6 +31,15 @@ fn parse_args() -> Result<Args, String> {
     if cmd=="--help" || cmd=="-h" || cmd=="--version" {
         return Ok(Args{command:cmd,file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
             intent:None,trusted_key:None,mode:"local".into(),offline:false});
+    }
+    if cmd=="config" {
+        let sub=a.next().ok_or("missing config subcommand")?;
+        if sub!="show" { return Err("only config show is supported".into()); }
+        if let Some(opt)=a.next() {
+            if opt!="--json" || a.next().is_some() { return Err("unexpected config option".into()); }
+        }
+        return Ok(Args{command:"config-show".into(),file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
+            intent:None,trusted_key:None,mode:"local".into(),offline:true});
     }
     if cmd!="inspect" && cmd!="check" { return Err("unknown command".into()); }
     let file=a.next().ok_or("missing transaction path")?;
@@ -132,6 +143,10 @@ fn main(){
     match parse_args(){
         Ok(v) if v.command=="--help" || v.command=="-h"=>{
             println!("{}",usage());process::exit(0)
+        }
+        Ok(v) if v.command=="config-show"=>{
+            println!("{}",serde_json::to_string_pretty(&cloud_config::describe()).expect("JSON serialization"));
+            process::exit(0)
         }
         Ok(v) if v.command=="--version"=>{
             println!("hguet unreleased-draft (no product version or release)");process::exit(0)
