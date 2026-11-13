@@ -267,6 +267,10 @@ fn token_account_snapshot_findings(
         findings.push(("RPC_TOKEN_ACCOUNT_MISSING","high",
             "At least one token holding account was absent from a later RPC snapshot; balances and authorities are unresolved"));
     }
+    if snapshot.accounts.iter().any(|x|x.status=="not_token_2022") {
+        findings.push(("RPC_TOKEN_ACCOUNT_PROGRAM_UNVERIFIED","high",
+            "A reported token account is not owned by Token-2022 in the later RPC snapshot; this reader cannot authenticate its program state or owner"));
+    }
     if snapshot.accounts.iter().any(|x|x.mint_matches_simulation_report==Some(false)) {
         findings.push(("RPC_TOKEN_ACCOUNT_MINT_MISMATCH","high",
             "A token account mint in the later RPC snapshot differs from simulated balance metadata; this may be stale or inconsistent provider evidence"));
@@ -614,6 +618,20 @@ mod token_account_snapshot_tests {
             assert!(codes.contains(&expected),"missing {expected}");
         }
         assert!(!codes.contains(&"ALLOW"));
+    }
+    #[test]
+    fn unknown_token_account_program_is_not_silently_trusted(){
+        let mut snap=sample();
+        snap.accounts[0].status="not_token_2022".into();
+        snap.accounts[0].state=None;
+        snap.accounts[0].mint_matches_simulation_report=None;
+        snap.accounts[0].authority_matches_simulation_report=None;
+        let codes=token_account_snapshot_findings(&snap)
+            .into_iter().map(|(code,_,_)|code).collect::<Vec<_>>();
+        assert_eq!(codes,vec![
+            "RPC_TOKEN_ACCOUNT_NON_ATOMIC",
+            "RPC_TOKEN_ACCOUNT_PROGRAM_UNVERIFIED",
+        ]);
     }
     #[test]
     fn missing_account_does_not_get_decoded_as_zero_or_trusted(){
