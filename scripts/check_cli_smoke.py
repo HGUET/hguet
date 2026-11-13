@@ -81,4 +81,31 @@ if len(sys.argv)>5:
     assert any(f["code"]=="INTENT_REJECTED" and "exceed" in f["summary"]
                for f in rejected["verdict"]["findings"])
     print("PASS: exact-byte signed mint cap permits equal raw declared amount and rejects 1 over")
+if len(sys.argv)>7:
+    permitted = json.loads(Path(sys.argv[6]).read_text())
+    rejected = json.loads(Path(sys.argv[7]).read_text())
+    for report in (permitted,rejected):
+        Draft202012Validator(schema).validate(report["verdict"])
+        assert report["inspection"]["compiled_top_level_instructions"][0]["account_indices"] == [1,3,2,0]
+    verdict=permitted["verdict"]
+    assert verdict["decision"] == "UNKNOWN"
+    assert verdict["intent_status"] == "signature_verified"
+    assert verdict["simulation_status"] == "not_performed"
+    assert "signed_direct_token_source_authority_roles" in verdict["coverage"]
+    review = permitted["signed_token_source_review"]
+    assert review["checked_direct_debit_instructions"] == 1
+    assert review["transaction_required_signer_role_checked"] is True
+    assert review["transaction_signatures_verified"] is False
+    assert review["token_account_owner_verified"] is False
+    assert review["total_spending_proven"] is False
+    assert review["debits"][0]["declared_raw"] == "1234"
+    assert review["debits"][0]["signed_limit_raw"] == "1234"
+    assert any(x["code"]=="SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE"
+               for x in verdict["findings"])
+    assert rejected["verdict"]["decision"]=="DENY"
+    assert rejected["verdict"]["intent_status"]=="rejected"
+    assert rejected["verdict"]["simulation_status"]=="not_performed"
+    assert any(x["code"]=="INTENT_REJECTED" and "source" in x["summary"]
+               for x in rejected["verdict"]["findings"])
+    print("PASS: signed token source/required-signer scope exact-cap UNKNOWN and cap-over DENY")
 print("PASS: legacy and v1 CLI JSON validated; unsupported onchain effects remain UNKNOWN")
