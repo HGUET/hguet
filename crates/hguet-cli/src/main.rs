@@ -153,6 +153,35 @@ fn rpc_intent_risks(
     risks
 }
 
+/// Security classifications of *simulated*, single-provider token CPI data.
+fn token_cpi_findings(
+    status: &str,
+    items: &[hguet_rpc::TokenCpiInstruction],
+    opaque_count: usize,
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    if status != "rpc_succeeded" { return Vec::new(); }
+    let mut findings = Vec::new();
+    if items.iter().any(|item| matches!(item.operation.as_str(),
+        "approve"|"approve_checked"|"revoke"|"set_authority"|
+        "freeze_account"|"thaw_account"|"close_account"))
+    {
+        findings.push(("RPC_TOKEN_CPI_AUTHORITY_RISK","high",
+            "A simulated CPI contains token delegation, authority or account-control instructions; inspect account roles and signer authorization independently"));
+    }
+    if items.iter().any(|item| matches!(item.operation.as_str(),
+        "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
+        "burn"|"burn_checked"))
+    {
+        findings.push(("RPC_TOKEN_CPI_MOVEMENT","medium",
+            "Compiled token CPI declares a transfer, mint or burn; declared amounts are not independently verified net balance effects"));
+    }
+    if opaque_count>0 {
+        findings.push(("RPC_TOKEN_CPI_OPAQUE","high",
+            "One or more simulated token CPI instructions have unknown, extension-specific or unverified binary semantics; no safe effect can be inferred"));
+    }
+    findings
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -261,32 +290,16 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verdict.finding("RPC_TOKEN_DELTA_UNDETERMINED","high",
                         "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred");
                 }
-                if evidence.status=="rpc_succeeded" {
-                    // A trusted RPC request asks for compiled CPI instructions.
-                    // All classifications remain ONE-PROVIDER advisory evidence.
-                    if !effects.cpi.token_instructions.is_empty() {
-                        verdict.coverage.push("rpc_token_cpi_compiled_instruction_decode".into());
-                    }
-                    if effects.cpi.token_instructions.iter().any(|item|
-                        matches!(item.operation.as_str(),
-                            "approve"|"approve_checked"|"revoke"|"set_authority"|
-                            "freeze_account"|"thaw_account"|"close_account")
-                    ) {
-                        verdict.finding("RPC_TOKEN_CPI_AUTHORITY_RISK","high",
-                            "A simulated CPI contains token delegation, authority or account-control instructions; inspect account roles and signer authorization independently");
-                    }
-                    if effects.cpi.token_instructions.iter().any(|item|
-                        matches!(item.operation.as_str(),
-                            "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
-                            "burn"|"burn_checked")
-                    ) {
-                        verdict.finding("RPC_TOKEN_CPI_MOVEMENT","medium",
-                            "Compiled token CPI declares a transfer, mint or burn; declared amounts are not independently verified net balance effects");
-                    }
-                    if effects.cpi.opaque_token_instruction_count>0 {
-                        verdict.finding("RPC_TOKEN_CPI_OPAQUE","high",
-                            "One or more simulated token CPI instructions have unknown, extension-specific or unverified binary semantics; no safe effect can be inferred");
-                    }
+                if evidence.status=="rpc_succeeded" &&
+                    !effects.cpi.token_instructions.is_empty() {
+                    verdict.coverage.push("rpc_token_cpi_compiled_instruction_decode".into());
+                }
+                for (code,severity,message) in token_cpi_findings(
+                    &evidence.status,
+                    &effects.cpi.token_instructions,
+                    effects.cpi.opaque_token_instruction_count,
+                ) {
+                    verdict.finding(code,severity,message);
                 }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
@@ -371,6 +384,43 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod token_cpi_classification_tests {
+    use super::*;
+    fn token(operation: &str) -> hguet_rpc::TokenCpiInstruction {
+        hguet_rpc::TokenCpiInstruction {
+            parent_instruction_index: 0,
+            inner_instruction_index: 0,
+            program_id: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".into(),
+            operation: operation.into(),
+            source_account: None,
+            destination_account: None,
+            mint: None,
+            authority: None,
+            delegate: None,
+            amount_raw: None,
+            decimals: None,
+            authority_type: None,
+            new_authority: None,
+        }
+    }
+    fn codes(items: &[(&'static str, &'static str, &'static str)]) -> Vec<&'static str> {
+        items.iter().map(|(code, _, _)| *code).collect()
+    }
+    #[test]
+    fn authority_and_value_movements_have_distinct_advisory_findings() {
+        assert_eq!(codes(&token_cpi_findings("rpc_succeeded",
+            &[token("approve_checked"),token("transfer_checked")], 1)),
+            vec!["RPC_TOKEN_CPI_AUTHORITY_RISK","RPC_TOKEN_CPI_MOVEMENT","RPC_TOKEN_CPI_OPAQUE"]);
+    }
+    #[test]
+    fn missing_and_failed_simulation_never_claim_cpi_actions() {
+        assert!(token_cpi_findings("rpc_failed",&[token("set_authority")],1).is_empty());
+        assert!(token_cpi_findings("rpc_unavailable",&[token("burn")],1).is_empty());
+        assert!(token_cpi_findings("rpc_succeeded",&[],0).is_empty());
     }
 }
 
