@@ -1,4 +1,4 @@
-# HGUET ↔ HGUET Server — Unified interoperability contract (draft v0.1)
+# HGUET ↔ HGUET Server — Unified interoperability contract (draft earlier draft)
 
 **Canonical source:** this PUBLIC repository (`HGUET/hguet`).  
 **Consumer:** private `HGUET/server`, which must pin this repository's tagged contract.  
@@ -150,7 +150,7 @@ Raw bytes: allowed only with CLI user's explicit disclosure or previously config
 - If analysis ends UNKNOWN due to genuine supported-but-inconclusive evidence, charge only if explicit prior tariff covers that status; never charge an upstream outage as a successful check.
 - Server signs a `BillingReceipt` separately; client `CheckStatus` gets the same result and receipt after a disconnect. Receipt must match the assessment request and final charged amount.
 
-**No subscription/web checkout required for v0.1.** Topup amount and per-check price must not be implied fixed; tariff is server-authoritative, authenticated, and subject to client price ceiling.
+**No subscription/web checkout required for earlier draft.** Topup amount and per-check price must not be implied fixed; tariff is server-authoritative, authenticated, and subject to client price ceiling.
 
 ## 7. Final verdict merge and exit status
 
