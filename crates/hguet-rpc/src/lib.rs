@@ -19,6 +19,7 @@ mod mint_rpc;
 mod token_account_rpc;
 mod source_account_rpc;
 mod cpi_source_rpc;
+mod aggregate_spending;
 mod token_account_state;
 mod authority_review;
 mod token_semantics;
@@ -29,6 +30,7 @@ pub use mint_state::{Token2022MintState, MintExtension, MintTransferFeeConfig, M
 pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
 pub use source_account_rpc::{fetch_missing_signed_sources,SignedSourceAccountRpcSnapshot,SignedSourceAccountObservation};
 pub use cpi_source_rpc::{fetch_missing_cpi_sources,correlate_cpi_source_coverage,cpi_source_claims,CpiSourceClaim,CpiSourceRpcSnapshot,CpiSourceAccountObservation,CpiSourceCoverage,CpiSourceEvidence};
+pub use aggregate_spending::{analyze_aggregate_token_spending,AggregateTokenSpending,AggregateMintView,AggregateSourceView};
 pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
 pub use authority_review::{correlate_signed_source_authority,correlate_signed_source_authority_with_mints,correlate_signed_source_authority_with_additional_sources,SourceAuthorityReview,SourceAuthorityObservation};
 pub use alt::LookupResolution;
