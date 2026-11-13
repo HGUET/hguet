@@ -325,4 +325,54 @@ mod tests {
         assert_eq!(checked_result(json!({"jsonrpc":"2.0","id":2,"error":{"code":-32000}}),2),
             Err(RpcError::RpcRejected));
     }
+    #[test] fn v0_lookup_is_resolved_before_simulation_with_min_context_slot() {
+        struct FakeV0 { requested_min_context: std::cell::Cell<bool> }
+        impl JsonRpcTransport for FakeV0 {
+            fn post_json(&self,_endpoint:&str,request:&Value)->Result<Value,RpcError> {
+                match request["id"].as_u64() {
+                    Some(1)=>Ok(json!({"jsonrpc":"2.0","id":1,"result":DEVNET_GENESIS})),
+                    Some(3)=>{
+                        assert_eq!(request["method"],"getMultipleAccounts");
+                        let mut data=vec![0u8;56];
+                        data[0..4].copy_from_slice(&1u32.to_le_bytes());
+                        data[4..12].copy_from_slice(&u64::MAX.to_le_bytes());
+                        data[12..20].copy_from_slice(&100u64.to_le_bytes());
+                        data[20]=1; // previous extension index, not warm
+                        data.extend_from_slice(&[55u8;32]);
+                        Ok(json!({"jsonrpc":"2.0","id":3,"result":{
+                            "context":{"slot":500},
+                            "value":[{"owner":crate::alt::ALT_PROGRAM,
+                                      "executable":false,
+                                      "data":[STANDARD.encode(data),"base64"]}]
+                        }}))
+                    }
+                    Some(2)=>{
+                        if request["params"][1]["minContextSlot"].as_u64()==Some(500) {
+                            self.requested_min_context.set(true);
+                        }
+                        Ok(json!({"jsonrpc":"2.0","id":2,"result":{
+                            "context":{"slot":501},
+                            "value":{"err":null,"logs":[],"innerInstructions":[],
+                                     "unitsConsumed":300}
+                        }}))
+                    }
+                    _=>Err(RpcError::InvalidResponse)
+                }
+            }
+        }
+        let mut wire=legacy_unsigned();
+        wire.insert(65,0x80); // version=0, after signature bytes
+        wire.push(1); // one lookup table
+        wire.extend([9u8;32]); // table pubkey
+        wire.extend([1,0,0]); // one writable index 0, no readonly indexes
+        let provider=FakeV0{requested_min_context:std::cell::Cell::new(false)};
+        let result=simulate_with(&provider,"https://rpc.example","devnet",&wire).unwrap();
+        let lookup=result.lookup_resolution.unwrap();
+        assert_eq!(lookup.context_slot,500);
+        assert_eq!(lookup.resolved_writable_accounts,
+            vec![bs58::encode([55u8;32]).into_string()]);
+        assert!(provider.requested_min_context.get());
+        assert_eq!(result.status,"rpc_succeeded");
+    }
+
 }
