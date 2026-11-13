@@ -455,7 +455,7 @@ fn token_account_snapshot_findings(
     snapshot: &hguet_rpc::TokenAccountRpcSnapshot,
 ) -> Vec<(&'static str, &'static str, &'static str)> {
     let mut findings=vec![("RPC_TOKEN_ACCOUNT_NON_ATOMIC","medium",
-        "Token-2022 holding account state was read separately after simulation; minimum slot does not guarantee an atomic execution snapshot")];
+        "SPL Token or Token-2022 holding account state was read separately after simulation; minimum slot does not guarantee an atomic execution snapshot")];
     if snapshot.accounts.iter().any(|x|x.status=="missing") {
         findings.push(("RPC_TOKEN_ACCOUNT_MISSING","high",
             "At least one token holding account was absent from a later RPC snapshot; balances and authorities are unresolved"));
@@ -473,9 +473,10 @@ fn token_account_snapshot_findings(
             "Token account authority differs between later account state and simulated balance metadata; neither view can establish signer authorization"));
     }
     let states=snapshot.accounts.iter().filter_map(|x|x.state.as_ref()).collect::<Vec<_>>();
-    if snapshot.accounts.iter().any(|x|x.state.is_some()&&!x.matching_mint_state_observed) {
+    if snapshot.accounts.iter().any(|x|x.status=="token_2022" &&
+        x.state.is_some()&&!x.matching_mint_state_observed) {
         findings.push(("RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED","high",
-            "Token account was read but its referenced mint was not confirmed as a Token-2022 mint in the separate mint snapshot"));
+            "Token-2022 holding account was read but its referenced mint was not confirmed as a Token-2022 mint in the separate mint snapshot"));
     }
     if states.iter().any(|s|s.account_state=="frozen") {
         findings.push(("RPC_TOKEN_ACCOUNT_FROZEN","high",
