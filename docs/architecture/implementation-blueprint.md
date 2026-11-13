@@ -167,7 +167,7 @@ All “current time” decisions should take a supplied clock snapshot so tests 
 | `hguet-analyzer` | `Effect`, `AuthorityChange`, `UnknownEffect` | CPI/Token-2022 fixtures |
 | `hguet-verdict` | `SecurityVerdict`, `Finding`, `Coverage` | JSON schema + canonical tests |
 | `hguet-protocol` | `ClientEnvelope`, `ServerEnvelope`, `ProtocolVersion` | wire version & fuzz |
-| `hguet-transport` | `AuthenticatedCloudSession` | real PQ mTLS interop + negative tests |
+| `hguet-transport` | `AuthenticatedCloudSession` + one-use paid claim | real server-authenticated PQ TLS interop + negative tests |
 | `hguet-storage` | `ConfigSnapshot`, `CredentialRef`, `LocalBudgetLedger` | permissions & transaction races |
 
 ## 6. Dependency candidates (not pinned choices yet)
@@ -190,8 +190,8 @@ Prefer explicit Cargo features such as:
 ```text
 default = ["local"]
 local      = core + RPC-based free checks
-cloud      = transport + protocol + account features
-platform-secure-storage = OS-backed device credentials
+cloud      = transport + protocol + quote/claim verification
+platform-secure-storage = OS-protected one-use claim secrets
 dev-fixtures = local mocks, never published as production auth bypass
 ```
 
@@ -202,7 +202,7 @@ No hidden remote code/plugin downloads, no mutation of customer wallets, no arbi
 ## 8. Observability and privacy
 
 - Internal typed events: `decode_started`, `rpc_context_observed`, `simulation_finished`, `policy_violation`, `cloud_enrichment`, `report_rendered`.
-- Redact raw transactions, intent bodies, wallet secrets, device credentials, RPC URL tokens and customer email addresses from logs by default.
+- Redact raw transactions, intent bodies, wallet secrets, quote claim secrets, RPC URL tokens and customer email addresses from logs by default.
 - Never put secrets in panic output, metrics tags or support bundles.
 - HGUET Cloud telemetry is **opt-in** for the user, not a free-CLI dependency.
 - Log performance without exposing sensitive resources; use sample fixture IDs in CI.
