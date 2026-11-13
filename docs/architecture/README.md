@@ -1,12 +1,12 @@
 # HGUET CLI — Architecture specification
 
-**Version:** 0.1-draft · **Date:** 2026-11-13 · **Status:** design only / not implemented  
+**Status:** Unreleased design draft · **Date:** 2026-11-13 · **Implementation:** Not released / not implemented  
 **Repository:** `HGUET/hguet` (public, Apache-2.0)  
 **Commercial counterpart:** `HGUET/server` (private, proprietary)
 
 > This is the authoritative **proposed architecture** for the open-source CLI. No command, cryptographic guarantee, security detection, production deployment, or audit described below is claimed to exist yet. Implementations must pass the acceptance criteria before the project can be called production-ready.
 
-> **V0.2 billing update (2026-11-13):** older sections below that describe long-lived client enrollment, prepaid credits, `topup`, or USDC are **superseded**. The authoritative model is [anonymous SOL pay-per-request](payment-per-request.md) with [complexity-priced Cloud checks](pricing-policy.md) and [public v0.2 protocol](../../protocol/v1/README.md). SOL/USD is a **current-day cached price** with roughly ±5% market tolerance, while the signed invoice is payable in exact lamports. No mandatory account/balance or client mTLS in v0.2. Mainnet uses real SOL; Devnet/Testnet use valueless test SOL and isolated sandbox.
+> **Current architecture decision (2026-11-13):** older sections below that describe long-lived client enrollment, prepaid credits, `topup`, or USDC are **superseded**. The authoritative model is [anonymous SOL pay-per-request](payment-per-request.md) with [complexity-priced Cloud checks](pricing-policy.md) and [public current draft protocol](../../protocol/v1/README.md). SOL/USD is a **current-day cached price** with roughly ±5% market tolerance, while the signed invoice is payable in exact lamports. No mandatory account/balance or client mTLS in current draft. Mainnet uses real SOL; Devnet/Testnet use valueless test SOL and isolated sandbox.
 
 ## 1. Product mandate
 
