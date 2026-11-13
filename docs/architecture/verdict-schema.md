@@ -150,12 +150,12 @@ For signed **CloudAssessment** reports (not the final CLI SecurityVerdict):
 
 1. Define exact canonical byte encoding (e.g., canonical JSON/JCS or protobuf canonical subset with explicit rules).
 2. Exclude the signature field from the signed body.
-3. Domain-separate `HGUET-CLOUD-ASSESSMENT/v1` and include original message hash, intent hash, network, profile, decision, issued-at, expiry and evidence hash.
+3. Domain-separate `HGUET-CLOUD-ASSESSMENT/v1` and include original message hash, intent hash, network, profile, signed Cloud findings/coverage, source provenance, evidence digest, issued-at and expiry. The final CLI decision and separate billing receipt are **not** included in this signature.
 4. Sign with a server-held, rotated key; prefer ML-DSA-87 for the post-quantum profile once end-to-end implementation is verified.
 5. Publish server verification keys and rotation records through an authenticated pinned-key chain.
 6. Client verifies signature and freshness before indicating `report_signature_verified=true`.
 
-A signed verdict authenticates issuer and bound content, **not a proof that transaction execution will be safe**.
+A signed CloudAssessment authenticates the assessment's issuer and content, **not a proof that a payment is safe**. The final CLI SecurityVerdict is composed separately.
 
 ## 6. JSON output and tests
 
