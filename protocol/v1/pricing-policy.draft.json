@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "status": "prelaunch_draft_not_published_rates",
+  "pricing_policy_version": "draft-2026-11-13",
+  "currency_reference": "USD",
+  "payment_asset": "SOL",
+  "usd_price_unit": "micro_usd",
+  "sol_quantity_unit": "lamport",
+  "oracle": {
+    "pair": "SOL/USD",
+    "source_max_age_seconds": 86400,
+    "preferred_refresh_interval_seconds": [
+      14400,
+      43200
+    ],
+    "max_tolerated_independent_divergence_bps": 500,
+    "quote_ttl_seconds": 90,
+    "fresh_reference_required": true,
+    "fetch_oracle_for_each_request": false,
+    "note": "The tolerance is approximate market-reference divergence, never tolerance for invoice underpayment."
+  },
+  "tiers": [
+    {
+      "id": "basic",
+      "usd_price_micros": 1000,
+      "limits": {
+        "max_transaction_bytes": 512,
+        "max_top_level_instructions": 4,
+        "max_resolved_accounts": 16,
+        "max_lookup_tables": 0,
+        "max_distinct_programs": 2,
+        "max_risk_subjects": 2
+      },
+      "allowed_capabilities": [
+        "network_health",
+        "program_risk"
+      ],
+      "requires_raw": false
+    },
+    {
+      "id": "standard",
+      "usd_price_micros": 3000,
+      "limits": {
+        "max_transaction_bytes": 1232,
+        "max_top_level_instructions": 12,
+        "max_resolved_accounts": 32,
+        "max_lookup_tables": 2,
+        "max_distinct_programs": 6,
+        "max_risk_subjects": 6
+      },
+      "allowed_capabilities": [
+        "network_health",
+        "program_risk",
+        "program_upgrade_history",
+        "behavior_window"
+      ],
+      "requires_raw": false
+    },
+    {
+      "id": "complex",
+      "usd_price_micros": 6000,
+      "limits": {
+        "max_transaction_bytes": 4096,
+        "max_top_level_instructions": 24,
+        "max_resolved_accounts": 64,
+        "max_lookup_tables": 4,
+        "max_distinct_programs": 16,
+        "max_risk_subjects": 12
+      },
+      "allowed_capabilities": [
+        "network_health",
+        "program_risk",
+        "program_upgrade_history",
+        "behavior_window",
+        "token_extensions",
+        "authority_changes",
+        "cpi_metadata"
+      ],
+      "requires_raw": false
+    },
+    {
+      "id": "extended",
+      "usd_price_micros_min": 10000,
+      "limits": {
+        "max_transaction_bytes": 4096,
+        "max_top_level_instructions": 128,
+        "max_resolved_accounts": 256,
+        "max_lookup_tables": 32,
+        "max_distinct_programs": 128,
+        "max_risk_subjects": 64
+      },
+      "allowed_capabilities": [
+        "network_health",
+        "program_risk",
+        "program_upgrade_history",
+        "behavior_window",
+        "token_extensions",
+        "authority_changes",
+        "cpi_metadata",
+        "independent_rpc_simulation",
+        "extra_feed_lookup"
+      ],
+      "requires_explicit_quote": true
+    }
+  ],
+  "safety": {
+    "no_surcharge_after_payment": true,
+    "no_price_dependence_on_transaction_value": true,
+    "no_price_dependence_on_verdict_risk_score": true,
+    "metadata_only_cannot_assert_full_simulation": true,
+    "request_must_bind_quote_tier_and_metrics": true,
+    "max_lamports_enforced_before_payment": true
+  }
+}
