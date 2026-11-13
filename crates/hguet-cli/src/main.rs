@@ -328,6 +328,29 @@ fn token_account_snapshot_findings(
     findings
 }
 
+/// Correlation compares evidence sources, but never attributes simulated
+/// net flows to a particular CPI or proves that later state was the bank state.
+fn effect_graph_findings(
+    graph: &hguet_rpc::EffectGraph,
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    if graph.simulation_status!="rpc_succeeded" {return vec![];}
+    let mut results=Vec::new();
+    if graph.alerts.contains(&"GRAPH_CPI_NET_ATTRIBUTION_UNPROVEN") {
+        results.push(("RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED","medium",
+            "Declared token CPI movement and simulated net balance deltas are indexed separately; per-instruction gross spending and causality are not proven"));
+    }
+    if graph.alerts.iter().any(|flag|matches!(*flag,
+        "GRAPH_ACCOUNT_MINT_DISAGREEMENT"|"GRAPH_ACCOUNT_AUTHORITY_DISAGREEMENT")) {
+        results.push(("RPC_EFFECT_GRAPH_IDENTITY_CONFLICT","high",
+            "The non-atomic token-account snapshot conflicts with simulation mint or authority metadata; neither view proves execution-time identity"));
+    }
+    if graph.evidence_gaps.contains(&"opaque_token_cpi_semantics_unresolved") {
+        results.push(("RPC_EFFECT_GRAPH_OPAQUE_CPI","high",
+            "Opaque CPI instructions prevent attribution of all token and authority effects; correlated balances cannot close this coverage gap"));
+    }
+    results
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -466,6 +489,12 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         verdict.finding(code,severity,message);
                     }
                 }
+                if evidence.status=="rpc_succeeded" {
+                    verdict.coverage.push("rpc_effect_correlation_graph_advisory".into());
+                }
+                for (code,severity,message) in effect_graph_findings(&evidence.effect_graph) {
+                    verdict.finding(code,severity,message);
+                }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
@@ -549,6 +578,51 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod effect_graph_reporting_tests {
+    use super::*;
+    use hguet_rpc::EffectGraph;
+    fn graph() -> EffectGraph {
+        EffectGraph{
+            version:1,simulation_status:"rpc_succeeded".into(),
+            nodes:vec![],edges:vec![],sources:vec![],
+            evidence_gaps:vec!["full_execution_and_gross_spending_unverified"],
+            alerts:vec![],
+            execution_proven:false,spend_limit_enforced:false,
+            security_coverage:"partial_untrusted_rpc",
+            limitation:"test fixture",
+        }
+    }
+    #[test]
+    fn graph_warning_codes_preserve_cpi_and_cross_slot_uncertainty() {
+        let mut g=graph();
+        g.alerts.extend([
+            "GRAPH_CPI_NET_ATTRIBUTION_UNPROVEN",
+            "GRAPH_ACCOUNT_MINT_DISAGREEMENT",
+        ]);
+        g.evidence_gaps.push("opaque_token_cpi_semantics_unresolved");
+        let codes=effect_graph_findings(&g).into_iter().map(|f|f.0)
+            .collect::<Vec<_>>();
+        assert_eq!(codes,vec![
+            "RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED",
+            "RPC_EFFECT_GRAPH_IDENTITY_CONFLICT",
+            "RPC_EFFECT_GRAPH_OPAQUE_CPI",
+        ]);
+    }
+    #[test]
+    fn no_graph_warning_claims_authorization_or_execution() {
+        let g=graph();
+        assert!(effect_graph_findings(&g).is_empty());
+        let mut failed=graph();
+        failed.simulation_status="rpc_failed".into();
+        failed.alerts.push("GRAPH_CPI_NET_ATTRIBUTION_UNPROVEN");
+        failed.evidence_gaps.push("opaque_token_cpi_semantics_unresolved");
+        assert!(effect_graph_findings(&failed).is_empty());
+        assert!(!failed.execution_proven);
+        assert!(!failed.spend_limit_enforced);
     }
 }
 
