@@ -1,44 +1,50 @@
-# HGUET protocol v1 — PUBLIC DRAFT
+# HGUET public protocol v1 — accountless SOL pay-per-check (DRAFT)
 
-**Unreleased draft (2026-11-13).** This is the **single proposed source of truth** for the wire format between the open-source CLI and private HGUET Server. Protobuf definitions here are **not evidence of a working endpoint**.
+**Design version:** v0.2 · **Unreleased, not a running API** · Updated 2026-11-13.
+
+This directory is the **canonical public contract** shared by `HGUET/hguet` (Rust CLI) and private `HGUET/server`. The server consumes an exact pinned commit and must not fork these public message definitions.
 
 ## Files
 
-- [hguet.proto](hguet.proto): framed Protobuf messages for registration, devices, invoices, prepaid balance, cloud checks and status.
-- [cloud-assessment.schema.json](cloud-assessment.schema.json): canonical JSON data signed by HGUET Server for **CloudAssessment only**, including risk-source provenance and evidence manifest digest.
-- [contract-cases.json](contract-cases.json): cross-repo conformance test scenarios (requirements, not completed test results).
-- [Unified interoperability contract](../../docs/architecture/interoperability.md): normative roles, signing, precedence and billing policy.
+- [hguet.proto](hguet.proto) — TLS-framed Protobuf: `PriceQuoteRequest`, `PriceQuoteResult`, `PaidCheckRequest`, `PaidCheckStatus`, pending `CheckReceipt`, terminal `CheckResult`.
+- [payment-quote.schema.json](payment-quote.schema.json) — JCS-canonical signed SOL/USD quote; **USD tariff is a price reference, not a token transfer**.
+- [payment-receipt.schema.json](payment-receipt.schema.json) — separately signed receipt for **one native SOL payment, one Cloud check**.
+- [cloud-assessment.schema.json](cloud-assessment.schema.json) — source-attributed, separately signed Cloud risk assessment. The CLI composes the **final** SecurityVerdict.
+- [contract-cases.json](contract-cases.json) — 30 **planned** interoperability scenarios, not completed integration tests.
+- [fixtures/payment-quote-example.json](fixtures/payment-quote-example.json), [fixtures/payment-receipt-example.json](fixtures/payment-receipt-example.json), [fixtures/cloud-assessment-example.json](fixtures/cloud-assessment-example.json) — synthetic only, never production treasury or current market data.
+- [Authoritative payment spec](../../docs/architecture/payment-per-request.md) and [CLI/server compatibility](../../docs/architecture/interoperability.md).
 
-## Encoding and transport
+## The complete paid check
 
 ```text
-TCP -> TLS 1.3 with required tested PQ profile
-    -> uint32 BE length (max 1 MiB) -> Protobuf Envelope
-    -> Envelope protocol_major=1, protocol_minor=0
-    -> Envelope.request_id = exactly 16 unpredictable bytes
+CLI local check (free)
+  → server-authenticated PQ TLS (no registration, no device mTLS required)
+  → PriceQuoteRequest (message/intent/subjects, scope, max lamports)
+  ← signed PriceQuoteResult (USD tariff, fresh SOL/USD, integer lamports, receiver, expiry)
+  → external wallet signs native SOL System transfer + memo quote ID
+  → PaidCheckRequest (signature, private claim secret, bound check parameters)
+  ← CheckReceipt (pending) OR CheckResult (terminal signed CloudAssessment + PaymentReceipt)
+  → CLI verifies both, merges with local checks, returns final SecurityVerdict
 ```
 
-Do not carry tenant authorization in user-supplied fields. Identity comes from the verified mTLS device session. Initial enrollment uses already authenticated server-only TLS before issuing a device certificate.
+`PaidCheckStatus` lets the holder of the private quote claim secret retrieve an existing result after a disconnection **without paying again**. A claim is not a user account or a credit balance. The claim secret is not published onchain; its SHA-256 commitment is bound into signed quote. The server must not disclose one person's result to a third party who simply observes the onchain transfer signature.
 
-The `signed_cloud_assessment` field is a detached-signature wrapper around JCS-canonical `cloud-assessment.schema.json` JSON; report domain separator is `HGUET-CLOUD-ASSESSMENT/v1` plus a zero byte and signed bytes. `signed_receipt` is a **distinct** signed record with a separately defined domain separator `HGUET-BILLING-RECEIPT/v1`. Invoice `server_invoice_signature` uses `HGUET-INVOICE/v1`. Never reuse one domain separator across kinds.
+## Pricing and cluster policy
 
-Solana wire bytes may be sent only under `DataScope.DATA_SCOPE_RAW_TRANSACTION` with `raw_transaction_consent=true`; a metadata-only request cannot assert full independent simulation.
+- **All invoices are native SOL**, expressed in integer **lamports**; never USDC, SPL mints, fiat card payments or internal credit balances in v0.2.
+- Product tariff may be expressed in **integer USD microdollars** and converted into lamports using an independently sourced **SOL/USD** feed. Check actual price update time, confidence and data-source quality; reject stale or implausible prices.
+- Conversion: `lamports = ceil(usd_price_micros * 1_000_000_000 / sol_usd_price_micros)` using checked integer arithmetic.
+- Signed quote freezes the lamports amount until expiry; user max price cap is binding, no silent repricing.
+- Mainnet: real SOL and production receiver. Devnet/Testnet: **test** SOL and sandbox receiver. All quotes and receipts bind environment + network **and genesis hash**, never interchangeable.
+- Donation wallet is **not** the receiver for service payments.
 
-A `PriceQuoteRequest` asks for an authenticated price for the intended capabilities, network, profile and data-sharing scope. `PriceQuoteResult` carries quote ID, schedule, signed maximum price and expiry. The client validates the `HGUET-PRICE-QUOTE/v1` signature and its own cap **before** sending `CheckRequest.accepted_quote_id`. Invalid or expired quotes fail closed.
+## Authentication, signing and transport
 
-`maximum_charge_units` is a nonnegative decimal string in authenticated tariff units. No floating-point monetary calculations. Client can set 0 to forbid a charge; server rejects rather than raises the ceiling.
+- TLS 1.3 with the selected verified hybrid `SecP384r1MLKEM1024` group and ML-DSA-87 server identity profile. These are **testable design requirements**, not proof of live PQ service.
+- No user registration or long-lived client certificate: one quote is authorized by its private claim secret and **verified onchain settlement**.
+- Framing: `uint32 big-endian length` (≤1 MiB), followed by one Protobuf `Envelope` with major=1/minor=0 draft.
+- Signed quote uses `HGUET-SOL-QUOTE/v1`; signed PaymentReceipt uses `HGUET-SOL-PAYMENT-RECEIPT/v1`; CloudAssessment uses `HGUET-CLOUD-ASSESSMENT/v1`. Each has independent canonical JCS body, detached signature and authenticated key.
+- A signed Cloud assessment **does not sign or replace** the final CLI SecurityVerdict.
+- Replay, wrong cluster, wrong receiver, changed message, expired quote or wrong claim secret fail closed; network delays remain pending and can be recovered.
 
-## Security requirements before implementation
-
-- Strict parser/schema validation: field lengths, enums, unknown critical fields, per-field bounds and rejecting malformed JCS payloads.
-- Reject unknown protocol major; explicit minor/capability negotiation.
-- Reject encrypted connection when negotiated group, certificate or signature policy fails.
-- Sign and verify assessment **independently** of final CLI JSON verdict.
-- Server returns terminal `CheckResult` only on terminal assessment. `CheckReceipt` indicates pending/accepted, not risk decision.
-- Idempotency `tenant + request ID + canonical request hash`, same result/charge on retries.
-- Authenticated session context binds server-signed report to tenant, network, request, message and intent hashes.
-- Verified server receipt proves issuer and data binding, not absolute safety.
-
-## Interoperability upgrade rule
-
-This protocol is draft and can change until a **public tagged release**. Thereafter any incompatible wire change requires a new protocol major. Private `HGUET/server` pins the published version, runs the same test fixtures and never forks this file.
+**No released protocol version exists yet.** The private server must pin this exact public draft while in development and run cross-repository fixtures before production.
