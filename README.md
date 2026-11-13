@@ -30,6 +30,8 @@
 
 **Future server address:** `vps-d0669a91.vps.ovh.net:443` is currently the hardcoded default for *future* opt-in Cloud use. `hguet config show --json` displays it offline. Cloud transport remains disabled until authenticated TLS and the signed-protocol workflow are implemented.
 
+ The current RPC CPI analyzer now performs **limited compiled-byte decoding** of common SPL Token/Token-2022 transfer, mint, burn, delegation, authority, freeze and close instructions; unsupported extensions remain opaque high-risk observations, not evidence of safety.
+
 **Not working yet:** independently verified multi-provider/atomic Solana state, guaranteed complete account/balance snapshots, **semantic** CPI and Token-2022 effects, **full** spending-cap enforcement (including program-internal transfers and network fees), finalized transaction audit, Cloud networking, SOL settlement or signed Cloud assessments. Optional RPC balance/CPI fields are treated as incomplete provider-supplied observations, not proof of safe execution. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
 
 ```sh
