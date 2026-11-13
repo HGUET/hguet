@@ -1,6 +1,6 @@
 # HGUET public protocol v1 — accountless SOL pay-per-check (DRAFT)
 
-**Design status:** Unreleased draft, not a running API · Updated 2026-11-13.
+**Design status:** Unreleased draft, not a running API. **No HGUET product releases exist yet.** The `protocol/v1` folder denotes a proposed wire-schema major version, **not** an HGUET v1.0 product release. · Updated 2026-11-13.
 
 This directory is the **canonical public contract** shared by `HGUET/hguet` (Rust CLI) and private `HGUET/server`. The server consumes an exact pinned commit and must not fork these public message definitions.
 
