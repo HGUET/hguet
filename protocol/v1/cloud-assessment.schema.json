@@ -1,15 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hguet.fr/schemas/v1/cloud-assessment.schema.json",
-  "title": "HGUET CloudAssessment V1 (draft)",
-  "description": "Canonical JCS payload signed by private HGUET server; not the final CLI SecurityVerdict.",
+  "title": "HGUET CloudAssessment — unreleased wire-schema draft",
+  "description": "Server-signed Cloud enrichment for exactly one anonymously paid SOL quote; final CLI SecurityVerdict is separate.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
     "kind",
-    "tenant_scope",
-    "request_id",
     "network",
     "genesis_hash",
     "message_sha256",
@@ -24,7 +22,12 @@
     "findings",
     "coverage",
     "issued_at",
-    "expires_at"
+    "expires_at",
+    "quote_id",
+    "environment",
+    "data_scope",
+    "subjects_sha256",
+    "transaction_sha256"
   ],
   "properties": {
     "schema_version": {
@@ -32,15 +35,6 @@
     },
     "kind": {
       "const": "cloud_assessment"
-    },
-    "tenant_scope": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 160
-    },
-    "request_id": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{32}$"
     },
     "network": {
       "type": "string",
@@ -250,6 +244,38 @@
           }
         }
       }
+    },
+    "quote_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$",
+      "description": "Same one-off quote_id as original signed price quote and payment receipt."
+    },
+    "environment": {
+      "enum": [
+        "production",
+        "sandbox"
+      ]
+    },
+    "data_scope": {
+      "enum": [
+        "metadata_only",
+        "raw_transaction"
+      ]
+    },
+    "subjects_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "transaction_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   }
 }
