@@ -141,6 +141,10 @@ Aggregation precedence: definitive hard deny wins; otherwise missing mandatory e
 
 `cloud` is explicit; environment defaults may not silently switch free checks to paid requests. Local mode must be usable without a HGUET account or HGUET Cloud availability.
 
+## 6. Shared CLI ↔ Server contract
+
+The normative **[interoperability specification](interoperability.md)** and [public draft protocol](../../protocol/v1/README.md) define how this open-source CLI securely consumes the closed HGUET Cloud. The server signs its own **CloudAssessment**, not the CLI's final **SecurityVerdict**. A metadata-only Cloud call cannot independently simulate or decode a transaction from a hash; raw transaction disclosure is opt-in.
+
 ## 6. Data contracts, system design references
 
 Read these companion specifications:
@@ -153,7 +157,9 @@ Read these companion specifications:
 6. [Rust implementation blueprint](implementation-blueprint.md) — crate interfaces, typed pipeline, dependency direction and first tickets.
 7. [Testing, roadmap & release gates](testing-roadmap.md) — repeatable criteria and CI.
 8. [Architectural decisions](decisions.md) — accepted vs deferred choices.
-9. [Primary technical references](references.md) — external specs and compatibility checklist.
+9. [Shared interop contract](interoperability.md) — source of truth for both repositories and signed report boundaries.
+10. [Public protocol draft](../../protocol/v1/README.md) — Protobuf, JSON schema and conformance scenarios.
+11. [Primary technical references](references.md) — external specs and compatibility checklist.
 
 ## 7. Project-wide invariants
 
