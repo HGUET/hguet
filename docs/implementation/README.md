@@ -143,7 +143,7 @@ The parser additionally labels Token-2022 CPI instruction **prefixes** from bina
 - For Transfer Fee, optional raw amounts, expected fee, basis points and maximum fee; for Permanent Delegate and Transfer Hook, selected key/address roles. The Token-2022 prefix discriminants and subtypes follow the published SPL Token-2022 interface.
 - Family-only hints for confidential transfers/fees/mint-burn, CPI guard, pause, non-transferable, account reallocation, pointer/configuration extensions and unknown future opcodes. These remain **opaque**.
 
-Even when some exact fields are parsed, `opaque_token_instruction_count` and `token_2022_extension_instruction_count` still include these extensions: their state-dependent semantics have **not** been validated. In particular, no mint TLV extension inventory is fetched, no transfer-hook program is authenticated or re-executed, and no fee formula is checked against live mint state. An extension can exist on a mint **without any extension instruction appearing in simulated CPI**; absence of these observations is never proof of absence of fees/hooks/delegates.
+Even when some exact fields are parsed, `opaque_token_instruction_count` and `token_2022_extension_instruction_count` still include these extensions: their state-dependent semantics have **not** been validated. In particular, this CPI classifier does not by itself authenticate or execute transfer-hook programs, verify Token-2022 mint configuration, or validate fee formulas against an atomic execution-state snapshot. An extension can exist on a mint **without any extension instruction appearing in simulated CPI**; absence of these observations is never proof of absence of fees/hooks/delegates.
 
 After a successful advisory RPC simulation, the CLI may emit these findings for extension instructions **or for corresponding extension-authority rotations in a Token-2022 `SetAuthority` CPI** (authority types `4`/`5` for transfer fees, `8` for permanent delegate, `10` for transfer hook, and `9`/`11` for confidential authorities):
 
@@ -155,6 +155,29 @@ After a successful advisory RPC simulation, the CLI may emit these findings for 
 All findings remain high-risk advisory hints, return `UNKNOWN`, do **not** broadcast or sign, and do not authorize a transaction. To enforce actual payment constraints, future work needs authenticated mint/account data, full extension state validation, transaction-level direct + CPI effects, independent provider comparisons, and customer-controlled signer integration.
 
 Sources: [Token-2022 interface discriminants](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/instruction.rs.html), [Transfer Fee instruction layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/transfer_fee/instruction.rs.html), [Transfer Hook instruction layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/transfer_hook/instruction.rs.html), [Solana transfer fees](https://solana.com/docs/tokens/extensions/transfer-fees), [Solana permanent delegate](https://solana.com/docs/tokens/extensions/permanent-delegate).
+
+## Opt-in Token-2022 mint TLV snapshot (implemented, advisory)
+
+After a successful opt-in Solana RPC simulation, HGUET may issue **one additional read-only `getMultipleAccounts` request to the same selected RPC** for at most 16 candidate mints. Candidates are derived from reported token balance changes and compiled Token-2022 CPI instructions. No request happens for an offline check, failed simulation, or absent candidates. If there are more than 16 candidates, HGUET refuses to silently truncate the risk set and reports unavailable evidence.
+
+The request uses `encoding=base64`, `commitment=confirmed`, and `minContextSlot=<simulation slot>`. This enforces only a **minimum RPC context slot**, NOT an atomic read of the bank used by `simulateTransaction`. The output includes `rpc_analysis.mint_snapshot.simulation_slot`, `context_slot`, `atomic_with_simulation=false`, and per-address status (`token_2022`, `not_token_2022`, or `missing`). Invalid, stale or conflicting provider responses fail closed to `UNKNOWN`.
+
+For a Token-2022-owned mint the parser checks the base 82-byte mint state, 83-byte zero padding, account type byte at **offset 165**, and TLV entries starting at **offset 166**. It rejects truncated or duplicate extensions, wrong account-only extension types, unsupported sizes and invalid decoded layouts. The bounded TLV list records all recognized type IDs; unknown types remain explicitly opaque.
+
+The current byte-level **mint-state** decoders cover:
+
+- `TransferFeeConfig` (type 1): config/withdraw authorities, withheld raw amount and older/newer fee schedules, including epoch, basis points, maximum fee.
+- `PermanentDelegate` (type 12): optional non-zero pubkey for mint-wide delegation.
+- `TransferHook` (type 14): optional update authority and hook program pubkey.
+- `NonTransferable` (type 9): presence with exactly empty payload.
+
+Other mint extension types, including confidential transfer configuration, default account state, pausable, interest-bearing, pointer and metadata extensions, remain **present-but-not-semantically-validated**. Account-side Token-2022 extension state is not yet read.
+
+The CLI now reports advisory `RPC_MINT_TRANSFER_FEE_CONFIG`, `RPC_MINT_TRANSFER_HOOK_ACTIVE`, `RPC_MINT_PERMANENT_DELEGATE_ACTIVE`, `RPC_MINT_CONFIDENTIAL_EXTENSION`, `RPC_MINT_UNKNOWN_EXTENSION`, `RPC_MINT_OPAQUE_EXTENSION_STATE`, `RPC_MINT_STATE_MISSING`, and `RPC_MINT_STATE_NON_ATOMIC` as appropriate. The risk checks do not promote any transaction to `ALLOW`. Even a mint with no detected extension is **not evidence of full transaction safety**, because CPI can move funds through other accounts, mint state can change, and simulated results are provider-supplied.
+
+This is **single-provider snapshot correlation**, not verified on-chain finality or a signer-enforced authorization policy. The next stages require transaction-instruction-to-mint provenance, authenticated account/mint state, consistency across providers and slots, Token-2022 account-side TLVs, and signer-controlled enforcement.
+
+Source: [Solana `getMultipleAccounts`](https://solana.com/docs/rpc/http/getmultipleaccounts), [official Token-2022 TLV layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/mod.rs.html), [Token-2022 extension IDs](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/enum.ExtensionType.html).
 
 ## Planned default Cloud server (configured, not active)
 
