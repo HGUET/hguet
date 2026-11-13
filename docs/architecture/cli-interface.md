@@ -10,7 +10,7 @@ hguet
   inspect [TRANSACTION|-] [--offline] [--json]
   check [TRANSACTION|-] --intent INTENT.json [--policy POLICY.toml]
        [--mode local|cloud] [--profile strict|review|explore]
-       [--rpc URL] [--network mainnet|devnet] [--json]
+       [--rpc URL] [--network mainnet|devnet] [--max-charge UNITS] [--json]
   policy validate FILE
   intent verify FILE [--trusted-key PUBKEY]
   doctor [--rpc] [--cloud] [--json]
@@ -18,6 +18,7 @@ hguet
   register [--email ...]
   login
   account
+  pricing [--json]              # authenticated current Cloud quote/schedule
   device list|revoke DEVICE_ID
   topup AMOUNT --asset USDC
   balance
@@ -44,6 +45,10 @@ hguet
 | `balance/usage/history` | device identity | HGUET Cloud | credit and usage summary |
 
 **Avoid “hguet pay”**: it implies wallet or transfer execution and violates the non-custodial product mandate.
+
+### Price confirmation before charging
+
+Cloud checks first obtain an **authenticated price quote** (network, capabilities, disclosure scope, price schedule, quote ID and expiry). Automated callers configure a maximum **integer credit-unit** charge; the CLI must reject an invoice/check whose verified price exceeds the cap and **never** silently approve a more expensive quote. Interactive CLI can show the price before submitting, without invoking any web cabinet.
 
 ### Cloud mode and wallet distinction
 
@@ -78,6 +83,7 @@ hguet login
 hguet doctor --cloud
 hguet topup 10 --asset USDC
 hguet balance --json
+hguet pricing --json
 hguet check tx.bin --intent approved-intent.json --mode cloud --json
 hguet usage --since 2026-11-01 --json
 hguet device list
