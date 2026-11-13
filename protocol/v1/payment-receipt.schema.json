@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/payment-receipt.schema.json",
+  "title": "HGUET one-payment one-check terminal receipt v0.2 DRAFT",
+  "description": "Domain HGUET-SOL-PAYMENT-RECEIPT/v1, not a topup, not a credit balance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "quote_id",
+    "environment",
+    "network",
+    "genesis_hash",
+    "message_sha256",
+    "payment_signature",
+    "payment_instruction_index",
+    "lamports_paid",
+    "receiver",
+    "settled_slot",
+    "settled_commitment",
+    "analysis_state",
+    "cloud_assessment_sha256",
+    "issued_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "native_sol_payment_receipt"
+    },
+    "quote_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "environment": {
+      "enum": [
+        "production",
+        "sandbox"
+      ]
+    },
+    "network": {
+      "enum": [
+        "mainnet",
+        "devnet",
+        "testnet"
+      ]
+    },
+    "genesis_hash": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "message_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "payment_signature": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 100
+    },
+    "payment_instruction_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lamports_paid": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 40
+    },
+    "receiver": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44
+    },
+    "settled_slot": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "settled_commitment": {
+      "const": "finalized"
+    },
+    "analysis_state": {
+      "enum": [
+        "completed",
+        "retryable",
+        "refund_required"
+      ]
+    },
+    "cloud_assessment_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
