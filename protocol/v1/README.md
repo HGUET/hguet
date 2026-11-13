@@ -14,7 +14,11 @@ This directory is the **canonical public contract** shared by `HGUET/hguet` (Rus
 - [fixtures/payment-quote-example.json](fixtures/payment-quote-example.json), [fixtures/payment-receipt-example.json](fixtures/payment-receipt-example.json), [fixtures/cloud-assessment-example.json](fixtures/cloud-assessment-example.json) — synthetic only, never production treasury or current market data.
 - [Authoritative payment spec](../../docs/architecture/payment-per-request.md) and [CLI/server compatibility](../../docs/architecture/interoperability.md).
 
-## The complete paid check
+## Protected transaction's optional signed token caps
+
+A separately signed `PaymentIntent` for the **transaction being inspected** may now include optional `token_spend_limits` entries (`mint` Base58 address, `max_debit_raw` canonical unsigned u64). This is **not** a quote currency, HGUET payment method or Cloud invoice. It bounds recognized **direct checked token debit declarations** in the original wire only. The current Rust verifier rejects uncovered direct token operations, exceeded caps and duplicate/invalid entries but cannot authorize total execution spending through CPI, custom programs or token extensions. All such unknown outcomes stay `UNKNOWN`. The omitted field preserves signed SOL-only intent compatibility; the private server must pin this exact public contract before assuming any new field semantics.
+
+
 
 ```text
 CLI local check (free)
