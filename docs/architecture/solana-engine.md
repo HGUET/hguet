@@ -66,7 +66,11 @@ Current official Solana docs describe **legacy**, **v0**, and **v1** transaction
 
 All indexed accounts must resolve to concrete addresses. Missing lookup table, RPC inconsistency or invalid account index → `UNKNOWN`. Resolving only static message keys in a v0 transaction is a security bug.
 
-## 3. RPC adapter
+### Aggregate token spending — three non-additive evidence views
+
+The `AggregateTokenSpending` report joins **namespaced evidence**, not transfers: (1) directly declared checked token source debits from the original wire; (2) checked SPL Token/Token-2022 source CPI amounts reported by one RPC; and (3) the magnitude of negative complete-pair token account **net** deltas reported by that RPC. They are independently summed per mint and per (mint, source account) using bounded integer arithmetic, with each category separately compared against independently verified signed mint/source caps. They are **never added together** or claimed as total gross token spending. A provider net delta may net out transfers in or include accounts outside the intended payer, and unchecked transfers have no declared mint. Cross-provider trust, atomic execution-time account state, hidden program/hook CPI and signer-side spending enforcement remain unproven. CLI JSON provides `aggregate_token_spending` only for successful opt-in simulations, with `total_gross_token_spend_proven=false` and `onchain_spend_limit_enforced=false`. All aggregate cap mismatches are **advisory**.
+
+
 
 Use a configured provider and robust JSON-RPC parser. Minimum methods:
 
