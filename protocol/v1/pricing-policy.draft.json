@@ -83,10 +83,10 @@
       "usd_price_micros_min": 10000,
       "limits": {
         "max_transaction_bytes": 4096,
-        "max_top_level_instructions": 128,
-        "max_resolved_accounts": 256,
+        "max_top_level_instructions": 64,
+        "max_resolved_accounts": 96,
         "max_lookup_tables": 32,
-        "max_distinct_programs": 128,
+        "max_distinct_programs": 64,
         "max_risk_subjects": 64
       },
       "allowed_capabilities": [
@@ -110,5 +110,6 @@
     "metadata_only_cannot_assert_full_simulation": true,
     "request_must_bind_quote_tier_and_metrics": true,
     "max_lamports_enforced_before_payment": true
-  }
+  },
+  "network_specific_limits_note": "Solana legacy/v0/v1 have different instruction/account/wire size limits; do not admit unsupported work even if a general pricing tier allows it. Actual validated runtime format limits take precedence."
 }
