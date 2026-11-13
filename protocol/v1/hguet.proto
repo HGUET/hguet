@@ -83,6 +83,17 @@ message ClientEvidence {
   string local_decision = 3;               // advisory local context ONLY
 }
 
+// Complexity metrics are bounded declarations, NOT trusted proof of execution.
+// Metadata-only mode charges only the actually supplied/allowed subjects.
+message ComplexityMetrics {
+  uint32 transaction_bytes = 1;
+  uint32 top_level_instructions = 2;
+  uint32 resolved_accounts = 3;
+  uint32 lookup_tables = 4;
+  uint32 distinct_programs = 5;
+  uint32 risk_subjects = 6;
+  bool verified_from_raw_transaction = 7;
+}
 // Server-signed JSON schema: protocol/v1/payment-quote.schema.json.
 // Amount is calculated by server from configured USD tariff and fresh SOL/USD.
 // Quote is scoped to ONE exact analysis and ONE buyer-held claim secret.
@@ -99,6 +110,7 @@ message PriceQuoteRequest {
   string maximum_lamports = 9;          // unsigned decimal integer; user cap
   repeated Subject subjects = 10;      // present for metadata-only intelligence
   bytes subjects_sha256 = 11;          // canonical subject set binding, exactly 32 bytes
+  ComplexityMetrics complexity = 12;   // for a transparent, bounded quote
 }
 message PriceQuoteResult {
   ResultCode result = 1;
@@ -124,6 +136,7 @@ message PaidCheckRequest {
   bool raw_transaction_consent = 13;
   ClientEvidence evidence = 14;
   bytes subjects_sha256 = 15;          // must match signed quote and canonical evidence subjects
+  ComplexityMetrics quoted_complexity = 16; // same bounded scope as signed quote
 }
 message PaidCheckStatus {
   bytes quote_id = 1;
