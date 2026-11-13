@@ -87,7 +87,25 @@ The transport sets a response size limit (1 MiB), request size limit, short netw
 
 **v0 ALT address lookup (implemented as advisory):** for v0 messages referencing lookup tables, the RPC Engine also calls `getMultipleAccounts` after verified genesis and validates the returned account owner (`AddressLookupTab1e1111111111111111111111111`), serialized metadata discriminator, active table status, selected indexes and extension-slot warm-up. It resolves writable keys from all tables before read-only keys, and passes the observed ALT context slot to `simulateTransaction` as `minContextSlot`. Invalid/missing/deactivating tables, wrong owners, malformed data, or backwards-moving simulation slots fail closed to `UNKNOWN`. The `rpc_analysis.lookup_resolution` result is **one-provider, slot-scoped evidence only** and is not a consensus guarantee. Offline output still reports unresolved ALT addresses, because no network state was read.
 
-Still outstanding: independently corroborated/atomic v0 Address Lookup Table **state**, account-state/balance delta inspection, complete CPI and Token-2022 analysis, RPC multi-provider cross-checks and trusted policy enforcement at the external signer. Until those exist, remote simulation alone cannot justify `ALLOW`.
+## Solana balance deltas and CPI coverage (implemented, advisory)
+
+The `hguet-rpc::effects` module now processes the **optional** `simulateTransaction` fields `preBalances`/`postBalances`, `preTokenBalances`/`postTokenBalances`, `innerInstructions`, `fee` and `loadedAddresses`. Every observation is tied to the explicit RPC simulation slot and the **original signed message hash**; for v0, loaded addresses are matched against the separately checked lookup-table resolution.
+
+Results are returned under `rpc_analysis.effect_analysis`:
+
+- `lamport_deltas`: per-account address, before/after and signed change in exact **lamports** (string integers, not floating point).
+- `token_deltas`: token-account index/address, mint, decimals, owner when supplied, raw token-unit balances and delta **only when both comparable sides are present**. New/closed or inconsistent account state is **not** silently treated as zero.
+- `cpi`: whether internal instructions were recorded, number of groups/instructions, invoked program IDs validated against account indexes, and explicit need for semantic review. `innerInstructions=null` is **missing coverage**, not proof of zero CPI.
+- `simulated_fee_lamports`: fee only if the RPC provided a well-formed integer.
+- `observed_fields`, `missing_fields` and `warnings`: explicit evidence coverage. `security_coverage` is **always** `partial_untrusted_rpc`.
+
+Malformed or inconsistent arrays, invalid account indices, duplicate token records, wrongly encoded amounts, CPI indices, mismatched `loadedAddresses` and unsupported metadata cause `rpc_unavailable`/`UNKNOWN`, never `ALLOW`. JSON-RPC responses are capped at 1 MiB; nested token/CPI collections have explicit bounds. Raw log text is never copied into the CLI's analysis output.
+
+**Limitations:** Not every RPC provider emits all of these optional simulation fields. The simulation may use a replacement blockhash and does not prove the transaction will execute on-chain. A token change observed across two RPC snapshots **is not** complete attribution of all CPI effects, and a successful response alone does not certify authorization, exact eventual debits, consensus state or token-program semantics. Even when every optional field is populated, the local `SecurityVerdict` stays `UNKNOWN`.
+
+Source: [official Solana RPC simulation result and balance/CPI structures](https://solana.com/docs/rpc/json-structures) and [simulateTransaction API](https://solana.com/docs/rpc/http/simulatetransaction).
+
+Still outstanding: independently corroborated/atomic v0 Address Lookup Table **state**, finalized post-execution `getTransaction` audit, complete CPI and Token-2022 semantic decoding, reliable pre-sign fee and **total** debit limits, RPC multi-provider cross-checks and trusted policy enforcement at the external signer. Until those exist, remote simulation alone cannot justify `ALLOW`.
 
 ## Planned default Cloud server (configured, not active)
 
