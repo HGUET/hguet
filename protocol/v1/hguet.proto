@@ -65,6 +65,8 @@ message Envelope {
     CheckStatus check_status = 32;
     CheckResult check_result = 33;
     ProtocolError error = 34;
+    PriceQuoteRequest price_quote_request = 35;
+    PriceQuoteResult price_quote_result = 36;
   }
 }
 message ClientHello {
@@ -172,6 +174,21 @@ message ClientEvidence {
   repeated Subject subjects = 2;
   string local_decision = 3;           // context only, not server authorization
 }
+// A Cloud check must first be bound to a server-authenticated price quote.
+message PriceQuoteRequest {
+  string network = 1;
+  string profile = 2;
+  repeated string requested_capabilities = 3;
+  DataScope scope = 4;
+}
+message PriceQuoteResult {
+  ResultCode result = 1;
+  string quote_id = 2;
+  string price_schedule = 3;
+  string maximum_charge_units = 4;  // authenticated quoted price; integer decimal
+  uint64 expires_unix_ms = 5;
+  SignedPayload signed_quote = 6;    // HGUET-PRICE-QUOTE/v1
+}
 message CheckRequest {
   string network = 1;                 // explicit solana cluster
   string genesis_hash = 2;            // checked against source when possible
@@ -186,6 +203,7 @@ message CheckRequest {
   ClientEvidence evidence = 11;
   string accepted_price_schedule = 12;
   string maximum_charge_units = 13;   // decimal integer; max user-authorized fee
+  string accepted_quote_id = 14;      // must match server-issued signed quote
 }
 message CheckReceipt {
   ResultCode result = 1;              // accepted or in progress, NOT a verdict
