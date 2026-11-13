@@ -13,7 +13,7 @@
 | M4 | SecurityVerdict | stable JSON schema, proof fields, exit codes, CI integration |
 | M5 | Agent/x402/MPP adapters | realistic checkout/challenge fixtures, no signing, signer-bound checks |
 | M6 | Local release | cross-platform binaries, supply-chain policy, published limitations |
-| M7 | Cloud client prototype | real PQ TLS interop, enrollment, signed receipts and fail closed |
+| M7 | Cloud client prototype | real server-authenticated PQ TLS interop, signed one-use SOL quote/assessment/receipt, fail closed |
 | M8 | Paid account CLI | top-up invoice, account, credit ledger and retry-safe billing |
 | M9 | External trial | benchmarks against existing tools, false positive/negative analysis, audit |
 
@@ -21,7 +21,7 @@ Do not start private Cloud before a useful and well-tested **free M1–M4** mile
 
 ### Cross-repository interoperability gate
 
-Both projects must consume the single public [protocol v1 draft](../../protocol/v1/README.md) and execute [contract conformance scenarios](../../protocol/v1/contract-cases.json). Mandatory negative tests include Cloud-signed assessment versus CLI-composed SecurityVerdict, hash-only capability restrictions, receipt/idempotency boundaries, TLS algorithm downgrade, account/tenant mixups and Cloud outage behavior. **The presence of draft fixtures does not mean these tests have run.**
+Both projects must consume the single public [protocol v1 draft](../../protocol/v1/README.md) and execute [contract conformance scenarios](../../protocol/v1/contract-cases.json). Mandatory negative tests include Cloud-signed assessment versus CLI-composed SecurityVerdict, hash-only capability restrictions, receipt/idempotency boundaries, TLS algorithm downgrade, cross-quote claim leakage, wrong-genesis payments and Cloud outage behavior. **The presence of draft fixtures does not mean these tests have run.**
 
 ## 2. Test matrix
 
