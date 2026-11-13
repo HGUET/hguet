@@ -85,7 +85,9 @@ JSON output includes optional `rpc_analysis`: verified genesis, context slot, si
 
 The transport sets a response size limit (1 MiB), request size limit, short network timeouts, and **no redirects**. Unit tests inject a mock JSON-RPC transport and cover wrong genesis, malformed responses, conflicting status, success, simulation error, no accidental RPC before offline validation, and mutually compatible blockhash/signature options. Tests do **not** claim live Devnet simulation succeeded.
 
-Still outstanding: **v0 Address Lookup Table resolution**, account-state/balance delta inspection, complete CPI and Token-2022 analysis, RPC multi-provider cross-checks and trusted policy enforcement at the external signer. Until those exist, remote simulation alone cannot justify `ALLOW`.
+**v0 ALT address lookup (implemented as advisory):** for v0 messages referencing lookup tables, the RPC Engine also calls `getMultipleAccounts` after verified genesis and validates the returned account owner (`AddressLookupTab1e1111111111111111111111111`), serialized metadata discriminator, active table status, selected indexes and extension-slot warm-up. It resolves writable keys from all tables before read-only keys, and passes the observed ALT context slot to `simulateTransaction` as `minContextSlot`. Invalid/missing/deactivating tables, wrong owners, malformed data, or backwards-moving simulation slots fail closed to `UNKNOWN`. The `rpc_analysis.lookup_resolution` result is **one-provider, slot-scoped evidence only** and is not a consensus guarantee. Offline output still reports unresolved ALT addresses, because no network state was read.
+
+Still outstanding: independently corroborated/atomic v0 Address Lookup Table **state**, account-state/balance delta inspection, complete CPI and Token-2022 analysis, RPC multi-provider cross-checks and trusted policy enforcement at the external signer. Until those exist, remote simulation alone cannot justify `ALLOW`.
 
 ## Planned default Cloud server (configured, not active)
 
