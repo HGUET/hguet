@@ -40,7 +40,11 @@ The first implementation is in `crates/hguet-rpc/src/effect_graph.rs` and is exp
 
 The unreleased CLI now accepts optional `token_spend_limits` in the separately signed `PaymentIntent` v1. For each canonical mint it rejects direct checked token debits whose summed raw amount exceeds the independently signed ceiling. Unchecked transfers, token authority changes, unsupported direct Token-2022 extensions, unresolved ALT and uncovered mint identities fail signed-intent validation rather than being treated as zero outflow. This is a bound on **declared direct instruction arguments**, not proven gross onchain spending. CPI/raw token account differences are compared to these caps only as advisory single-provider RPC findings; the Effect Graph's `spend_limit_enforced=false` remains correct for total transaction spending. See [implementation details](../implementation/README.md).
 
+### Signed source-token-account scope
 
+The signed `PaymentIntent` v1 optionally includes `token_source_limits` binding each declared checked debit to an exact source token-account, mint, raw cap and authority present among the message's first `num_required_signatures` static keys. Strict single-authority instruction shapes are required; multisig and extra hook accounts fail closed in this initial mode. **Signer role ≠ verified transaction signature ≠ proven token-account owner.** Required-signer placement is checked offline, and `transaction_signatures_verified` indicates whether all transaction signatures validated. Actual onchain ownership, delegates, CPI spending and complete execution remain unresolved.
+
+## 2. Solana formats and canonical identity
 
 Current official Solana docs describe **legacy**, **v0**, and **v1** transaction formats; v1 has different size and account/resource-limit semantics. The implementation must be version-aware.
 
