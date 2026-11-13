@@ -111,11 +111,17 @@ fn token_rows(items: &[Value], keys: &[String])
 {
     if items.len()>MAX_TOKEN_ROWS { return Err(RpcError::TooLarge); }
     let mut rows=BTreeMap::new();
+    let mut seen_account_indices=BTreeSet::new();
     for item in items {
         let value=item.as_object().ok_or(RpcError::InvalidResponse)?;
         let index=value.get("accountIndex").and_then(Value::as_u64)
             .and_then(|n|usize::try_from(n).ok()).ok_or(RpcError::InvalidResponse)?;
-        if index>=keys.len() { return Err(RpcError::InvalidResponse); }
+        if index>=keys.len() || !seen_account_indices.insert(index) {
+            // A token account cannot have two different mints in the same
+            // pre/post snapshot. Otherwise an untrusted provider could spoof
+            // contradictory mint evidence at one index.
+            return Err(RpcError::InvalidResponse);
+        }
         let mint=value.get("mint").and_then(Value::as_str)
             .filter(|x|valid_pubkey(x)).ok_or(RpcError::InvalidResponse)?.to_owned();
         let owner=value.get("owner").and_then(Value::as_str).map(str::to_owned);
@@ -426,6 +432,10 @@ mod tests {
             json!({"preBalances":[10,"10"],"postBalances":[1,1]}),
             json!({"preTokenBalances":[row(7,"10")],"postTokenBalances":[]}),
             json!({"preTokenBalances":[row(1,"1"),row(1,"2")],"postTokenBalances":[]}),
+            json!({"preTokenBalances":[row(1,"1"),{"accountIndex":1,
+                "mint":bs58::encode([99u8;32]).into_string(),
+                "uiTokenAmount":{"amount":"3","decimals":6}}],
+                "postTokenBalances":[]}),
             json!({"preTokenBalances":[row(1,"1.2")],"postTokenBalances":[]}),
             json!({"innerInstructions":[{"index":42,"instructions":[]}]}),
             json!({"innerInstructions":[{"index":0,"instructions":[{"programIdIndex":99}]}]}),
