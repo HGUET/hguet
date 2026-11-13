@@ -239,3 +239,36 @@ fn signed_source_role_fields_cannot_be_tampered_after_signature(){
     broken.payload_b64=STANDARD.encode(serde_json::to_vec(&json).unwrap());
     assert!(verified(&broken,&pin,&tx).unwrap_err().contains("signature"));
 }
+
+#[test]
+fn a_fully_verified_wallet_signature_is_reported_separately_from_owner_proof(){
+    let wallet=SigningKey::from_bytes(&[13u8;32]);
+    let wallet_key=bs58::encode(wallet.verifying_key().to_bytes()).into_string();
+    let mut message=vec![1u8,0,1,7];
+    for key in [wallet_key.clone(),key(2),key(3),key(4),key(5),
+                LEGACY_TOKEN.into(),TOKEN_2022.into()]{
+        message.extend(bs58::decode(key).into_vec().unwrap());
+    }
+    message.extend([9u8;32]);
+    message.extend([1,5,4,1,3,2,0,10,12]);
+    message.extend(25u64.to_le_bytes());
+    message.push(6);
+    let signature=wallet.sign(&message);
+    let mut raw=vec![1u8];
+    raw.extend(signature.to_bytes());
+    raw.extend(message);
+    let parsed=parse_transaction(&raw).unwrap();
+    assert_eq!(parsed.transaction_signature_status,
+        crate::TransactionSignatureStatus::Verified);
+    let mut scoped=source_cap(4,2,1,"25");
+    scoped.authority=wallet_key;
+    let signed=signed_source_payload(&parsed,None,vec![scoped]);
+    let (env,pin)=sign(&signed);
+    assert!(verified(&env,&pin,&parsed).is_ok());
+    let review=review_declared_source_limits(&parsed,
+        signed.token_source_limits.as_ref().unwrap()).unwrap();
+    assert!(review.transaction_signatures_verified);
+    assert!(review.transaction_required_signer_role_checked);
+    assert!(!review.token_account_owner_verified);
+    assert!(!review.total_spending_proven);
+}
