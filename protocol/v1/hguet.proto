@@ -98,6 +98,7 @@ message PriceQuoteRequest {
   bytes claim_secret_sha256 = 8;        // exactly 32 bytes; never reveal secret now
   string maximum_lamports = 9;          // unsigned decimal integer; user cap
   repeated Subject subjects = 10;      // present for metadata-only intelligence
+  bytes subjects_sha256 = 11;          // canonical subject set binding, exactly 32 bytes
 }
 message PriceQuoteResult {
   ResultCode result = 1;
@@ -122,6 +123,7 @@ message PaidCheckRequest {
   bytes raw_transaction = 12;         // only with explicit consent
   bool raw_transaction_consent = 13;
   ClientEvidence evidence = 14;
+  bytes subjects_sha256 = 15;          // must match signed quote and canonical evidence subjects
 }
 message PaidCheckStatus {
   bytes quote_id = 1;
