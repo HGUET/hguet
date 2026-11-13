@@ -100,22 +100,22 @@ The planned commercial transport is authenticated post-quantum-capable TLS 1.3, 
 
 **Trust boundary:** Cloud signs only its own assessment and billing receipt; the CLI independently verifies them and composes the final SecurityVerdict. Server-side intelligence cannot override a local hard DENY. Public protocol files are a **draft**, not released endpoints.
 
-## Current Cloud product direction — v0.2 (pre-alpha)
+## Current Cloud direction — unreleased design
 
-**No registration, no balances, no USDC (legacy design; not used in v0.2).** HGUET's optional Cloud is designed as **one security check paid directly in native SOL**, quoted in USD using a cached current-day SOL/USD reference (approximately ±5% tolerance in the market reference, **exact lamports in the signed invoice**). A Basic metadata check has a **proposed** USD reference price of $0.001; more instructions, accounts, sources and computational depth increase the pre-agreed quoted price. Pricing is a draft, not a live offer.
+**No registration, no balances, no USDC.** HGUET's optional Cloud is designed as **one security check paid directly in native SOL**, quoted in USD using a cached current-day SOL/USD reference (approximately ±5% tolerance in the market reference, **exact lamports in the signed invoice**). A Basic metadata check has a **proposed** USD reference price of $0.001; more instructions, accounts, sources and computational depth increase the pre-agreed quoted price. Pricing is a draft, not a live offer.
 
 - [Complexity-based pricing policy](docs/architecture/pricing-policy.md)
 - [Anonymous SOL payment flow](docs/architecture/payment-per-request.md)
 - [Public accountless protocol draft](protocol/v1/README.md)
 
-### Detailed CLI architecture — design v0.1
+### CLI architecture — design documents
 
 The full Rust CLI specification is published in **[docs/architecture/README.md](docs/architecture/README.md)**. All components below are planned; the codebase is still pre-alpha.
 
 | Document | What it specifies |
 | --- | --- |
 | [Rust implementation blueprint](docs/architecture/implementation-blueprint.md) | Crate boundaries, typed interfaces, pipeline and build plan |
-| [CLI commands & configuration](docs/architecture/cli-interface.md) | Command syntax, output, registration, USDC (legacy design; not used in v0.2) credit, local state |
+| [CLI commands & configuration](docs/architecture/cli-interface.md) | Command syntax, output, registration, SOL-only payment, local state |
 | [Solana engine](docs/architecture/solana-engine.md) | Legacy/v0/v1, ALT, CPI, simulation, RPC evidence and failures |
 | [Security & threat model](docs/architecture/security.md) | Trusted intent, limits, bypass threats, risk and privacy |
 | [Verdict schema](docs/architecture/verdict-schema.md) | JSON contract and ALLOW/WARN/DENY/UNKNOWN decision rules |
@@ -143,7 +143,7 @@ HGUET's local security CLI is planned to remain free and open source. If you'd l
 
 **Network:** Solana mainnet · **Asset:** native SOL · [View address on Solscan](https://solscan.io/account/39iqkHNMqncEPp3p52zKwUHnYzk2MJbcaHyY4Hhg2fWC)
 
-> Donations are voluntary, do not purchase HGUET Cloud credits or services, and are **not** the HGUET Cloud billing/USDC (legacy design; not used in v0.2) top-up address. Check the complete address and network before sending. HGUET never asks you to share wallet private keys.
+> Donations are voluntary, do not purchase HGUET Cloud credits or services, and are **not** the HGUET Cloud billing/commercial SOL payment address. Check the complete address and network before sending. HGUET never asks you to share wallet private keys.
 
 ## Project status
 
