@@ -182,6 +182,34 @@ fn token_cpi_findings(
     findings
 }
 
+/// These are warnings about reported instructions, not proof that the mint
+/// has a given extension or that a transaction executed successfully.
+fn token_2022_extension_findings(
+    status: &str,
+    items: &[hguet_rpc::Token2022ExtensionObservation],
+) -> Vec<(&'static str, &'static str, &'static str)> {
+    if status!="rpc_succeeded" { return Vec::new(); }
+    let mut findings=Vec::new();
+    if items.iter().any(|item|item.family=="transfer_fee") {
+        findings.push(("RPC_TOKEN_2022_TRANSFER_FEE","high",
+            "Token-2022 CPI references transfer-fee configuration, expected fees, or withheld fee operations; fee state and net receipts have not been verified"));
+    }
+    if items.iter().any(|item|item.family=="transfer_hook") {
+        findings.push(("RPC_TOKEN_2022_TRANSFER_HOOK","high",
+            "Token-2022 CPI references transfer-hook configuration; hook execution and downstream program effects are not independently verified"));
+    }
+    if items.iter().any(|item|item.family=="permanent_delegate") {
+        findings.push(("RPC_TOKEN_2022_PERMANENT_DELEGATE","high",
+            "Token-2022 CPI references permanent-delegate initialization; this authority may move or burn tokens outside ordinary account-owner consent"));
+    }
+    if items.iter().any(|item|matches!(item.family,
+        "confidential_transfer"|"confidential_transfer_fee"|"confidential_mint_burn")) {
+        findings.push(("RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS","high",
+            "Token-2022 CPI references confidential token operations; ordinary balance snapshots cannot establish all hidden movements"));
+    }
+    findings
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -301,6 +329,12 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 ) {
                     verdict.finding(code,severity,message);
                 }
+                for (code,severity,message) in token_2022_extension_findings(
+                    &evidence.status,
+                    &effects.cpi.token_2022_extension_observations,
+                ) {
+                    verdict.finding(code,severity,message);
+                }
                 if let Some(ref intent) = verified_intent {
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
@@ -384,6 +418,42 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod token_2022_extension_tests {
+    use super::*;
+    fn observation(family: &'static str) -> hguet_rpc::Token2022ExtensionObservation {
+        hguet_rpc::Token2022ExtensionObservation {
+            parent_instruction_index:0,inner_instruction_index:0,
+            opcode:26,sub_opcode:Some(1),family,operation:"test",
+            layout_checked:false,mint:None,authority:None,new_authority:None,
+            hook_program_id:None,declared_amount_raw:None,expected_fee_raw:None,
+            fee_basis_points:None,maximum_fee_raw:None,
+        }
+    }
+    #[test]
+    fn extension_types_generate_distinct_advisory_risks() {
+        let items=[
+            observation("transfer_fee"),observation("transfer_hook"),
+            observation("permanent_delegate"),observation("confidential_transfer_fee"),
+        ];
+        let codes=token_2022_extension_findings("rpc_succeeded",&items)
+            .into_iter().map(|v|v.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec![
+            "RPC_TOKEN_2022_TRANSFER_FEE","RPC_TOKEN_2022_TRANSFER_HOOK",
+            "RPC_TOKEN_2022_PERMANENT_DELEGATE","RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS"]);
+    }
+    #[test]
+    fn failures_and_missing_extensions_do_not_invent_warnings() {
+        assert!(token_2022_extension_findings("rpc_failed",
+            &[observation("transfer_fee")]).is_empty());
+        assert!(token_2022_extension_findings("rpc_unavailable",
+            &[observation("transfer_hook")]).is_empty());
+        assert!(token_2022_extension_findings("rpc_succeeded",
+            &[observation("unknown_extension")]).is_empty());
+        assert!(token_2022_extension_findings("rpc_succeeded",&[]).is_empty());
     }
 }
 
