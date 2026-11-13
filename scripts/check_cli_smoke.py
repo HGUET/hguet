@@ -32,4 +32,28 @@ if len(sys.argv)>2:
     assert parsed_v1["resource_config"]["loaded_accounts_data_size_limit"]==65536
     assert v1["verdict"]["decision"]=="UNKNOWN"
     assert v1["verdict"]["simulation_status"]=="not_performed"
+if len(sys.argv)>3:
+    direct = json.loads(Path(sys.argv[3]).read_text())
+    Draft202012Validator(schema).validate(direct["verdict"])
+    p = direct["inspection"]
+    assert p["wire_format"] == "legacy"
+    assert p["transaction_bytes"] == 311
+    assert p["instruction_count"] == 1
+    assert p["transaction_signature_status"] == "unsigned"
+    assert p["program_ids"] == ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"]
+    raw_ix = p["compiled_top_level_instructions"][0]
+    assert raw_ix["instruction_index"] == 0
+    assert raw_ix["program_index"] == 5
+    assert raw_ix["account_indices"] == [1,3,2,4]
+    assert raw_ix["data_base58"]
+    v = direct["verdict"]
+    assert v["decision"] == "UNKNOWN"
+    assert v["simulation_status"] == "not_performed"
+    assert "wire_direct_token_binary_decode" in v["coverage"]
+    codes = [x["code"] for x in v["findings"]]
+    assert "WIRE_TOKEN_DIRECT_MOVEMENT" in codes
+    assert "WIRE_TOKEN_DIRECT_OPAQUE" not in codes
+    assert "RPC_SIMULATION_ONLY" not in codes
+    assert "WIRE_TOKEN_DIRECT_ALT_UNRESOLVED" not in codes
+    print("PASS: original-wire TransferChecked detected offline, no ALLOW or simulated effects")
 print("PASS: legacy and v1 CLI JSON validated; unsupported onchain effects remain UNKNOWN")
