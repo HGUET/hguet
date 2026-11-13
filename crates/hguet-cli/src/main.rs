@@ -599,13 +599,16 @@ fn execute(v:Args)->(serde_json::Value,i32){
         }
     }
     let mut signed_token_spend_review=None;
+    let mut signed_token_source_review=None;
     if let Some(ref intent)=verified_intent {
         match &intent.token_spend_limits {
             None=>{
-                if let Some(ref direct)=offline_direct_analysis {
-                    if signed_sol_intent_cannot_cap_direct_tokens(direct) {
-                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
-                            "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed per-mint debit limits");
+                if intent.token_source_limits.is_none() {
+                    if let Some(ref direct)=offline_direct_analysis {
+                        if signed_sol_intent_cannot_cap_direct_tokens(direct) {
+                            verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
+                                "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed token debit limits");
+                        }
                     }
                 }
             }
@@ -625,6 +628,23 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         verdict.finding("SIGNED_INTENT_TOKEN_CAP_INVALID","critical",err);
                         return (json!({"inspection":parsed,"verdict":verdict}),20);
                     }
+                }
+            }
+        }
+        if let Some(ref scopes)=intent.token_source_limits {
+            // Exact-byte signing + source/signer-role enforcement ran in
+            // verify_intent. Recompute once to expose bounded review evidence.
+            match hguet_core::review_declared_source_limits(&parsed,scopes) {
+                Ok(review)=>{
+                    verdict.coverage.push("signed_direct_token_source_authority_roles".into());
+                    verdict.finding("SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE","high",
+                        "Signed source/mint/authority scopes bind direct checked debit declarations to required message signer roles, but do not verify token-account ownership, multisig, CPI, actual signature presence before signing or total executed spending");
+                    signed_token_source_review=Some(review);
+                }
+                Err(err)=>{
+                    verdict.decision=Decision::Deny;
+                    verdict.finding("SIGNED_INTENT_SOURCE_SCOPE_INVALID","critical",err);
+                    return (json!({"inspection":parsed,"verdict":verdict}),20);
                 }
             }
         }
@@ -735,6 +755,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 }
                 return (json!({"inspection":parsed,"rpc_analysis":evidence,
                     "signed_token_spend_review":signed_token_spend_review,
+                    "signed_token_source_review":signed_token_source_review,
                     "verdict":verdict}),30)
             }
             Err(err)=>{
@@ -743,6 +764,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     "Solana RPC evidence unavailable or inconsistent; no successful execution should be inferred");
                 return (json!({"inspection":parsed,
                     "signed_token_spend_review":signed_token_spend_review,
+                    "signed_token_source_review":signed_token_source_review,
                     "verdict":verdict}),30)
             }
         }
@@ -750,6 +772,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
     verdict.finding("NO_SIMULATION","high","Wire inspection does not prove transfers, CPI effects, execution or wallet authorization");
     (json!({"inspection":parsed,
         "signed_token_spend_review":signed_token_spend_review,
+                    "signed_token_source_review":signed_token_source_review,
         "verdict":verdict}),if v.command=="inspect"{0}else{30})
 }
 fn main(){
