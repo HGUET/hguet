@@ -18,7 +18,9 @@ This directory is the **canonical public contract** shared by `HGUET/hguet` (Rus
 
 A separately signed `PaymentIntent` for the **transaction being inspected** may now include optional `token_spend_limits` entries (`mint` Base58 address, `max_debit_raw` canonical unsigned u64). This is **not** a quote currency, HGUET payment method or Cloud invoice. It bounds recognized **direct checked token debit declarations** in the original wire only. The current Rust verifier rejects uncovered direct token operations, exceeded caps and duplicate/invalid entries but cannot authorize total execution spending through CPI, custom programs or token extensions. All such unknown outcomes stay `UNKNOWN`. The omitted field preserves signed SOL-only intent compatibility; the private server must pin this exact public contract before assuming any new field semantics.
 
+**Signed source-account limits:** The optional `token_source_limits` entries bind `mint`, `source_token_account`, `authority` (a required transaction signer key) and raw `max_debit_raw`. Only the source/mint/authority roles of simple checked direct token instructions are compared; unknown opcodes, multisig and extra accounts fail closed. A listed required signer is not independently verified as current owner/delegate of the token account. No CPI, hooks, total spending or `ALLOW` are proven. Mint and source limits must *both* hold when present. The optional field is part of the **protected transaction's signed intent**, not the Cloud SOL invoice.
 
+## The complete paid check
 
 ```text
 CLI local check (free)
