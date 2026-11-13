@@ -177,7 +177,7 @@ mod tests {
                 table_address:bs58::encode([7u8;32]).into_string(),
                 writable_indexes:vec![0],readonly_indexes:vec![1]
             }],
-            program_ids:vec![],system_transfers:vec![],
+            program_ids:vec![],compiled_top_level_instructions:vec![],system_transfers:vec![],
             declared_system_transfer_lamports:"0".into(),resource_config:None,limitations:vec![]
         }
     }
