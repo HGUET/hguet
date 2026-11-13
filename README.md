@@ -30,7 +30,7 @@
 
 **Future server address:** `vps-d0669a91.vps.ovh.net:443` is currently the hardcoded default for *future* opt-in Cloud use. `hguet config show --json` displays it offline. Cloud transport remains disabled until authenticated TLS and the signed-protocol workflow are implemented.
 
-**Not working yet:** v0 address-lookup resolution, trustworthy multi-provider/slot-aligned state and balance delta analysis, complete CPI/Token-2022 effects, **full** spend-cap enforcement (including program-internal transfers and network fees), Cloud networking, SOL settlement or signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
+**Not working yet:** independently verified multi-provider and single-slot Solana state, complete account/balance delta and CPI/Token-2022 effects, **full** spend-cap enforcement (including program-internal transfers and network fees), Cloud networking, SOL settlement or signed Cloud assessments. One-provider v0 ALT resolution is now available for explicit RPC checks, but remains untrusted advisory data. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
 
 ```sh
 cargo test --workspace
