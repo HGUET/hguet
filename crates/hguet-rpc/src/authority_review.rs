@@ -412,6 +412,86 @@ mod tests {
             &review,None,Some(&mint),600).unwrap_err(),RpcError::InvalidResponse);
     }
     #[test]
+    fn missing_signed_source_is_observed_from_extra_batch_with_own_slot(){
+        use crate::source_account_rpc::{
+            SignedSourceAccountObservation,SignedSourceAccountRpcSnapshot,
+        };
+        let additional=SignedSourceAccountRpcSnapshot {
+            simulation_slot:600,context_slot:609,atomic_with_simulation:false,
+            accounts:vec![SignedSourceAccountObservation {
+                address:pubkey(3),signed_mint:pubkey(2),
+                declared_token_program:TOKEN_PROGRAM.into(),
+                status:"legacy_token",state:Some(state(4,Some(5),200,130)),
+                mint_matches_signed_scope:Some(true),
+                program_matches_signed_scope:Some(true),
+            }],
+            limitation:"test",
+        };
+        let result=correlate_signed_source_authority_with_additional_sources(
+            &signed(TOKEN_PROGRAM,5,"100"),None,Some(&additional),None,600).unwrap();
+        assert_eq!(result.token_account_context_slot,None);
+        assert_eq!(result.missing_signed_source_context_slot,Some(609));
+        assert_eq!(result.sources[0].context_slot,Some(609));
+        assert_eq!(result.sources[0].authority_relationship,"observed_delegate");
+        assert_eq!(result.sources[0].delegate_allowance_covers_declared,Some(true));
+        assert_eq!(result.sources[0].mint_matches_signed_scope,Some(true));
+        assert!(!result.authorization_proven);
+        assert!(!result.total_spending_proven);
+    }
+    #[test]
+    fn primary_balance_snapshot_is_not_duplicated_by_extra_source_snapshot(){
+        use crate::source_account_rpc::{
+            SignedSourceAccountObservation,SignedSourceAccountRpcSnapshot,
+        };
+        let additional=SignedSourceAccountRpcSnapshot {
+            simulation_slot:600,context_slot:610,atomic_with_simulation:false,
+            accounts:vec![SignedSourceAccountObservation {
+                address:pubkey(3),signed_mint:pubkey(2),
+                declared_token_program:TOKEN_2022_PROGRAM.into(),
+                status:"missing",state:None,
+                mint_matches_signed_scope:None,
+                program_matches_signed_scope:None,
+            }],
+            limitation:"test",
+        };
+        let previous=snap("token_2022",Some(state(4,None,100,0)));
+        assert_eq!(correlate_signed_source_authority_with_additional_sources(
+            &signed(TOKEN_2022_PROGRAM,4,"50"),Some(&previous),
+            Some(&additional),None,600).unwrap_err(),RpcError::InvalidResponse);
+        let mut old=additional.clone();
+        old.context_slot=599;
+        assert_eq!(correlate_signed_source_authority_with_additional_sources(
+            &signed(TOKEN_2022_PROGRAM,4,"50"),None,
+            Some(&old),None,600).unwrap_err(),RpcError::InvalidResponse);
+        old.context_slot=601;
+        old.accounts[0].declared_token_program=TOKEN_PROGRAM.into();
+        assert_eq!(correlate_signed_source_authority_with_additional_sources(
+            &signed(TOKEN_2022_PROGRAM,4,"50"),None,
+            Some(&old),None,600).unwrap_err(),RpcError::InvalidResponse);
+    }
+    #[test]
+    fn extra_missing_account_is_not_invented_as_zero_or_owner(){
+        use crate::source_account_rpc::{
+            SignedSourceAccountObservation,SignedSourceAccountRpcSnapshot,
+        };
+        let missing=SignedSourceAccountRpcSnapshot {
+            simulation_slot:600,context_slot:601,atomic_with_simulation:false,
+            accounts:vec![SignedSourceAccountObservation{
+                address:pubkey(3),signed_mint:pubkey(2),
+                declared_token_program:TOKEN_PROGRAM.into(),
+                status:"missing",state:None,
+                mint_matches_signed_scope:None,
+                program_matches_signed_scope:None,
+            }],
+            limitation:"test",
+        };
+        let result=correlate_signed_source_authority_with_additional_sources(
+            &signed(TOKEN_PROGRAM,4,"30"),None,Some(&missing),None,600).unwrap();
+        assert_eq!(result.sources[0].account_observation,"missing");
+        assert_eq!(result.sources[0].later_account_balance_covers_declared,None);
+        assert_eq!(result.sources[0].authority_relationship,"unobserved");
+    }
+    #[test]
     fn old_slot_atomic_claim_duplicate_or_inconsistent_state_is_rejected(){
         let signed=signed(TOKEN_2022_PROGRAM,4,"100");
         let mut s=snap("token_2022",Some(state(4,None,200,0)));
