@@ -6,6 +6,8 @@
 
 > This is the authoritative **proposed architecture** for the open-source CLI. No command, cryptographic guarantee, security detection, production deployment, or audit described below is claimed to exist yet. Implementations must pass the acceptance criteria before the project can be called production-ready.
 
+> **V0.2 billing update (2026-11-13):** older sections below that describe long-lived client enrollment, prepaid credits, `topup`, or USDC are **superseded**. The authoritative model is [anonymous SOL pay-per-request](payment-per-request.md) with [complexity-priced Cloud checks](pricing-policy.md) and [public v0.2 protocol](../../protocol/v1/README.md). SOL/USD is a **current-day cached price** with roughly ±5% market tolerance, while the signed invoice is payable in exact lamports. No mandatory account/balance or client mTLS in v0.2. Mainnet uses real SOL; Devnet/Testnet use valueless test SOL and isolated sandbox.
+
 ## 1. Product mandate
 
 HGUET is a Rust CLI that examines **prospective Solana transactions before customer-controlled signing**. It aims to answer four questions:
@@ -148,6 +150,10 @@ The normative **[interoperability specification](interoperability.md)** and [pub
 ## 6. Data contracts, system design references
 
 Read these companion specifications:
+
+- **[Complexity-based pricing policy](pricing-policy.md)** — low-cost Basic, higher tiers for complexity and volume; cached SOL/USD reference.
+- **[Anonymous SOL pay-per-request](payment-per-request.md)** — one payment per Cloud check, no account/balance, signed quote and receipt.
+- **[Solana network environments](network-environments.md)** — mainnet/devnet/testnet and sandbox segregation.
 
 1. [CLI surface & configuration](cli-interface.md) — exact proposed commands, inputs, config, exit codes and secret handling.
 2. [Solana transaction engine](solana-engine.md) — versions, RPC, simulation, account resolution and unsafe cases.
