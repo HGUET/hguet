@@ -66,7 +66,7 @@ fn parse_args() -> Result<Args, String> {
     if file.starts_with('-') && file!="-" { return Err("invalid transaction path".into()); }
     if file=="-" { return Err("stdin not yet supported; use a bounded file".into()); }
     let mut v=Args{command:cmd,file,network:"mainnet".into(),encoding:"binary".into(),
-        intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:false};
+        intent:None,trusted_key:None,policy:None,rpc_url:None,mode:"local".into(),offline:false};
     while let Some(flag)=a.next(){
         match flag.as_str(){
             "--offline"=>v.offline=true,
