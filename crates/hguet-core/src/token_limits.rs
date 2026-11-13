@@ -43,23 +43,24 @@ fn canonical_raw(s:&str)->Option<u64>{
 /// optional signed cap mode rejects every direct Token Program operation other
 /// than TransferChecked, BurnChecked and Token-2022 TransferCheckedWithFee.
 /// This is an intentionally conservative initial contract.
-pub fn review_declared_token_limits(
-    parsed:&ParsedTransaction,limits:&[TokenSpendLimit],
-)->Result<TokenSpendLimitReview,String>{
-    if limits.len()>MAX_MINTS{return Err("signed token limit list exceeds 16 mints".into());}
-    let mut caps=BTreeMap::<String,u64>::new();
-    let mut seen=BTreeSet::new();
-    for cap in limits {
-        if !canonical_pubkey(&cap.mint){
-            return Err("signed token limit mint is not a canonical 32-byte Base58 pubkey".into());
-        }
-        let limit=canonical_raw(&cap.max_debit_raw)
-            .ok_or("signed token debit maximum must be canonical u64 raw units")?;
-        if !seen.insert(cap.mint.clone()){
-            return Err("duplicate signed token mint cap".into());
-        }
-        caps.insert(cap.mint.clone(),limit);
-    }
+
+#[derive(Debug,Clone)]
+pub(crate) struct CheckedDirectDebit {
+    pub mint:String,
+    pub source_token_account:String,
+    pub authority:String,
+    pub amount_raw:u64,
+    pub instruction_index:usize,
+    pub account_count:usize,
+    pub exact_single_authority_count:usize,
+}
+
+/// Reused by mint-wide and per-source signed cap checks. It deliberately
+/// excludes unchecked transfers, approvals, mint authority operations and
+/// unknown Token-2022 instructions. Every direct Token Program opcode must
+/// be accounted for or the *entire* signed cap review fails closed.
+pub(crate) fn checked_direct_debits(parsed:&ParsedTransaction)
+    -> Result<Vec<CheckedDirectDebit>,String>{
     if parsed.unresolved_lookup_addresses>0 {
         return Err("unresolved ALT addresses cannot establish signed token debit coverage".into());
     }
@@ -67,8 +68,7 @@ pub fn review_declared_token_limits(
         parsed.program_ids.len()!=parsed.instruction_count {
         return Err("missing original compiled instruction bytes for signed token caps".into());
     }
-    let mut totals=BTreeMap::<String,u128>::new();
-    let mut count=0usize;
+    let mut result=Vec::new();
     for (i,ix) in parsed.compiled_top_level_instructions.iter().enumerate() {
         if ix.instruction_index!=i || ix.program_index>=parsed.static_account_keys.len()||
            ix.account_indices.iter().any(|&n|n>=parsed.static_account_keys.len()) {
@@ -87,47 +87,75 @@ pub fn review_declared_token_limits(
         if bytes.len()>MAX_INSTRUCTION_BYTES {
             return Err("direct token instruction data exceeds signed cap decoder bound".into());
         }
-        let (mint_index,amount) = match bytes.as_slice(){
-            // SPL Token TransferChecked and BurnChecked (both token programs):
-            // opcode + u64 raw debit + u8 decimals; mint is account index 1.
-            _ if bytes.len()==10 &&
-                ((bytes[0]==12 && ix.account_indices.len()>=4) ||
-                 (bytes[0]==15 && ix.account_indices.len()>=3)) => {
+        let (mint_role,auth_role,amount,expected_count) = match bytes.as_slice(){
+            // TransferChecked and BurnChecked: opcode + u64 amount + u8 decimals.
+            _ if bytes.len()==10 && bytes[0]==12 && ix.account_indices.len()>=4 =>{
                 let raw=u64::from_le_bytes(bytes[1..9].try_into()
-                    .map_err(|_|"invalid checked token debit amount")?);
-                (1,raw)
+                    .map_err(|_|"invalid checked transfer amount")?);
+                (1,3,raw,4)
+            },
+            _ if bytes.len()==10 && bytes[0]==15 && ix.account_indices.len()>=3 =>{
+                let raw=u64::from_le_bytes(bytes[1..9].try_into()
+                    .map_err(|_|"invalid checked burn amount")?);
+                (1,2,raw,3)
             },
             // Token-2022 TransferCheckedWithFee: opcode 26, subtype 1,
-            // u64 amount, u8 decimals, u64 expected fee. Fee is *withheld*
-            // from recipient; the declared source debit is the amount.
+            // amount u64, decimals u8, expected withheld fee u64.
             [26,1,..] if program==TOKEN_2022 &&
-                bytes.len()==19 && ix.account_indices.len()>=4 => {
+                bytes.len()==19 && ix.account_indices.len()>=4 =>{
                 let raw=u64::from_le_bytes(bytes[2..10].try_into()
                     .map_err(|_|"invalid Token-2022 fee transfer amount")?);
-                (1,raw)
+                (1,3,raw,4)
             },
             _=>return Err("direct token instruction cannot be bounded by signed mint debit limits (unchecked, authority, opaque or malformed operation)".into()),
         };
-        let mint_account=ix.account_indices[mint_index];
-        let mint=parsed.static_account_keys.get(mint_account)
-            .ok_or("direct token mint index outside message")?;
-        let cap=caps.get(mint)
+        let key=|role:usize|parsed.static_account_keys.get(ix.account_indices[role])
+            .ok_or_else(||"direct token account index outside message".to_string()).cloned();
+        result.push(CheckedDirectDebit {
+            mint:key(mint_role)?,source_token_account:key(0)?,authority:key(auth_role)?,
+            amount_raw:amount,instruction_index:i,
+            account_count:ix.account_indices.len(),exact_single_authority_count:expected_count,
+        });
+    }
+    Ok(result)
+}
+
+pub fn review_declared_token_limits(
+    parsed:&ParsedTransaction,limits:&[TokenSpendLimit],
+)->Result<TokenSpendLimitReview,String>{
+    if limits.len()>MAX_MINTS{return Err("signed token limit list exceeds 16 mints".into());}
+    let mut caps=BTreeMap::<String,u64>::new();
+    let mut seen=BTreeSet::new();
+    for cap in limits {
+        if !canonical_pubkey(&cap.mint){
+            return Err("signed token limit mint is not a canonical 32-byte Base58 pubkey".into());
+        }
+        let limit=canonical_raw(&cap.max_debit_raw)
+            .ok_or("signed token debit maximum must be canonical u64 raw units")?;
+        if !seen.insert(cap.mint.clone()){
+            return Err("duplicate signed token mint cap".into());
+        }
+        caps.insert(cap.mint.clone(),limit);
+    }
+    let debits=checked_direct_debits(parsed)?;
+    let mut totals=BTreeMap::<String,u128>::new();
+    for debit in &debits {
+        let cap=caps.get(&debit.mint)
             .ok_or("direct token debit mint is missing from signed token_spend_limits")?;
-        let new=totals.get(mint).copied().unwrap_or(0)
-            .checked_add(u128::from(amount))
+        let new=totals.get(&debit.mint).copied().unwrap_or(0)
+            .checked_add(u128::from(debit.amount_raw))
             .ok_or("direct token declared debit sum overflow")?;
         if new>u128::from(*cap) {
             return Err("declared direct token debits exceed signed per-mint max_debit_raw".into());
         }
-        totals.insert(mint.clone(),new);
-        count+=1;
+        totals.insert(debit.mint.clone(),new);
     }
     Ok(TokenSpendLimitReview{
         debits:totals.into_iter().map(|(mint,amount)|DeclaredMintDebit{
             signed_limit_raw:caps[&mint].to_string(),
             mint,declared_raw:amount.to_string(),
         }).collect(),
-        decoded_direct_debit_instructions:count,
+        decoded_direct_debit_instructions:debits.len(),
         limits_enforced_on_direct_wire_declarations:true,
         total_spending_proven:false,coverage:"direct_checked_wire_declarations_only",
         limitation:"Signed caps reject uncovered direct Token Program instructions and direct declared debit overages. They do NOT cover CPI, fees, hooks, custom program side effects, wrapped SOL, account delegation or independent onchain execution; they do NOT authorize any transaction.",
