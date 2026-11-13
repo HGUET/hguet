@@ -137,8 +137,7 @@ fn signature_status(
     else { TransactionSignatureStatus::PartiallySigned }
 }
 
-fn parse_v1_config(r: &mut Reader<'_>) -> Result<V1Resources, String> {
-    let config_mask = r.u32()?;
+fn parse_v1_config(r: &mut Reader<'_>, config_mask: u32) -> Result<V1Resources, String> {
     if config_mask & !0x1f != 0 { return Err("unsupported v1 config mask bits".into()); }
     if config_mask & 0b11 == 0b01 || config_mask & 0b11 == 0b10 {
         return Err("v1 priority-fee bits must be set together".into());
@@ -170,13 +169,15 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         let required = r.u8()? as usize;
         let signed_ro = r.u8()? as usize;
         let unsigned_ro = r.u8()? as usize;
-        let config = parse_v1_config(&mut r)?;
+        let config_mask = r.u32()?;
         r.take(32)?; // recent blockhash
         let n_instructions = r.u8()? as usize;
         if n_instructions > MAX_INSTRUCTIONS { return Err("too many v1 instructions".into()); }
         let n_accounts = r.u8()? as usize;
         if n_accounts > MAX_V1_ACCOUNTS { return Err("too many v1 addresses".into()); }
         let keys = r.take(n_accounts.checked_mul(32).ok_or("account size overflow")?)?.to_vec();
+        // Config values follow address list, NOT the config_mask itself.
+        let config = parse_v1_config(&mut r, config_mask)?;
         let mut headers = Vec::with_capacity(n_instructions);
         for _ in 0..n_instructions {
             let program = r.u8()? as usize;
