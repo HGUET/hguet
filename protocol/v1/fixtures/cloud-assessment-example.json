@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "kind": "cloud_assessment",
-  "network": "solana-mainnet",
-  "genesis_hash": "ExampleGenesisHashNotMainnet",
-  "message_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "intent_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "network": "devnet",
+  "genesis_hash": "SYNTHETIC_DEVNET_GENESIS_DO_NOT_USE",
+  "message_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "intent_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "requested_profile": "strict",
   "capabilities_performed": [
     "network_health",
