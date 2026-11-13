@@ -483,6 +483,7 @@ mod tests {
                 not_before_unix:1,expires_at_unix:4102444800,
                 allowed_program_ids:vec![SYSTEM_PROGRAM.into()],
                 max_spend_lamports:limit.into(),
+                token_spend_limits:None,
             };
             let bytes=serde_json::to_vec(&intent).unwrap();
             let mut message=b"HGUET-PAYMENT-INTENT\0".to_vec();
