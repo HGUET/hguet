@@ -3,13 +3,14 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus};
 use serde_json::json;
 use hguet_policy::LocalPolicy;
+use hguet_rpc::{simulate_with, validate_endpoint, HttpsTransport};
 use std::{env, fs, io::Read, process};
 
 fn usage() -> &'static str {
     "HGUET unreleased CLI (offline prototype)\n\
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--encoding binary|base64|base58] [--json]\n\
+  hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--rpc-url HTTPS_URL] [--encoding binary|base64|base58] [--json]\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet --help\n\
@@ -25,6 +26,7 @@ struct Args {
     intent: Option<String>,
     trusted_key: Option<String>,
     policy: Option<String>,
+    rpc_url: Option<String>,
     mode: String,
     offline: bool,
 }
@@ -33,7 +35,7 @@ fn parse_args() -> Result<Args, String> {
     let cmd=a.next().ok_or("missing command")?;
     if cmd=="--help" || cmd=="-h" || cmd=="--version" {
         return Ok(Args{command:cmd,file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
-            intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:false});
+            intent:None,trusted_key:None,policy:None,rpc_url:None,mode:"local".into(),offline:false});
     }
     if cmd=="config" {
         let sub=a.next().ok_or("missing config subcommand")?;
@@ -42,7 +44,7 @@ fn parse_args() -> Result<Args, String> {
             if opt!="--json" || a.next().is_some() { return Err("unexpected config option".into()); }
         }
         return Ok(Args{command:"config-show".into(),file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
-            intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:true});
+            intent:None,trusted_key:None,policy:None,rpc_url:None,mode:"local".into(),offline:true});
     }
     if cmd=="policy" {
         if a.next().as_deref()!=Some("validate") {
@@ -57,7 +59,7 @@ fn parse_args() -> Result<Args, String> {
         }
         return Ok(Args { command:"policy-validate".into(),file,
             network:"mainnet".into(),encoding:"binary".into(),intent:None,
-            trusted_key:None,policy:None,mode:"local".into(),offline:true });
+            trusted_key:None,policy:None,rpc_url:None,mode:"local".into(),offline:true });
     }
     if cmd!="inspect" && cmd!="check" { return Err("unknown command".into()); }
     let file=a.next().ok_or("missing transaction path")?;
@@ -74,6 +76,7 @@ fn parse_args() -> Result<Args, String> {
             "--intent"=>v.intent=Some(a.next().ok_or("missing --intent value")?),
             "--trusted-key"=>v.trusted_key=Some(a.next().ok_or("missing --trusted-key value")?),
             "--policy"=>v.policy=Some(a.next().ok_or("missing --policy path")?),
+            "--rpc-url"=>v.rpc_url=Some(a.next().ok_or("missing --rpc-url value")?),
             "--mode"=>v.mode=a.next().ok_or("missing --mode value")?,
             _=>return Err(format!("unknown option {flag}")),
         }
@@ -84,6 +87,12 @@ fn parse_args() -> Result<Args, String> {
     if v.command=="inspect" && !v.offline { return Err("inspect must be explicitly --offline".into()); }
     if v.command=="inspect" && v.policy.is_some() { return Err("--policy requires check command".into()); }
     if v.command=="check" && v.intent.is_none() { return Err("--intent FILE required".into()); }
+    if v.rpc_url.is_some() && (v.command!="check" || v.offline) {
+        return Err("--rpc-url requires check command without --offline".into());
+    }
+    if let Some(url)=&v.rpc_url {
+        validate_endpoint(url).map_err(|_|"RPC endpoint must be an explicit HTTPS URL without credentials or fragment".to_string())?;
+    }
     Ok(v)
 }
 fn limited_file(path:&str, max:u64)->Result<Vec<u8>,String>{
@@ -182,6 +191,31 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 verdict.finding("INTENT_UNVERIFIED","high","--trusted-key is required to verify independent authorization");
             }
             _=>{}
+        }
+    }
+    if let Some(endpoint)=&v.rpc_url {
+        // Explicit opt-in ONLY; never forward anything to HGUET Cloud. The
+        // user-selected Solana RPC provider receives the raw transaction.
+        match simulate_with(&HttpsTransport::default(),endpoint,&v.network,&data) {
+            Ok(evidence)=>{
+                verdict.simulation_status=evidence.status.clone();
+                verdict.coverage.push("solana_rpc_genesis_verified".into());
+                verdict.coverage.push("solana_rpc_simulation_single_provider".into());
+                if evidence.status=="rpc_failed" {
+                    verdict.finding("RPC_SIMULATION_FAILED","high",
+                        "The selected Solana RPC reported a failed simulation; execution is not validated");
+                } else {
+                    verdict.finding("RPC_SIMULATION_ONLY","medium",
+                        "RPC simulation completed, but it is advisory and not evidence of total spending or future onchain success");
+                }
+                return (json!({"inspection":parsed,"rpc_analysis":evidence,"verdict":verdict}),30)
+            }
+            Err(err)=>{
+                verdict.simulation_status="rpc_unavailable".into();
+                verdict.finding(err.code(),"high",
+                    "Solana RPC evidence unavailable or inconsistent; no successful execution should be inferred");
+                return (json!({"inspection":parsed,"verdict":verdict}),30)
+            }
         }
     }
     verdict.finding("NO_SIMULATION","high","Wire inspection does not prove transfers, CPI effects, execution or wallet authorization");
