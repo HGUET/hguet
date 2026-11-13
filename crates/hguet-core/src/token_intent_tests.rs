@@ -130,3 +130,112 @@ fn token2022_fee_transfer_amount_is_cap_covered_but_execution_stays_unknown(){
     let (less,_) =sign(&payload(&tx,Some(vec![capped(4,"87")])));
     assert!(verified(&less,&key,&tx).is_err());
 }
+
+
+fn source_cap(mint:u8,source:u8,authority:u8,raw:&str)->TokenSourceLimit {
+    TokenSourceLimit {
+        mint:key(mint),source_token_account:key(source),
+        authority:key(authority),max_debit_raw:raw.into(),
+    }
+}
+fn signed_source_payload(
+    parsed:&ParsedTransaction,
+    mint_caps:Option<Vec<TokenSpendLimit>>,
+    source_caps:Vec<TokenSourceLimit>,
+)->PaymentIntentPayload{
+    let mut p=payload(parsed,mint_caps);
+    p.token_source_limits=Some(source_caps);
+    p
+}
+#[test]
+fn signed_source_and_mint_caps_limit_each_direct_checked_source(){
+    let tx=wire(&[
+        (false,checked(12,80),vec![1,3,2,0]),
+        (false,checked(12,20),vec![1,3,2,0]),
+        (false,checked(12,30),vec![2,3,4,0]),
+    ]);
+    let p=signed_source_payload(&tx,Some(vec![capped(4,"130")]),vec![
+        source_cap(4,2,1,"100"),source_cap(4,3,1,"30"),
+    ]);
+    let (env,key)=sign(&p);
+    assert!(verified(&env,&key,&tx).is_ok());
+    let review=review_declared_source_limits(&tx,p.token_source_limits.as_ref().unwrap()).unwrap();
+    assert_eq!(review.debits.len(),2);
+    assert_eq!(review.debits[0].declared_raw,"100");
+    assert_eq!(review.debits[1].declared_raw,"30");
+    assert_eq!(review.checked_direct_debit_instructions,3);
+    assert!(review.transaction_required_signer_role_checked);
+    assert!(!review.transaction_signatures_verified);
+    assert!(!review.token_account_owner_verified);
+    assert!(!review.total_spending_proven);
+    let p=signed_source_payload(&tx,Some(vec![capped(4,"130")]),vec![
+        source_cap(4,2,1,"99"),source_cap(4,3,1,"30"),
+    ]);
+    let (bad,_) =sign(&p);
+    assert!(verified(&bad,&key,&tx).unwrap_err().contains("exceed"));
+}
+#[test]
+fn signer_role_and_authority_mismatches_fail_closed(){
+    let tx=wire(&[(false,checked(12,10),vec![1,3,2,0])]);
+    let (valid,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"10")]));
+    assert!(verified(&valid,&key,&tx).is_ok());
+    // Signed scope authorizes a different required signer key.
+    let (wrong,_) =sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,5,"10")]));
+    assert!(verified(&wrong,&key,&tx).is_err());
+    // Source account is bound to message index 1, not arbitrary owner claims.
+    let (wrong_source,_) =sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,3,1,"10")]));
+    assert!(verified(&wrong_source,&key,&tx).is_err());
+    // Instruction authority key 5 is not among header-required signers.
+    let tx=wire(&[(false,checked(12,10),vec![1,3,2,4])]);
+    let (env,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"100")]));
+    assert!(verified(&env,&key,&tx).is_err());
+}
+#[test]
+fn strict_source_caps_reject_multisig_and_trailing_hook_accounts(){
+    let tx=wire(&[(false,checked(12,5),vec![1,3,2,0,4])]);
+    let (env,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"100")]));
+    assert!(verified(&env,&key,&tx).unwrap_err().contains("multisig"));
+    // Token-2022 checked-with-fee also requires exactly four known roles.
+    let mut data=vec![26,1];
+    data.extend(5u64.to_le_bytes());data.push(6);data.extend(1u64.to_le_bytes());
+    let tx=wire(&[(true,data,vec![1,3,2,0,4])]);
+    let (env,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"100")]));
+    assert!(verified(&env,&key,&tx).is_err());
+}
+#[test]
+fn signed_source_caps_reject_duplicate_sources_missing_and_zero(){
+    let tx=wire(&[(false,checked(15,5),vec![1,3,0])]);
+    let (env,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"5")]));
+    assert!(verified(&env,&key,&tx).is_ok());
+    let (zero,_) =sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"0")]));
+    assert!(verified(&zero,&key,&tx).is_err());
+    let (none,_) =sign(&signed_source_payload(&tx,None,vec![]));
+    assert!(verified(&none,&key,&tx).is_err());
+    let (duplicate,_) =sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"5"),source_cap(4,2,1,"10")]));
+    assert!(verified(&duplicate,&key,&tx).unwrap_err().contains("duplicate"));
+    let (invalid,_) =sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"05")]));
+    assert!(verified(&invalid,&key,&tx).is_err());
+}
+#[test]
+fn signed_source_role_fields_cannot_be_tampered_after_signature(){
+    let tx=wire(&[(false,checked(12,7),vec![1,3,2,0])]);
+    let (env,key)=sign(&signed_source_payload(&tx,None,
+        vec![source_cap(4,2,1,"7")]));
+    assert!(verified(&env,&key,&tx).is_ok());
+    let mut broken=env.clone();
+    let mut json:serde_json::Value=serde_json::from_slice(
+        &STANDARD.decode(&env.payload_b64).unwrap()).unwrap();
+    json["token_source_limits"][0]["authority"]=key(5).into();
+    broken.payload_b64=STANDARD.encode(serde_json::to_vec(&json).unwrap());
+    assert!(verified(&broken,&key,&tx).unwrap_err().contains("signature"));
+}
