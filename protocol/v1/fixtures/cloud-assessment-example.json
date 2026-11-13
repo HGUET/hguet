@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "cloud_assessment",
+  "tenant_scope": "tenant-hash-synthetic",
+  "request_id": "0123456789abcdef0123456789abcdef",
+  "network": "solana-mainnet",
+  "genesis_hash": "ExampleGenesisHashNotMainnet",
+  "message_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "intent_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "requested_profile": "strict",
+  "capabilities_performed": [
+    "network_health",
+    "program_risk"
+  ],
+  "capabilities_unavailable": [],
+  "risk_snapshot_id": "synthetic-snapshot-1",
+  "ruleset_version": "demo-rules-0",
+  "findings": [
+    {
+      "code": "RECENT_PROGRAM_UPGRADE",
+      "severity": "medium",
+      "enforcement": "warn",
+      "evidence_refs": [
+        "demo-evidence-1"
+      ],
+      "summary": "Illustrative program upgrade finding, not a real risk assessment"
+    }
+  ],
+  "coverage": {
+    "required": [
+      "network_health",
+      "program_risk"
+    ],
+    "passed": [
+      "network_health",
+      "program_risk"
+    ],
+    "unknown": []
+  },
+  "issued_at": "2026-11-13T15:00:00Z",
+  "expires_at": "2026-11-13T15:05:00Z"
+}
