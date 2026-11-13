@@ -532,6 +532,62 @@ fn token_account_snapshot_findings(
 /// but it cannot authenticate historical execution-time permissions.
 /// CPI source addresses and token-account state both come from one untrusted
 /// RPC. These observations are never transaction-local authorization proofs.
+/// Compare independently observed categories, never their sum. Every RPC
+/// anomaly is advisory even when a separately verified cap was supplied.
+fn aggregate_token_findings(
+    report:&hguet_rpc::AggregateTokenSpending,
+)->Vec<(&'static str,&'static str,&'static str)> {
+    let mut out=Vec::new();
+    if !report.mints.is_empty() || !report.sources.is_empty() {
+        out.push(("RPC_AGGREGATE_TOKEN_NON_ADDITIVE","medium",
+            "Direct wire declarations, RPC CPI instructions and negative token-account net deltas are three potentially overlapping evidence views and are NEVER added as executed gross spending"));
+    }
+    if report.mints.iter().any(|x|x.wire_exceeds_signed_cap)||
+       report.sources.iter().any(|x|x.wire_exceeds_signed_cap) {
+        out.push(("RPC_AGGREGATE_WIRE_CAP_ANOMALY","high",
+            "Original wire checked debit declarations appear to exceed independently provided signed limits; transaction-local verification must reject rather than infer a safe transaction from RPC"));
+    }
+    if report.mints.iter().any(|x|x.rpc_cpi_exceeds_signed_cap) {
+        out.push(("RPC_AGGREGATE_CPI_MINT_CAP_RISK","high",
+            "Sum of selected RPC checked CPI debits for a mint exceeds its independently signed raw cap; CPI effects are not execution-authenticated"));
+    }
+    if report.sources.iter().any(|x|x.rpc_cpi_exceeds_signed_cap) {
+        out.push(("RPC_AGGREGATE_CPI_SOURCE_CAP_RISK","high",
+            "Sum of selected RPC checked CPI debits for one source/mint exceeds its signed source cap; authority and gross spending remain unverified"));
+    }
+    if report.mints.iter().any(|x|x.rpc_negative_net_exceeds_signed_cap){
+        out.push(("RPC_AGGREGATE_NET_MINT_CAP_RISK","high",
+            "Summed negative provider token-account net deltas exceed a signed mint cap; losses are not payer-attributed gross debits and may overlap CPI"));
+    }
+    if report.sources.iter().any(|x|x.rpc_negative_net_exceeds_signed_cap){
+        out.push(("RPC_AGGREGATE_NET_SOURCE_CAP_RISK","high",
+            "Negative net token delta at a source account exceeds its signed source cap according to one RPC; a net delta is not verified gross spending"));
+    }
+    if report.mints.iter().any(|x|x.rpc_cpi_or_net_outside_signed_mint_list) {
+        out.push(("RPC_AGGREGATE_UNLISTED_MINT","high",
+            "Selected RPC observes CPI checked debits or negative net changes for a mint outside the independently signed mint cap list"));
+    }
+    if report.sources.iter().any(|x|x.rpc_cpi_or_net_outside_signed_source_list) {
+        out.push(("RPC_AGGREGATE_UNLISTED_SOURCE","high",
+            "Selected RPC observes CPI checked debits or negative net changes for a token source outside the independently signed source scopes"));
+    }
+    if report.opaque_direct_token_instructions>0||
+       report.opaque_rpc_cpi_token_instructions>0||
+       report.unattributed_direct_debit_instructions>0||
+       report.unattributed_cpi_debit_instructions>0||
+       report.incomplete_token_balance_rows>0||
+       report.missing_token_balance_snapshot||
+       report.cpi_source_coverage_missing_or_incomplete {
+        out.push(("RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE","high",
+            "Opaque, unchecked, incomplete or absent CPI/balance source evidence prevents any bound on total token spending; missing data never means zero"));
+    }
+    if report.authority_or_nondebit_operations_observed {
+        out.push(("RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS","medium",
+            "Authority, allowance, minting or other non-debit token operations are excluded from debit sums and need independent semantic review"));
+    }
+    out
+}
+
 fn cpi_source_coverage_findings(
     review:&hguet_rpc::CpiSourceCoverage,
 )->Vec<(&'static str,&'static str,&'static str)>{
@@ -992,6 +1048,28 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         }
                     }
                 }
+                let mut aggregate_token_spending=None;
+                if evidence.status=="rpc_succeeded" {
+                    // The intent is independently signature-verified above
+                    // (or None). Never treat agent-provided caps as trusted.
+                    match hguet_rpc::analyze_aggregate_token_spending(
+                        &evidence.status,evidence.context_slot,
+                        &evidence.direct_token_analysis,&evidence.effect_analysis,
+                        cpi_source_coverage.as_ref(),verified_intent.as_ref(),
+                    ) {
+                        Ok(report)=>{
+                            verdict.coverage.push("rpc_aggregate_token_views_advisory".into());
+                            for (code,severity,message) in aggregate_token_findings(&report) {
+                                verdict.finding(code,severity,message);
+                            }
+                            aggregate_token_spending=Some(report);
+                        }
+                        Err(_)=>{
+                            verdict.finding("RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID","high",
+                                "Independent token debit evidence views were inconsistent, malformed or exceeded bounds; gross token spending is unknown");
+                        }
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     if intent.token_spend_limits.is_some() {
                         for (code,severity,message) in rpc_signed_token_cap_findings(
@@ -1047,6 +1125,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     "signed_source_authority_evidence":signed_source_authority_evidence,
                     "cpi_source_account_snapshot":cpi_source_account_snapshot,
                     "cpi_source_coverage":cpi_source_coverage,
+                    "aggregate_token_spending":aggregate_token_spending,
                     "verdict":verdict}),30)
             }
             Err(err)=>{
