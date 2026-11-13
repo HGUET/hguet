@@ -2,7 +2,8 @@
 //! These are observations from one user-selected RPC, NOT independent proof of
 //! execution, sender authorization, total debit, or safe signing.
 //! Missing data is missing coverage, NEVER zero balance / no CPI / no tokens.
-use crate::{alt::LookupResolution, token_semantics::{decode_token_cpi, is_token_program, TokenCpiDecode, TokenCpiInstruction}, RpcError};
+use crate::{alt::LookupResolution, extension_semantics::Token2022ExtensionObservation,
+    token_semantics::{decode_token_cpi, is_token_program, TokenCpiDecode, TokenCpiInstruction}, RpcError};
 use hguet_core::ParsedTransaction;
 use serde::Serialize;
 use serde_json::Value;
@@ -41,6 +42,7 @@ pub struct CpiObservation {
     pub instruction_count: Option<usize>,
     pub invoked_program_ids: Vec<String>,
     pub token_instructions: Vec<TokenCpiInstruction>,
+    pub token_2022_extension_observations: Vec<Token2022ExtensionObservation>,
     pub opaque_token_instruction_count: usize,
     pub token_2022_extension_instruction_count: usize,
     pub missing_compiled_token_data_count: usize,
@@ -260,6 +262,7 @@ pub fn inspect_simulation_effects(
                 captured:false,group_count:None,instruction_count:None,
                 invoked_program_ids:vec![],
                 token_instructions:vec![],
+                token_2022_extension_observations:vec![],
                 opaque_token_instruction_count:0,
                 token_2022_extension_instruction_count:0,
                 missing_compiled_token_data_count:0,
@@ -273,6 +276,7 @@ pub fn inspect_simulation_effects(
             let mut seen=BTreeSet::new();
             let mut programs=BTreeSet::new();
             let mut token_instructions=Vec::new();
+            let mut extension_observations=Vec::new();
             let mut opaque_token_instruction_count=0usize;
             let mut token_2022_extension_instruction_count=0usize;
             let mut missing_compiled_token_data_count=0usize;
@@ -312,10 +316,11 @@ pub fn inspect_simulation_effects(
                             &keys, index, inner_index
                         )? {
                             TokenCpiDecode::Recognized(item) => token_instructions.push(item),
-                            TokenCpiDecode::Opaque { extension, missing_compiled } => {
+                            TokenCpiDecode::Opaque { extension, missing_compiled, observation } => {
                                 opaque_token_instruction_count+=1;
                                 if extension { token_2022_extension_instruction_count+=1; }
                                 if missing_compiled { missing_compiled_token_data_count+=1; }
+                                if let Some(hint)=observation { extension_observations.push(hint); }
                             }
                         }
                     }
@@ -327,6 +332,7 @@ pub fn inspect_simulation_effects(
                 captured:true,group_count:Some(groups.len()),instruction_count:Some(count),
                 invoked_program_ids:programs.into_iter().collect(),
                 token_instructions,
+                token_2022_extension_observations:extension_observations,
                 opaque_token_instruction_count,
                 token_2022_extension_instruction_count,
                 missing_compiled_token_data_count,
