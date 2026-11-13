@@ -38,5 +38,16 @@
     "unknown": []
   },
   "issued_at": "2026-11-13T15:00:00Z",
-  "expires_at": "2026-11-13T15:05:00Z"
+  "expires_at": "2026-11-13T15:05:00Z",
+  "evidence_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "sources": [
+    {
+      "source_id": "synthetic-rpc-observer",
+      "kind": "solana_rpc",
+      "observed_at": "2026-11-13T14:59:54Z",
+      "observed_slot": 123,
+      "evidence_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "freshness_seconds": 6
+    }
+  ]
 }
