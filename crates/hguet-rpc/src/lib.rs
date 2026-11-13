@@ -11,6 +11,8 @@
 //! - no wallet keys, seeds, accounts, balances, or Cloud requests.
 mod alt;
 mod effects;
+mod token_semantics;
+pub use token_semantics::TokenCpiInstruction;
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -178,7 +180,8 @@ pub fn simulate_with<T: JsonRpcTransport>(
             "commitment": "confirmed",
             "sigVerify": false,
             "replaceRecentBlockhash": true,
-            "innerInstructions": true
+            "innerInstructions": true,
+            "innerInstructionsEncoding": "json"
         }]
     });
     if let Some(ref lookup) = lookup_resolution {
