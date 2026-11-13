@@ -229,13 +229,13 @@ fn signed_source_caps_reject_duplicate_sources_missing_and_zero(){
 #[test]
 fn signed_source_role_fields_cannot_be_tampered_after_signature(){
     let tx=wire(&[(false,checked(12,7),vec![1,3,2,0])]);
-    let (env,key)=sign(&signed_source_payload(&tx,None,
+    let (env,pin)=sign(&signed_source_payload(&tx,None,
         vec![source_cap(4,2,1,"7")]));
-    assert!(verified(&env,&key,&tx).is_ok());
+    assert!(verified(&env,&pin,&tx).is_ok());
     let mut broken=env.clone();
     let mut json:serde_json::Value=serde_json::from_slice(
         &STANDARD.decode(&env.payload_b64).unwrap()).unwrap();
     json["token_source_limits"][0]["authority"]=key(5).into();
     broken.payload_b64=STANDARD.encode(serde_json::to_vec(&json).unwrap());
-    assert!(verified(&broken,&key,&tx).unwrap_err().contains("signature"));
+    assert!(verified(&broken,&pin,&tx).unwrap_err().contains("signature"));
 }
