@@ -5,6 +5,7 @@
 //! account/mint snapshots. Graph edges NEVER prove gross spending, causality,
 //! account authorization, atomic state or final transaction execution.
 use crate::{
+    direct_token::DirectTokenAnalysis,
     effects::SimulationEffects,
     mint_rpc::MintRpcSnapshot,
     token_account_rpc::TokenAccountRpcSnapshot,
@@ -120,6 +121,7 @@ impl Builder {
 pub fn correlate_effects(
     parsed:&ParsedTransaction, status:&str, simulation_slot:u64,
     effects:&SimulationEffects,
+    direct_token:Option<&DirectTokenAnalysis>,
     mint_snapshot:Option<&MintRpcSnapshot>,
     token_account_snapshot:Option<&TokenAccountRpcSnapshot>,
 ) -> Result<EffectGraph,RpcError> {
@@ -146,6 +148,93 @@ pub fn correlate_effects(
         b.edge(("account",&transfer.source),("account",&transfer.destination),
             "declared_system_transfer",Some(transfer.lamports.clone()),None,
             "original_wire",None,Some(transfer.instruction_index),None,"declared_only")?;
+    }
+    // Direct SPL Token instructions are declarations from the original wire.
+    // They must be represented even when RPC simulation reports failure.
+    if let Some(direct)=direct_token {
+        for item in &direct.opaque {
+            b.gaps.insert("opaque_direct_token_instruction");
+            b.alerts.insert("GRAPH_DIRECT_TOKEN_OPAQUE");
+            if item.token_2022_extension {
+                b.gaps.insert("opaque_direct_token_2022_extension");
+            }
+            if item.program_address_from_lookup {
+                b.gaps.insert("direct_token_program_from_untrusted_alt");
+            }
+        }
+        for item in &direct.recognized {
+            if item.program_address_from_lookup {
+                b.gaps.insert("direct_token_program_from_untrusted_alt");
+            }
+            if item.account_addresses_from_lookup {
+                b.gaps.insert("direct_token_account_from_untrusted_alt");
+            }
+            let decoded=&item.decoded;
+            let index=Some(item.instruction_index);
+            match decoded.operation.as_str() {
+                "transfer"|"transfer_checked"=>{
+                    if let (Some(src),Some(dst))=(&decoded.source_account,&decoded.destination_account) {
+                        b.edge(("account",src),("account",dst),
+                            "wire_declared_token_transfer",
+                            decoded.amount_raw.clone(),decoded.mint.clone(),
+                            "original_wire",None,index,None,"declared_only")?;
+                        b.alerts.insert("GRAPH_DIRECT_TOKEN_MOVEMENT");
+                        if decoded.mint.is_none() {
+                            b.gaps.insert("unchecked_direct_token_mint_not_declared");
+                        }
+                    } else {b.gaps.insert("direct_token_account_role_missing");}
+                }
+                "mint_to"|"mint_to_checked"=>{
+                    if let (Some(mint),Some(dst))=(&decoded.mint,&decoded.destination_account) {
+                        b.edge(("mint",mint),("account",dst),
+                            "wire_declared_token_mint",decoded.amount_raw.clone(),
+                            Some(mint.clone()),"original_wire",None,index,None,"declared_only")?;
+                        b.alerts.insert("GRAPH_DIRECT_TOKEN_MOVEMENT");
+                    } else {b.gaps.insert("direct_token_account_role_missing");}
+                }
+                "burn"|"burn_checked"=>{
+                    if let (Some(src),Some(mint))=(&decoded.source_account,&decoded.mint) {
+                        b.edge(("account",src),("mint",mint),
+                            "wire_declared_token_burn",decoded.amount_raw.clone(),
+                            Some(mint.clone()),"original_wire",None,index,None,"declared_only")?;
+                        b.alerts.insert("GRAPH_DIRECT_TOKEN_MOVEMENT");
+                    } else {b.gaps.insert("direct_token_account_role_missing");}
+                }
+                "approve"|"approve_checked"=>{
+                    if let (Some(src),Some(delegate))=(&decoded.source_account,&decoded.delegate) {
+                        b.edge(("account",src),("authority",delegate),
+                            "wire_declared_token_approval",decoded.amount_raw.clone(),
+                            decoded.mint.clone(),"original_wire",None,index,None,"declared_only")?;
+                    } else {b.gaps.insert("direct_token_account_role_missing");}
+                    b.alerts.insert("GRAPH_DIRECT_TOKEN_AUTHORITY");
+                }
+                "set_authority"|"close_account"|"revoke"|
+                "freeze_account"|"thaw_account"=>{
+                    if let Some(src)=&decoded.source_account {
+                        if let Some(authority)=&decoded.new_authority {
+                            b.edge(("account",src),("authority",authority),
+                                "wire_declared_token_new_authority",None,
+                                decoded.mint.clone(),"original_wire",None,index,None,"declared_only")?;
+                        }
+                        if let Some(authority)=&decoded.authority {
+                            b.edge(("account",src),("authority",authority),
+                                "wire_declared_token_authority_operation",None,
+                                decoded.mint.clone(),"original_wire",None,index,None,"declared_only")?;
+                        }
+                        if decoded.operation=="close_account" {
+                            if let Some(dst)=&decoded.destination_account {
+                                b.edge(("account",src),("account",dst),
+                                    "wire_declared_token_close_destination",None,
+                                    decoded.mint.clone(),"original_wire",None,index,None,"declared_only")?;
+                            }
+                        }
+                    } else {b.gaps.insert("direct_token_account_role_missing");}
+                    b.alerts.insert("GRAPH_DIRECT_TOKEN_AUTHORITY");
+                }
+                "sync_native"=>{},
+                _=>{b.gaps.insert("direct_token_operation_not_correlated");}
+            }
+        }
     }
     if status!="rpc_succeeded" {
         b.gaps.insert("rpc_simulation_failed_no_effect_attribution");
@@ -427,7 +516,7 @@ mod tests {
     }
     #[test]
     fn wire_declarations_simulated_net_and_cpi_claims_are_separate_edges() {
-        let graph=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),None,None).unwrap();
+        let graph=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),None,None,None).unwrap();
         assert_eq!(graph.version,1);
         assert_eq!(graph.simulation_status,"rpc_succeeded");
         let relations=graph.edges.iter().map(|e|e.relation).collect::<Vec<_>>();
@@ -447,7 +536,7 @@ mod tests {
     }
     #[test]
     fn failed_simulation_only_records_wire_claims_not_rpc_effects() {
-        let graph=correlate_effects(&parsed(),"rpc_failed",500,&effects(),None,None).unwrap();
+        let graph=correlate_effects(&parsed(),"rpc_failed",500,&effects(),None,None,None).unwrap();
         assert_eq!(graph.edges.len(),1);
         assert_eq!(graph.edges[0].relation,"declared_system_transfer");
         assert!(graph.evidence_gaps.contains(&"rpc_simulation_failed_no_effect_attribution"));
@@ -461,7 +550,7 @@ mod tests {
         e.cpi.captured=false;
         e.cpi.token_instructions.clear();
         e.cpi.opaque_token_instruction_count=2;
-        let g=correlate_effects(&parsed(),"rpc_succeeded",500,&e,None,None).unwrap();
+        let g=correlate_effects(&parsed(),"rpc_succeeded",500,&e,None,None,None).unwrap();
         assert!(g.evidence_gaps.contains(&"rpc_paired_native_balances_unavailable"));
         assert!(g.evidence_gaps.contains(&"rpc_paired_token_balances_unavailable"));
         assert!(g.evidence_gaps.contains(&"rpc_cpi_recording_missing"));
@@ -507,7 +596,7 @@ mod tests {
             }],limitation:"mock".into(),
         };
         let g=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
-            Some(&mint),Some(&account)).unwrap();
+            None,Some(&mint),Some(&account)).unwrap();
         assert_eq!(g.sources.len(),3);
         assert!(!g.sources[1].atomic_with_simulation);
         assert!(!g.sources[2].atomic_with_simulation);
@@ -531,7 +620,7 @@ mod tests {
             }],limitation:"mock".into(),
         };
         let g=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
-            None,Some(&later)).unwrap();
+            None,None,Some(&later)).unwrap();
         assert!(g.alerts.contains(&"GRAPH_ACCOUNT_MINT_DISAGREEMENT"));
         assert!(g.alerts.contains(&"GRAPH_ACCOUNT_AUTHORITY_DISAGREEMENT"));
         assert!(!g.execution_proven);
@@ -543,21 +632,21 @@ mod tests {
             accounts:vec![],limitation:"mock".into(),
         };
         assert_eq!(correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
-            Some(&later),None).unwrap_err(),RpcError::InvalidResponse);
+            None,Some(&later),None).unwrap_err(),RpcError::InvalidResponse);
         let bad=MintRpcSnapshot{
             context_slot:500,simulation_slot:500,atomic_with_simulation:true,
             accounts:vec![],limitation:"mock".into(),
         };
         assert_eq!(correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
-            Some(&bad),None).unwrap_err(),RpcError::InvalidResponse);
+            None,Some(&bad),None).unwrap_err(),RpcError::InvalidResponse);
         assert_eq!(correlate_effects(&parsed(),"rpc_succeeded",0,&effects(),
-            None,None).unwrap_err(),RpcError::InvalidResponse);
+            None,None,None).unwrap_err(),RpcError::InvalidResponse);
     }
     #[test]
     fn unresolved_wire_transfer_address_stays_a_gap_not_forged_edge() {
         let mut p=parsed();
         p.system_transfers[0].source="<unresolved-ALT-account>".into();
-        let g=correlate_effects(&p,"rpc_succeeded",500,&effects(),None,None).unwrap();
+        let g=correlate_effects(&p,"rpc_succeeded",500,&effects(),None,None,None).unwrap();
         assert!(g.evidence_gaps.contains(&"wire_native_transfer_address_unresolved"));
         assert!(!g.edges.iter().any(|e|e.relation=="declared_system_transfer"));
     }
