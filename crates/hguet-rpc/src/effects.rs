@@ -434,6 +434,48 @@ mod tests {
             assert!(inspect_simulation_effects(item.as_object().unwrap(),&tx(),None).is_err());
         }
     }
+    #[test] fn token_2022_cpi_binary_transfer_and_opaque_extension_are_separate() {
+        let mut t = tx();
+        t.static_account_keys = (1..=5).map(|i| bs58::encode([i; 32]).into_string()).collect();
+        t.static_account_keys[0] = crate::token_semantics::TOKEN_2022_PROGRAM.into();
+        t.static_account_count = 5;
+        t.total_address_count = 5;
+        let checked_transfer = [12u8, 232, 3, 0, 0, 0, 0, 0, 0, 6];
+        let data = json!({"innerInstructions":[{"index":0,"instructions":[
+            {"programIdIndex":0,"accounts":[1,2,3,4],
+             "data":bs58::encode(checked_transfer).into_string()},
+            {"programIdIndex":0,"accounts":[1,2],
+             "data":bs58::encode([36u8,1,2]).into_string()}
+        ]}]});
+        let r=inspect_simulation_effects(data.as_object().unwrap(),&t,None).unwrap();
+        assert!(r.cpi.captured);
+        assert_eq!(r.cpi.instruction_count,Some(2));
+        assert_eq!(r.cpi.token_instructions.len(),1);
+        assert_eq!(r.cpi.token_instructions[0].operation,"transfer_checked");
+        assert_eq!(r.cpi.token_instructions[0].amount_raw.as_deref(),Some("1000"));
+        assert_eq!(r.cpi.token_instructions[0].parent_instruction_index,0);
+        assert_eq!(r.cpi.token_instructions[0].inner_instruction_index,0);
+        assert_eq!(r.cpi.opaque_token_instruction_count,1);
+        assert_eq!(r.cpi.token_2022_extension_instruction_count,1);
+        assert_eq!(r.cpi.missing_compiled_token_data_count,0);
+        assert_eq!(r.security_coverage,"partial_untrusted_rpc");
+    }
+    #[test] fn provider_supplied_parsed_token_cpi_is_not_trusted_as_binary_decode() {
+        let mut t = tx();
+        t.static_account_keys[0] = crate::token_semantics::TOKEN_PROGRAM.into();
+        let data = json!({"innerInstructions":[{"index":0,"instructions":[
+            {"programIdIndex":0,"programId":crate::token_semantics::TOKEN_PROGRAM,
+             "parsed":{"type":"setAuthority","info":{}}}
+        ]}]});
+        let r=inspect_simulation_effects(data.as_object().unwrap(),&t,None).unwrap();
+        assert!(r.cpi.token_instructions.is_empty());
+        assert_eq!(r.cpi.opaque_token_instruction_count,1);
+        assert_eq!(r.cpi.missing_compiled_token_data_count,1);
+        let invalid = json!({"innerInstructions":[{"index":0,"instructions":[
+            {"programIdIndex":0,"accounts":[0,99],"data":"4NQ"}
+        ]}]});
+        assert!(inspect_simulation_effects(invalid.as_object().unwrap(),&t,None).is_err());
+    }
     #[test] fn refuse_unverified_or_disagreeing_lookup_addresses() {
         let mut t=tx();
         t.wire_format="v0".into();
