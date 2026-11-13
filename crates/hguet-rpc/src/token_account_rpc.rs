@@ -6,7 +6,7 @@ use crate::{
     effects::{SimulationEffects, TokenBalanceDelta},
     mint_rpc::MintRpcSnapshot,
     token_account_state::{parse_token_2022_account, Token2022AccountState, MAX_ACCOUNT_BYTES},
-    token_semantics::TOKEN_2022_PROGRAM,
+    token_semantics::{TOKEN_PROGRAM,TOKEN_2022_PROGRAM},
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
@@ -19,7 +19,7 @@ const MAX_ACCOUNT_QUERIES: usize=16;
 pub struct TokenAccountObservation {
     pub address: String,
     pub simulation_reported_mint: String,
-    /// "token_2022", "not_token_2022", or "missing"
+    /// "token_2022", "legacy_token", "not_token_2022", or "missing"
     pub status: String,
     pub state: Option<Token2022AccountState>,
     pub mint_matches_simulation_report: Option<bool>,
@@ -96,7 +96,7 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
         }
         let owner=obj.get("owner").and_then(Value::as_str)
             .ok_or(RpcError::InvalidResponse)?;
-        if owner!=TOKEN_2022_PROGRAM {
+        if owner!=TOKEN_2022_PROGRAM && owner!=TOKEN_PROGRAM {
             observation.status="not_token_2022".into();
             accounts.push(observation);
             continue;
@@ -121,7 +121,9 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
                 mint.status=="token_2022" && mint.state.is_some()));
         observation.authority_matches_simulation_report=
             row.owner.as_ref().map(|reported|state.token_authority==*reported);
-        observation.status="token_2022".into();
+        observation.status=if owner==TOKEN_2022_PROGRAM {
+            "token_2022"
+        } else {"legacy_token"}.into();
         observation.state=Some(state);
         accounts.push(observation);
     }
@@ -231,6 +233,24 @@ mod tests {
             &effects(vec![row(1,2,Some(3))]),Some(&snapshot)).unwrap().unwrap();
         assert!(!mismatched.accounts[0].matching_mint_state_observed);
         assert_eq!(mismatched.accounts[0].mint_matches_simulation_report,Some(false));
+    }
+    #[test]
+    fn legacy_spl_token_account_is_parsed_without_inventing_mint_tlv(){
+        let mut data=vec![0u8;165];
+        data[..32].fill(2);data[32..64].fill(3);
+        data[64..72].copy_from_slice(&100u64.to_le_bytes());
+        data[108]=1;
+        let f=Fake{slot:502,response:json!([{
+            "owner":TOKEN_PROGRAM,"executable":false,
+            "data":[STANDARD.encode(data),"base64"]
+        }]),calls:Cell::new(0)};
+        let r=fetch_candidate_token_accounts(&f,"https://example.org",500,
+            &effects(vec![row(1,2,Some(3))]),None).unwrap().unwrap();
+        assert_eq!(r.accounts[0].status,"legacy_token");
+        assert_eq!(r.accounts[0].mint_matches_simulation_report,Some(true));
+        assert_eq!(r.accounts[0].authority_matches_simulation_report,Some(true));
+        assert!(r.accounts[0].state.is_some());
+        assert!(!r.accounts[0].matching_mint_state_observed);
     }
     #[test]
     fn missing_and_non_token2022_accounts_are_not_decoded_as_token2022(){
