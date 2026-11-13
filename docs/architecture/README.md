@@ -139,7 +139,7 @@ Aggregation precedence: definitive hard deny wins; otherwise missing mandatory e
 | `check --mode local` | none | client's RPC | never | useful free baseline with trustworthy scope |
 | `check --mode cloud` | client credentials | client's RPC + cloud sources | yes | baseline + enriched paid intelligence |
 | `doctor` | none unless cloud tests requested | optional | optional | connectivity, version, crypto compatibility |
-| `account / topup / usage` | enrolled device identity | no requirement | yes | manage subscription-free usage entirely in CLI |
+| `payment status` | one-use SOL claim secret (no account) | none in local mode | yes, after explicit paid quote | retrieve a single paid check without another payment |
 
 `cloud` is explicit; environment defaults may not silently switch free checks to paid requests. Local mode must be usable without a HGUET account or HGUET Cloud availability.
 
