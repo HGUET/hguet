@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hguet.fr/schemas/v1/security-verdict.schema.json",
   "title": "HGUET local final SecurityVerdict — unreleased draft",
-  "description": "Produced by public CLI, not signed by HGUET Cloud. UNKNOWN is required when mandatory execution evidence is unavailable. In current CLI prototype ALLOW is NEVER emitted.",
+  "description": "The public CLI composes final advisory verdict. RPC simulation successes, token/CPI unknowns, and unresolved ALT addresses cannot justify ALLOW; no HGUET product release exists.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -71,7 +71,14 @@
       ]
     },
     "simulation_status": {
-      "const": "not_performed"
+      "type": "string",
+      "enum": [
+        "not_performed",
+        "rpc_succeeded",
+        "rpc_failed",
+        "rpc_unavailable"
+      ],
+      "description": "Read-only user-selected Solana RPC evidence; successful simulation is advisory and cannot by itself justify ALLOW."
     },
     "coverage": {
       "type": "array",
