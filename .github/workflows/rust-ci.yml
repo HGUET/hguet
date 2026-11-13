@@ -22,6 +22,20 @@ jobs:
         run: cargo clippy --workspace --all-targets
       - name: Verify Rust CLI help
         run: cargo run -p hguet -- --help
+      - name: Assert VPS endpoint is a non-SSH default and Cloud remains disabled
+        run: |
+          cargo run -p hguet -- config show --json > /tmp/hguet-cloud-config.json
+          python - <<'PY'
+          import json
+          with open('/tmp/hguet-cloud-config.json',encoding='utf-8') as f:
+              data=json.load(f)
+          cloud=data['cloud']
+          assert cloud['default_endpoint']=='vps-d0669a91.vps.ovh.net:443'
+          assert cloud['port']==443 and not cloud['available']
+          assert data['local_mode']['cloud_network_access'] is False
+          assert '@' not in cloud['default_endpoint']
+          print('PASS: Cloud DNS default configured, no SSH username, transport not activated')
+          PY
       - name: Validate public schema and illustrative fixtures
         run: |
           python -m pip install 'jsonschema[format]>=4,<5'
