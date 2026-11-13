@@ -30,6 +30,31 @@ def integer_ceil(a, b):
     return (a + b - 1) // b
 
 
+def tier_for_metrics(policy, metrics, capabilities):
+    """Highest-required published tier by all bounded metrics and capabilities."""
+    limits_map = {
+        "transaction_bytes": "max_transaction_bytes",
+        "top_level_instructions": "max_top_level_instructions",
+        "resolved_accounts": "max_resolved_accounts",
+        "lookup_tables": "max_lookup_tables",
+        "distinct_programs": "max_distinct_programs",
+        "risk_subjects": "max_risk_subjects",
+    }
+    for tier in policy["tiers"]:
+        lim = tier["limits"]
+        if all(metrics[k] <= lim[v] for k, v in limits_map.items()) and set(capabilities).issubset(set(tier["allowed_capabilities"])):
+            return tier
+    raise ValueError("Unsupported quote dimensions; refuse before payment")
+
+def price_reference_accepted(source_observed_seconds_ago, compared_divergence_bps, policy):
+    cfg = policy["oracle"]
+    if source_observed_seconds_ago < 0 or source_observed_seconds_ago > cfg["source_max_age_seconds"]:
+        return False
+    if compared_divergence_bps is not None and (compared_divergence_bps < 0 or compared_divergence_bps > cfg["max_tolerated_independent_divergence_bps"]):
+        return False
+    return True
+
+
 def check_quote_semantics(q):
     assert q["asset"] == "SOL"
     assert q["environment"] == ("production" if q["network"] == "mainnet" else "sandbox")
@@ -47,6 +72,27 @@ def main():
     receipt = load("fixtures/payment-receipt-example.json")
     receipt_schema = validate("payment-receipt", receipt)
     check_quote_semantics(quote)
+    policy = load("pricing-policy.draft.json")
+    assert policy["status"] == "prelaunch_draft_not_published_rates"
+    assert policy["pricing_policy_version"] == quote["pricing_policy_version"]
+    assert policy["oracle"]["pair"] == "SOL/USD" and policy["payment_asset"] == "SOL"
+    assert policy["oracle"]["max_tolerated_independent_divergence_bps"] == 500
+    assert not policy["oracle"]["fetch_oracle_for_each_request"]
+    tier = tier_for_metrics(policy, quote["complexity"], quote["requested_capabilities"])
+    assert tier["id"] == quote["pricing_tier"]
+    assert int(quote["usd_price_micros"]) == tier["usd_price_micros"]
+    assert int(quote["lamports_due"]) <= int(quote["max_lamports_requested"])
+    for age in [0, 14400, 43200, 86399, 86400]:
+        assert price_reference_accepted(age, 500, policy)
+    for age, divergence in [(86401,0), (90000,None), (0,501), (-1,None)]:
+        assert not price_reference_accepted(age, divergence, policy)
+    assert tier_for_metrics(policy, dict(quote["complexity"], transaction_bytes=513),
+                            quote["requested_capabilities"])["id"] == "standard"
+    assert tier_for_metrics(policy, dict(quote["complexity"], top_level_instructions=13),
+                            quote["requested_capabilities"])["id"] == "complex"
+    assert tier_for_metrics(policy, dict(quote["complexity"], risk_subjects=13),
+                            quote["requested_capabilities"])["id"] == "extended"
+    assert tier_for_metrics(policy, quote["complexity"], ["independent_rpc_simulation"])["id"] == "extended"
     assert quote["quote_id"] == receipt["quote_id"]
     assert quote["network"] == receipt["network"]
     assert quote["environment"] == receipt["environment"]
@@ -84,7 +130,7 @@ def main():
         assert f"message {name} " in proto, f"missing message {name}"
     for deprecated in ["EnrollStart", "CreditBalance", "TopUpQuote", "CheckRequest"]:
         assert f"message {deprecated} " not in proto, f"legacy prepaid flow remains: {deprecated}"
-    print(f"PASS: 3 draft JSON Schemas, synthetic SOL quote/receipt and {len(ids)} planned cases.")
+    print(f"PASS: 3 JSON Schemas, draft pricing tier/cap/24h ±5% tests, SOL quote/receipt and {len(ids)} planned cases.")
     print("NOTE: schema/fixture checks only; no running server, funded payment or PQ TLS interop.")
 
 
