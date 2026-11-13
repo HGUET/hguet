@@ -1,4 +1,4 @@
-//! Bounded optional Token-2022 holding-account lookup after simulation.
+//! Bounded optional SPL Token and Token-2022 holding-account lookup after simulation.
 //! This uses a separate one-provider request at a MINIMUM slot, not the
 //! execution bank. Correlation is warning evidence, never authorization.
 use super::{checked_result, JsonRpcTransport, RpcError};
@@ -129,7 +129,7 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
     }
     Ok(Some(TokenAccountRpcSnapshot{
         context_slot:slot,simulation_slot,atomic_with_simulation:false,accounts,
-        limitation:"Token holding accounts were read after simulation in a separate single-provider call at a minimum context slot; holdings, owner and extension state may have changed. Only accounts named by paired token-balance metadata are examined; CPI-only accounts remain unverified".into(),
+        limitation:"SPL Token / Token-2022 holding accounts were read after simulation in a separate single-provider call at a minimum context slot; owner, delegate, holdings and extension state may have changed. Only accounts named by paired token-balance metadata are examined; direct wire sources and CPI-only accounts absent from paired balances remain unobserved".into(),
     }))
 }
 
