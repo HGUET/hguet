@@ -1,8 +1,6 @@
 {
   "schema_version": 1,
   "kind": "cloud_assessment",
-  "tenant_scope": "tenant-hash-synthetic",
-  "request_id": "0123456789abcdef0123456789abcdef",
   "network": "solana-mainnet",
   "genesis_hash": "ExampleGenesisHashNotMainnet",
   "message_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -49,5 +47,10 @@
       "evidence_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "freshness_seconds": 6
     }
-  ]
+  ],
+  "quote_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment": "sandbox",
+  "data_scope": "metadata_only",
+  "subjects_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "transaction_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
