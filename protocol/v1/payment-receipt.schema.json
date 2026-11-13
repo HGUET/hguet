@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hguet.fr/schemas/v1/payment-receipt.schema.json",
-  "title": "HGUET one-payment one-check terminal receipt v0.2 DRAFT",
+  "title": "HGUET one-payment one-check receipt — unreleased draft",
   "description": "Domain HGUET-SOL-PAYMENT-RECEIPT/v1, not a topup, not a credit balance.",
   "type": "object",
   "additionalProperties": false,
@@ -67,7 +67,7 @@
     },
     "lamports_paid": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)$",
+      "pattern": "^[1-9][0-9]*$",
       "maxLength": 40
     },
     "receiver": {
