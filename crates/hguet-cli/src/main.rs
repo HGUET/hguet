@@ -220,10 +220,14 @@ fn rpc_signed_source_scope_findings(
                 observed.status=="legacy_token"=>{
                 // A delegate may legitimately be the instruction authority.
                 // The later allowance still cannot prove execution-time power.
-                if state.mint!=scope.mint ||
-                    (state.token_authority!=scope.authority &&
-                     state.delegate.as_deref()!=Some(scope.authority.as_str())) {
+                if state.mint!=scope.mint {
                     account_conflict=true;
+                } else if state.token_authority!=scope.authority &&
+                    state.delegate.as_deref()!=Some(scope.authority.as_str()) {
+                    // Token-2022 mint PermanentDelegate can also authorize a
+                    // transfer. Without mint-state evidence, this is unknown,
+                    // not a proven owner/authority conflict.
+                    uncertain=true;
                 }
                 if observed.status=="token_2022" &&
                     !observed.matching_mint_state_observed {uncertain=true;}
@@ -855,9 +859,9 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 let mut signed_source_authority_evidence=None;
                 if evidence.status=="rpc_succeeded" {
                     if let Some(ref review)=signed_token_source_review {
-                        match hguet_rpc::correlate_signed_source_authority(
+                        match hguet_rpc::correlate_signed_source_authority_with_mints(
                             review,evidence.token_account_snapshot.as_ref(),
-                            evidence.context_slot) {
+                            evidence.mint_snapshot.as_ref(),evidence.context_slot) {
                             Ok(result)=>{
                                 verdict.coverage.push("rpc_signed_source_authority_correlations_advisory".into());
                                 for (code,severity,message) in source_authority_findings(&result) {
@@ -988,6 +992,7 @@ mod authority_observation_report_tests {
     fn report() -> SourceAuthorityReview {
         SourceAuthorityReview {
             simulation_slot:600,token_account_context_slot:Some(601),
+            mint_context_slot:None,
             atomic_with_simulation:false,authorization_proven:false,
             total_spending_proven:false,limitation:"fixture",
             sources:vec![SourceAuthorityObservation {
@@ -999,6 +1004,8 @@ mod authority_observation_report_tests {
                 account_observation:"token_2022",
                 context_slot:Some(601),observed_token_owner:Some("owner".into()),
                 observed_delegate:Some("authority".into()),
+                observed_mint_permanent_delegate:None,
+                mint_permanent_delegate_matches_authority:None,
                 program_matches_wire:Some(true),
                 mint_matches_signed_scope:Some(true),
                 delegate_allowance_covers_declared:Some(true),
@@ -1206,7 +1213,8 @@ mod signed_token_cap_rpc_tests {
         let findings=rpc_signed_source_scope_findings(
             &scoped_intent(),"rpc_succeeded",&e,Some(&snapshot));
         let codes=findings.iter().map(|x|x.0).collect::<Vec<_>>();
-        assert!(codes.contains(&"RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT"));
+        assert!(codes.contains(&"RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE"));
+        assert!(!codes.contains(&"RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT"));
         assert!(!codes.contains(&"RPC_SIGNED_SOURCE_CPI_OVER_CAP"));
         // A delegate can perform a valid direct checked transfer, even
         // though the token account's owner is a different key. Do not
