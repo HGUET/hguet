@@ -118,16 +118,18 @@ message DeviceListResult { repeated DeviceInfo devices = 1; }
 message DeviceRevoke { string device_id = 1; }
 message DeviceRevokeResult { ResultCode result = 1; }
 message TopUpQuote {
-  string asset = 1;                    // "USDC", enforced mint/network on server
-  string requested_amount = 2;        // integer decimal base units, not float
+  string asset = 1;                    // "SOL" for v0.1, optional "USDC" later
+  string requested_amount = 2;        // integer decimal onchain base units, not float
+  string network = 3;                 // mainnet/devnet/testnet, validated against genesis
+  string environment = 4;             // production or sandbox, server-enforced
 }
 message TopUpInvoice {
   ResultCode result = 1;
   string invoice_id = 2;
   string network = 3;
   string genesis_hash = 4;
-  string token_program = 5;
-  string mint_address = 6;
+  string token_program = 5;          // empty for native SOL; required for SPL assets
+  string mint_address = 6;           // empty for native SOL; required for SPL assets
   string destination = 7;
   string base_units = 8;               // decimal integer
   string reference = 9;
@@ -135,6 +137,8 @@ message TopUpInvoice {
   string quoted_credit_units = 11;     // decimal integer
   string terms_version = 12;
   SignedPayload server_invoice_signature = 13;
+  string asset = 14;                  // "SOL" for native lamport invoice
+  string environment = 15;            // production or sandbox
 }
 message TopUpStatus { string invoice_id = 1; }
 message TopUpStatusResult {
@@ -202,7 +206,7 @@ message CheckRequest {
   bool raw_transaction_consent = 10;  // required with raw_transaction
   ClientEvidence evidence = 11;
   string accepted_price_schedule = 12;
-  string maximum_charge_units = 13;   // decimal integer; max user-authorized fee
+  string maximum_charge_units = 13;   // integer service credits, independent of SOL amount
   string accepted_quote_id = 14;      // must match server-issued signed quote
 }
 message CheckReceipt {
