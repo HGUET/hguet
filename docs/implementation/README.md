@@ -101,6 +101,15 @@ Results are returned under `rpc_analysis.effect_analysis`:
 
 Malformed or inconsistent arrays, invalid account indices, duplicate token records, wrongly encoded amounts, CPI indices, mismatched `loadedAddresses` and unsupported metadata cause `rpc_unavailable`/`UNKNOWN`, never `ALLOW`. JSON-RPC responses are capped at 1 MiB; nested token/CPI collections have explicit bounds. Raw log text is never copied into the CLI's analysis output.
 
+### Advisory comparison with independently verified PaymentIntent
+
+When `hguet check` has validated a signed PaymentIntent against the separately pinned `--trusted-key`, a successful single-provider RPC simulation can now add two **high-risk advisory findings** without changing the final `UNKNOWN` decision:
+
+- `RPC_CPI_OUTSIDE_SIGNED_INTENT`: a captured inner instruction names a program ID absent from the signed `allowed_program_ids`. This is a prompt to inspect the behavior, not independent proof that the CPI was malicious or that RPC captured every CPI.
+- `RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP`: paired native balance observations show that account index 0 (the fee payer) lost more lamports **net** than the signed `max_spend_lamports`. Network fees contribute to this loss and incoming transfers can mask outgoing spending, so this is not an accurate gross-spend calculation.
+
+The comparison runs only after trusted intent verification and only when `rpc_succeeded`. A missing trusted key, missing relevant RPC fields, or a failed simulation does not fabricate a mismatch. No provider-supplied observation can promote the decision to `ALLOW` or cause a definitive local `DENY`; the external signer must still enforce the authorization independently.
+
 **Limitations:** Not every RPC provider emits all of these optional simulation fields. The simulation may use a replacement blockhash and does not prove the transaction will execute on-chain. A token change observed across two RPC snapshots **is not** complete attribution of all CPI effects, and a successful response alone does not certify authorization, exact eventual debits, consensus state or token-program semantics. Even when every optional field is populated, the local `SecurityVerdict` stays `UNKNOWN`.
 
 Source: [official Solana RPC simulation result and balance/CPI structures](https://solana.com/docs/rpc/json-structures) and [simulateTransaction API](https://solana.com/docs/rpc/http/simulatetransaction).
