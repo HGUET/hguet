@@ -2,6 +2,8 @@
 
 **Status:** proposed wire contract and security requirements; **no production TLS interoperability is claimed**.
 
+**Interop clarification (2026-11-13):** [Unified interoperability contract](interoperability.md) and [public protocol draft](../../protocol/v1/README.md) are the canonical cross-repository source. The server signs a **CloudAssessment and a separate BillingReceipt**; it does **not** sign the CLI's final composite SecurityVerdict. Hash-only metadata enrichment cannot independently simulate a transaction. All messages here are design requirements, not implemented APIs.
+
 The **public** repository owns the client, wire schema and compatibility fixtures. The **private** `HGUET/server` repository owns the backend, aggregation, accounts, threat feeds, pricing and operations.
 
 ## 1. Network model
@@ -72,7 +74,7 @@ DeviceList    / DeviceRevoke
 Error         / RateLimited / UpgradeRequired
 ```
 
-Message schemas should be committed as `protocol/v1/hguet.proto` in **this public repository** before an implementation. Server implementations will pin a tagged protocol crate version. The listed protocol names are design targets, not implemented endpoints.
+The initial **draft** message schema is now published as [`protocol/v1/hguet.proto`](../../protocol/v1/hguet.proto), with a [signed CloudAssessment JSON Schema](../../protocol/v1/cloud-assessment.schema.json). It must be compiled, reviewed and tagged before claiming wire compatibility. Server implementations will pin a tagged protocol crate version. The listed protocol names are design targets, not implemented endpoints.
 
 ## 4. Server risk check request
 
@@ -151,7 +153,7 @@ Rules:
 - Prices and free limits are server-published and cryptographically authenticated; client never computes final charge.
 - Charge a completed analysis whether its result is ALLOW, WARN or DENY, if that was agreed in the quote.
 - Auth failures, malformed input rejected pre-analysis and genuine server-side failures must not be charged.
-- A service `UNKNOWN` due to incomplete but valid checks is priced only when agreed transparently; provider outage should be credited/refunded.
+- A completed service `UNKNOWN` due to supported-but-inconclusive evidence is billable **only under a previously authenticated tariff and client price ceiling**; outage, malformed admission, or unfulfilled mandatory service must not be billed.
 - Idempotent handling of retries, timeouts and duplicate transaction **checks**: key by account + request ID + canonical payload hash; reject same ID for a changed payload.
 - Credits never depend on an unauthenticated Solana RPC response alone; top-up deposit and finality policy must be verified authoritatively.
 - Client must display current balance and per-request price before submission where interactive; automation requires predefined pricing/budget ceiling.
