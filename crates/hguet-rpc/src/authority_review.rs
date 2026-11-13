@@ -127,7 +127,7 @@ pub fn correlate_signed_source_authority(
             );
             if state.token_authority==source.declared_authority {
                 observation.authority_relationship="observed_owner";
-            } else if state.delegate.as_deref()==Some(&source.declared_authority) {
+            } else if state.delegate.as_deref()==Some(source.declared_authority.as_str()) {
                 observation.authority_relationship="observed_delegate";
                 let delegated=state.delegated_amount_raw.parse::<u64>()
                     .map_err(|_|RpcError::InvalidResponse)?;
