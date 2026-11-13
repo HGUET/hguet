@@ -642,6 +642,79 @@ mod tests {
         assert_eq!(correlate_effects(&parsed(),"rpc_succeeded",0,&effects(),
             None,None,None).unwrap_err(),RpcError::InvalidResponse);
     }
+    fn direct_token_transfer(op:&str) -> DirectTokenAnalysis {
+        use crate::direct_token::DirectTokenInstruction;
+        let decoded=TokenCpiInstruction{
+            parent_instruction_index:0,inner_instruction_index:0,
+            program_id:TOKEN_2022_PROGRAM.into(),operation:op.into(),
+            source_account:Some(address(3)),destination_account:Some(address(4)),
+            mint:Some(address(9)),authority:Some(address(11)),delegate:None,
+            amount_raw:Some("25".into()),decimals:Some(6),
+            authority_type:None,new_authority:None,
+        };
+        DirectTokenAnalysis {
+            recognized:vec![DirectTokenInstruction {
+                instruction_index:0,program_address_from_lookup:false,
+                account_addresses_from_lookup:false,decoded,
+            }],
+            opaque:vec![],total_token_program_instructions:1,
+            limitation:"test",
+        }
+    }
+    #[test]
+    fn direct_wire_transfer_is_separate_from_simulated_cpi_and_net_balance() {
+        let direct=direct_token_transfer("transfer_checked");
+        let graph=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
+            Some(&direct),None,None).unwrap();
+        let direct_edges=graph.edges.iter().filter(|x|
+            x.relation=="wire_declared_token_transfer").collect::<Vec<_>>();
+        assert_eq!(direct_edges.len(),1);
+        assert_eq!(direct_edges[0].source,"original_wire");
+        assert_eq!(direct_edges[0].attribution,"declared_only");
+        assert_eq!(direct_edges[0].amount_raw.as_deref(),Some("25"));
+        assert_eq!(direct_edges[0].context_slot,None);
+        assert!(graph.edges.iter().any(|x|x.relation=="cpi_declared_token_transfer"
+            && x.source=="rpc_compiled_cpi"&&x.context_slot==Some(500)));
+        assert!(graph.edges.iter().any(|x|x.relation=="simulated_token_net_delta"
+            && x.amount_raw.as_deref()==Some("-25")));
+        assert!(!graph.execution_proven);
+        assert!(!graph.spend_limit_enforced);
+    }
+    #[test]
+    fn direct_wire_declarations_survive_failed_simulation_without_forged_effects() {
+        let direct=direct_token_transfer("transfer_checked");
+        let graph=correlate_effects(&parsed(),"rpc_failed",500,&effects(),
+            Some(&direct),None,None).unwrap();
+        assert!(graph.edges.iter().any(|x|x.relation=="wire_declared_token_transfer"));
+        assert!(!graph.edges.iter().any(|x|x.relation=="cpi_declared_token_transfer"
+            || x.relation=="simulated_token_net_delta"));
+        assert!(graph.evidence_gaps.contains(&"rpc_simulation_failed_no_effect_attribution"));
+    }
+    #[test]
+    fn opaque_direct_token_is_a_gap_and_alt_provenance_is_not_hidden() {
+        use crate::direct_token::OpaqueDirectTokenInstruction;
+        let mut direct=direct_token_transfer("transfer");
+        direct.recognized[0].account_addresses_from_lookup=true;
+        direct.opaque.push(OpaqueDirectTokenInstruction {
+            instruction_index:1,program_id:TOKEN_2022_PROGRAM.into(),
+            program_address_from_lookup:true,token_2022_extension:true,
+            extension_hint:None,
+        });
+        direct.total_token_program_instructions=2;
+        direct.recognized[0].decoded.mint=None;
+        let graph=correlate_effects(&parsed(),"rpc_succeeded",500,&effects(),
+            Some(&direct),None,None).unwrap();
+        for gap in ["opaque_direct_token_instruction",
+            "opaque_direct_token_2022_extension",
+            "direct_token_program_from_untrusted_alt",
+            "direct_token_account_from_untrusted_alt",
+            "unchecked_direct_token_mint_not_declared"] {
+            assert!(graph.evidence_gaps.contains(&gap),"missing {gap}");
+        }
+        assert!(graph.alerts.contains(&"GRAPH_DIRECT_TOKEN_OPAQUE"));
+        assert!(graph.edges.iter().any(|x|x.relation=="wire_declared_token_transfer"
+            && x.mint.is_none()));
+    }
     #[test]
     fn unresolved_wire_transfer_address_stays_a_gap_not_forged_edge() {
         let mut p=parsed();
