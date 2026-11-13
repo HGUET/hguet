@@ -981,6 +981,83 @@ fn main(){
 }
 
 #[cfg(test)]
+mod authority_observation_report_tests {
+    use super::*;
+    use hguet_rpc::{SourceAuthorityObservation,SourceAuthorityReview};
+    fn report() -> SourceAuthorityReview {
+        SourceAuthorityReview {
+            simulation_slot:600,token_account_context_slot:Some(601),
+            atomic_with_simulation:false,authorization_proven:false,
+            total_spending_proven:false,limitation:"fixture",
+            sources:vec![SourceAuthorityObservation {
+                mint:"mint".into(),source_token_account:"source".into(),
+                declared_token_program:"token".into(),
+                declared_authority:"authority".into(),
+                declared_debit_raw:"20".into(),
+                authority_relationship:"observed_delegate",
+                account_observation:"token_2022",
+                context_slot:Some(601),observed_token_owner:Some("owner".into()),
+                observed_delegate:Some("authority".into()),
+                program_matches_wire:Some(true),
+                mint_matches_signed_scope:Some(true),
+                delegate_allowance_covers_declared:Some(true),
+                later_account_balance_covers_declared:Some(true),
+                frozen_at_observation:Some(false),
+                restricted_or_opaque_extensions:Some(false),
+                authorization_proven:false,
+            }],
+        }
+    }
+    #[test]
+    fn matching_later_owner_or_delegate_never_becomes_authorization(){
+        let mut r=report();
+        let codes=source_authority_findings(&r).into_iter()
+            .map(|f|f.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["RPC_SOURCE_AUTHORITY_NON_ATOMIC"]);
+        r.sources[0].authority_relationship="observed_owner";
+        r.sources[0].observed_delegate=None;
+        assert_eq!(source_authority_findings(&r)[0].0,"RPC_SOURCE_AUTHORITY_NON_ATOMIC");
+        assert!(!r.authorization_proven);
+    }
+    #[test]
+    fn mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk(){
+        let mut r=report();
+        let account=&mut r.sources[0];
+        account.authority_relationship="unmatched";
+        account.program_matches_wire=Some(false);
+        account.mint_matches_signed_scope=Some(false);
+        account.delegate_allowance_covers_declared=Some(false);
+        account.later_account_balance_covers_declared=Some(false);
+        account.frozen_at_observation=Some(true);
+        account.restricted_or_opaque_extensions=Some(true);
+        let codes=source_authority_findings(&r).into_iter()
+            .map(|f|f.0).collect::<Vec<_>>();
+        for expected in [
+            "RPC_SOURCE_AUTHORITY_PROGRAM_CONFLICT",
+            "RPC_SOURCE_AUTHORITY_MINT_CONFLICT",
+            "RPC_SOURCE_AUTHORITY_ROLE_UNMATCHED",
+            "RPC_SOURCE_AUTHORITY_DELEGATE_ALLOWANCE_LOW",
+            "RPC_SOURCE_AUTHORITY_BALANCE_LOW",
+            "RPC_SOURCE_AUTHORITY_FROZEN",
+            "RPC_SOURCE_AUTHORITY_EXTENSION_UNRESOLVED",
+        ]{
+            assert!(codes.contains(&expected),"missing {expected}");
+        }
+        assert!(!r.total_spending_proven);
+    }
+    #[test]
+    fn no_observation_and_no_consumed_source_are_not_reported_as_safe(){
+        let mut r=report();
+        r.sources[0].account_observation="missing";
+        r.sources[0].authority_relationship="unobserved";
+        assert!(source_authority_findings(&r).iter()
+            .any(|f|f.0=="RPC_SOURCE_AUTHORITY_UNOBSERVED"));
+        r.sources.clear();
+        assert!(source_authority_findings(&r).is_empty());
+    }
+}
+
+#[cfg(test)]
 mod signed_token_cap_rpc_tests {
     use super::*;
     use hguet_core::TokenSpendLimit;
