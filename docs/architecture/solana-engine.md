@@ -44,6 +44,12 @@ The unreleased CLI now accepts optional `token_spend_limits` in the separately s
 
 The signed `PaymentIntent` v1 optionally includes `token_source_limits` binding each declared checked debit to an exact source token-account, mint, raw cap and authority present among the message's first `num_required_signatures` static keys. Strict single-authority instruction shapes are required; multisig and extra hook accounts fail closed in this initial mode. **Signer role ≠ verified transaction signature ≠ proven token-account owner.** Required-signer placement is checked offline, and `transaction_signatures_verified` indicates whether all transaction signatures validated. Actual onchain ownership, delegates, CPI spending and complete execution remain unresolved.
 
+### Signed source account authority reconciliation — observed state only
+
+The protected transaction can carry independently signed `token_source_limits` tying mint, source token account, declared authority and raw debit cap to a required message signer role. The original bytes validate the declared program identity, but not onchain account ownership. With explicit opt-in RPC simulation, `hguet-rpc::correlate_signed_source_authority` compares the separately observed legacy SPL Token/Token-2022 account base state with the signed direct debit review. It distinguishes **owner**, **delegate**, **delegate allowance shortfall**, frozen status, mint mismatch, token-owner program mismatch and missing data. A valid delegate is not automatically misclassified as an owner conflict.
+
+The CLI exposes `signed_source_authority_evidence`, separate from `rpc_analysis.effect_graph`, preserving the simulation and account snapshot slots with `atomic_with_simulation=false`. Both `authorization_proven` and `total_spending_proven` remain `false`: the separate RPC read does not establish account ownership, delegate allowance or signature authorization at the simulated execution bank. CPI-only and direct sources missing from simulated token-balance metadata are **not yet fetched**, and can never be assumed verified. No `ALLOW` is emitted.
+
 ## 2. Solana formats and canonical identity
 
 Current official Solana docs describe **legacy**, **v0**, and **v1** transaction formats; v1 has different size and account/resource-limit semantics. The implementation must be version-aware.
