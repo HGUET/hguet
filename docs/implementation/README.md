@@ -128,11 +128,33 @@ For instructions whose program ID exactly matches the original SPL Token Program
 - `token_2022_extension_instruction_count`: opaque Token-2022 CPI entries with extension or future opcode (25 or higher); they may contain hooks, transfer fees, withheld balances or other authority effects and must not be treated as ordinary transfers.
 - `missing_compiled_token_data_count`: token CPI entries lacking canonical compiled account indices/data; `jsonParsed` text never substitutes for binary evidence.
 
-The decoder recognizes a limited byte-level subset of common SPL Token instructions: `Transfer`, `TransferChecked`, `Approve`, `ApproveChecked`, `Revoke`, `SetAuthority`, `MintTo`, `MintToChecked`, `Burn`, `BurnChecked`, `CloseAccount`, `FreezeAccount`, `ThawAccount` and `SyncNative`. It does **not** resolve account owners, actual signature authorization, multisig conditions, mint state, Token-2022 extensions, hook effects, confidential flows, or verify that reported CPI was executed on-chain.
+The decoder recognizes a limited byte-level subset of common SPL Token instructions: `Transfer`, `TransferChecked`, `Approve`, `ApproveChecked`, `Revoke`, `SetAuthority`, `MintTo`, `MintToChecked`, `Burn`, `BurnChecked`, `CloseAccount`, `FreezeAccount`, `ThawAccount` and `SyncNative`. It does **not** resolve account owners, actual signature authorization, multisig conditions, mint extension state, Token-2022 runtime semantics, hook effects, confidential flows, or verify that reported CPI was executed on-chain.
 
 Only on `rpc_succeeded`, the CLI can emit `RPC_TOKEN_CPI_AUTHORITY_RISK` (approval, authority or account control), `RPC_TOKEN_CPI_MOVEMENT` (declared token movement), and `RPC_TOKEN_CPI_OPAQUE` (unparsed token semantics). They are advisory findings, **not** conclusive `DENY` and never a reason for `ALLOW`. A failed simulation cannot prove completion of any CPI. Unknown, unsupported and absent metadata remain unknown.
 
 References: [Solana simulation CPI encoding](https://solana.com/docs/rpc/http/simulatetransaction), [Solana transaction metadata](https://solana.com/docs/rpc/json-structures), [SPL Token instruction layout](https://docs.rs/spl-token-interface/latest/spl_token_interface/instruction/enum.TokenInstruction.html), [Token-2022 extensions](https://www.solana-program.com/docs/token-2022).
+
+### Token-2022 extension classification — phase 1 (advisory)
+
+The parser additionally labels Token-2022 CPI instruction **prefixes** from binary Base58-encoded `data`, never from untrusted `jsonParsed` strings. The new `effect_analysis.cpi.token_2022_extension_observations` array records the parent/inner CPI index, top-level discriminator and recognized family, plus:
+
+- `layout_checked=false` for an unrecognized/truncated layout or family-only hint; a known prefix alone is **not** proof that its inner instruction is valid.
+- `layout_checked=true` only for exactly parsed `TransferCheckedWithFee` (26/1), `SetTransferFee` (26/5), `InitializePermanentDelegate` (35), `InitializeTransferHook` (36/0), and `UpdateTransferHook` (36/1). Extracted fields are **declarations**, not authenticated configuration or proof of execution.
+- For Transfer Fee, optional raw amounts, expected fee, basis points and maximum fee; for Permanent Delegate and Transfer Hook, selected key/address roles. The Token-2022 prefix discriminants and subtypes follow the published SPL Token-2022 interface.
+- Family-only hints for confidential transfers/fees/mint-burn, CPI guard, pause, non-transferable, account reallocation, pointer/configuration extensions and unknown future opcodes. These remain **opaque**.
+
+Even when some exact fields are parsed, `opaque_token_instruction_count` and `token_2022_extension_instruction_count` still include these extensions: their state-dependent semantics have **not** been validated. In particular, no mint TLV extension inventory is fetched, no transfer-hook program is authenticated or re-executed, and no fee formula is checked against live mint state. An extension can exist on a mint **without any extension instruction appearing in simulated CPI**; absence of these observations is never proof of absence of fees/hooks/delegates.
+
+After a successful advisory RPC simulation, the CLI may emit:
+
+- `RPC_TOKEN_2022_TRANSFER_FEE`: transfer fees, withheld-fee operations or fee configuration mentioned in CPI.
+- `RPC_TOKEN_2022_TRANSFER_HOOK`: hook initialization/update instructions mentioned in CPI.
+- `RPC_TOKEN_2022_PERMANENT_DELEGATE`: an instruction to initialize mint-wide delegate authority mentioned in CPI.
+- `RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS`: confidential transfer, confidential fee or mint/burn extension CPI families mentioned in CPI.
+
+All findings remain high-risk advisory hints, return `UNKNOWN`, do **not** broadcast or sign, and do not authorize a transaction. To enforce actual payment constraints, future work needs authenticated mint/account data, full extension state validation, transaction-level direct + CPI effects, independent provider comparisons, and customer-controlled signer integration.
+
+Sources: [Token-2022 interface discriminants](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/instruction.rs.html), [Transfer Fee instruction layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/transfer_fee/instruction.rs.html), [Transfer Hook instruction layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/transfer_hook/instruction.rs.html), [Solana transfer fees](https://solana.com/docs/tokens/extensions/transfer-fees), [Solana permanent delegate](https://solana.com/docs/tokens/extensions/permanent-delegate).
 
 ## Planned default Cloud server (configured, not active)
 
