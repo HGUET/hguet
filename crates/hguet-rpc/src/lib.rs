@@ -26,7 +26,7 @@ pub use mint_rpc::{MintRpcSnapshot, MintAccountObservation};
 pub use mint_state::{Token2022MintState, MintExtension, MintTransferFeeConfig, MintTransferHook, FeeSchedule};
 pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
 pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
-pub use authority_review::{correlate_signed_source_authority,SourceAuthorityReview,SourceAuthorityObservation};
+pub use authority_review::{correlate_signed_source_authority,correlate_signed_source_authority_with_mints,SourceAuthorityReview,SourceAuthorityObservation};
 pub use alt::LookupResolution;
 pub use effects::{SimulationEffects,CpiObservation,TokenBalanceDelta,NativeBalanceDelta};
 pub use direct_token::{inspect_direct_tokens, DirectTokenAnalysis, DirectTokenInstruction, OpaqueDirectTokenInstruction};
