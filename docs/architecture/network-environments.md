@@ -1,101 +1,42 @@
-> **current draft payment update:** SOL payments are now **per-check, accountless**, priced by [current-day USD→SOL reference and transaction complexity](pricing-policy.md). No prepaid service credits, balance or USDC. Mainnet/Devnet/Testnet still have isolated payment/verification environments. This note supersedes earlier account/credit examples in this file.
+# HGUET — Solana network environments
 
-# Solana clusters and SOL-first Cloud billing
+**Status:** Unreleased design draft. The [anonymous SOL payment contract](payment-per-request.md) and [pricing rules](pricing-policy.md) supersede any historical top-up/credit proposals.
 
-**Status:** Unreleased draft; older examples below have been superseded; no payment processor or three-cluster server is implemented. Updated 2026-11-13.
+## Supported clusters
 
-## Decision: one cluster-aware security engine, separated billing environments
-
-HGUET analyzes prospective transactions on all three public Solana networks:
-
-| CLI network | Standard RPC (development only) | Product environment | Settlement asset |
+| Transaction cluster | Example development RPC | Cloud mode | Service payment |
 | --- | --- | --- | --- |
-| `mainnet` | `https://api.mainnet.solana.com` | `production` | **real native SOL** |
-| `devnet` | `https://api.devnet.solana.com` | `sandbox` | **test native SOL** |
-| `testnet` | `https://api.testnet.solana.com` | `sandbox` | **test native SOL** |
+| Mainnet | `https://api.mainnet.solana.com` | production | **real native SOL**, paid per check |
+| Devnet | `https://api.devnet.solana.com` | sandbox | **valueless test SOL**, paid per test check |
+| Testnet | `https://api.testnet.solana.com` | sandbox | **valueless test SOL**, paid per test check |
 
-Devnet is primarily for application integration and Testnet is primarily for validator/network testing; the latter may be intermittent. Both have test SOL available through airdrops and may reset. Production applications require a production RPC, not the public rate-limited example.
+User-provided RPC endpoints are supported but MUST be checked against expected **genesis hash**. Public example RPC services have usage restrictions and are not production infrastructure. Testnet is primarily for validator/network experiments, can reset and may have intermittent availability.
 
-All supported networks must be differentiated by **verified genesis hash**, not only display name, RPC hostname, account address or signature. The CLI may also inspect a local validator by explicit opt-in, but that is offline/local developer mode, not shared Cloud billing.
+A local validator can be supported for explicit local tests but has **no shared Cloud payment mode** in the current draft.
 
-## Native SOL first, USDC optional later
+## No reusable account credit
 
-For the initial implementation, paid Cloud **top-ups use native SOL**, not SPL tokens. This reduces deployment and reconciliation complexity across all three networks. No token mint or associated token account is required for an ordinary native SOL transfer. Future USDC acceptance must be added behind explicit asset support, network-specific verified mint IDs and dedicated tests; never accept a token merely because its symbol says USDC.
+There is **no `topup`, `balance`, account or USDC** in the proposed Cloud architecture. Each Cloud security request receives a **server-signed one-use price quote** in USD, converted using a cached daily SOL/USD reference into **exact native lamports**. An external wallet then transfers SOL to a configured commercial receiver with a unique quote Memo. That one verified payment authorizes **one** check bound to message/intent hashes and a private claim.
 
-The free CLI has **no fee** for local analysis. Charging is **not a commission on the protected payment amount**. Only explicitly requested **Cloud intelligence** consumes prepaid HGUET service credits.
+Mainnet settlement uses real SOL. Devnet/Testnet settlement exercises the same verification code using test SOL without any monetary value or production access. Sandbox/production receiver addresses, claim stores, cryptographic signing roots and risk/usage data are isolated.
 
-Onchain SOL amounts use **integer lamports** (1 SOL = 1,000,000,000 lamports), never floating-point money. HGUET service credits are separate integer accounting units. The server publishes a signed price schedule and signed top-up invoice. For the simplest MVP, set price schedules in integer service credits with fixed SOL top-up packages; SOL exchange-rate exposure is a known business trade-off. If fiat-pegged prices are introduced later, conversion must use an authenticated bounded-time quote with disclosed rate and expiry.
+## Accounting and payment boundaries
 
-## Top-up and check lifecycle
+- The [HGUET donation address](https://solscan.io/account/39iqkHNMqncEPp3p52zKwUHnYzk2MJbcaHyY4Hhg2fWC) is **not** a commercial treasury.
+- Solana network fees are separate from the fee for HGUET Cloud analysis.
+- Every quote binds **cluster name, verified genesis, environment, exact lamports, scope, claim commitment and expiry**.
+- Payment is counted only after independently verified finalized transfer + matching Memo to receiver.
+- The same onchain settlement cannot authorize two reports, and a Devnet/Testnet transfer can never purchase a Mainnet check.
+- An RPC outage or Testnet reset must never affect the free local CLI or charge a second time for an already paid claim.
 
-```text
-hguet topup 0.1 --asset SOL --network devnet
-   -> CLI obtains server-signed invoice (cluster/genesis, asset=SOL,
-      exact lamports, treasury destination, invoice reference, expiry,
-      sandbox/production environment and service credit units)
-   -> user signs ordinary SOL payment using their own wallet
-   -> server verifies actual transfer on the invoice's EXACT cluster
-   -> only corresponding environment's credit ledger is incremented ONCE
-
-hguet check transaction.bin --network devnet --mode cloud
-   -> CLI verifies local intent/policy and obtains signed Cloud price quote
-   -> server reserves and captures SANDBOX credits only
-   -> CLI verifies CloudAssessment and composes final SecurityVerdict
-```
-
-No HGUET component ever requests the customer's wallet private key, signs their payment, or broadcasts their protected payment transaction. External wallet transfer to pay **HGUET's service** is distinct from the transaction being security-checked.
-
-## Absolute environment isolation
-
-1. `production` has real SOL invoices and real paid credits; `sandbox` uses valueless test SOL and **test credits only**.
-2. Production and sandbox must have separate signing roots/certificates, treasury receiver configuration, invoices, credit journals, rate limits and settlement watchers. Prefer separate databases and deployment credentials. A tenant may have separate sandbox and production accounts but **never a fungible balance**.
-3. No Devnet/Testnet transfer can fund production, even with the same wallet pubkey, invoice reference or transaction signature.
-4. Every invoice, settlement, ledger entry, Cloud check and signed receipt is bound to `environment + network/genesis + tenant + request ID`.
-5. A changed RPC endpoint must pass `getGenesisHash` validation or the payment is rejected before credit.
-6. Test credits are resettable, non-withdrawable and have no real monetary value. Devnet/Testnet airdrop abuse must be controlled with quota and demo limits; airdrops are not free unlimited compute.
-7. A sandbox Cloud result is labeled `TEST`, even if it analyzes a hypothetical valid transaction. It must not be misrepresented as a production security guarantee.
-
-## Invoice verification
-
-Native SOL invoice fields: invoice ID, issue/expiry time, environment, network ID, genesis hash, `asset=SOL`, **integer lamports**, verified receiver and an invoice-binding reference. The server must inspect the finalized transfer (destination, positive lamports received, source/wallet constraints when specified, finalized commitment and reference matching) and apply a unique settlement event key. A memo alone is not payment proof; a bare customer-supplied signature is not settlement proof.
-
-Ambiguous matching must go to review, not silently credit another account. An ordinary transfer into the donation wallet is **never** a service top-up. The publicly listed donation address `39iqkHNMqncEPp3p52zKwUHnYzk2MJbcaHyY4Hhg2fWC` is for gifts only and is NOT the mainnet treasury address; server operators must configure separate receivers per cluster/environment.
-
-## CLI surface (planned, not implemented)
+## Examples (planned commands)
 
 ```sh
 hguet inspect tx.bin --offline --json
-hguet check tx.bin --intent intent.json --network mainnet --mode local --json
-hguet check tx.bin --intent intent.json --network devnet --mode cloud --json
-hguet check tx.bin --intent intent.json --network testnet --mode cloud --json
-
-hguet topup 0.1 --asset SOL --network mainnet
-hguet topup 2 --asset SOL --network devnet
-hguet topup 2 --asset SOL --network testnet
-hguet balance --network devnet --json
-hguet usage --network testnet --json
+hguet check tx.bin --intent intent.json --mode local --network mainnet --json
+hguet check tx.bin --intent intent.json --mode cloud --network devnet --max-fee-lamports 200000 --json
+hguet check tx.bin --intent intent.json --mode cloud --network testnet --max-fee-lamports 200000 --json
+hguet payment status QUOTE_ID --claim-file ./claim.hguet --json
 ```
 
-For a paid invoice, network selection must be explicit and reconfirmed; no silent fallback to Mainnet. Display `MAINNET / REAL SOL` or `DEVNET / TEST SOL` or `TESTNET / TEST SOL` prominently.
-
-## Acceptance cases
-
-- Each supported RPC identifies its expected network/genesis; wrong endpoint fails closed.
-- Native SOL invoice is matched by exact integer lamports, cluster/genesis, receiver and invoice reference, with finalized evidence.
-- Devnet/Testnet top-ups result **only in sandbox credits**, never production balance.
-- Production and sandbox reject each other's device credentials, signed invoices, request IDs and paid receipts.
-- Idempotent duplicate settlement or check retry credits/charges **once**.
-- Reorg/rollback, expired invoice, wrong receiver, uncertain transfer and unsolicited donation remain uncredited.
-- RPC/public faucet outage doesn't break free offline inspection; Cloud returns clearly degraded status.
-- No token accounts/mints are assumed for native SOL. Future USDC requires separate verified token handling.
-- No charge based on security-checked transaction size; fees are for optional Cloud checks only.
-
-## References
-
-- [Solana clusters](https://solana.com/docs/references/clusters)
-- [Solana faucets](https://solana.com/developers/cookbook/development/airdrops-and-faucets)
-- [Solana lamports](https://solana.com/docs/core/accounts/account-structure)
-- [Public CLI/server interoperability](interoperability.md)
-- [Public draft Protobuf protocol](../../protocol/v1/hguet.proto)
-
-**All payment parameters and commands in this document are examples, not live prices or deployed service addresses.**
+**No binary or paid server has been released yet.** See [shared interoperability](interoperability.md), [protocol](../../protocol/v1/README.md), [security model](security.md).
