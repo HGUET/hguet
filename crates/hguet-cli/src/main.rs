@@ -1,6 +1,6 @@
 mod cloud_config;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent};
+use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus};
 use serde_json::json;
 use std::{env, fs, io::Read, process};
 
@@ -107,6 +107,15 @@ fn execute(v:Args)->(serde_json::Value,i32){
     verdict.transaction_sha256=Some(parsed.transaction_sha256.clone());
     verdict.coverage.push("wire_structure".into());
     verdict.limitations.extend(parsed.limitations.clone());
+    if parsed.transaction_signature_status == TransactionSignatureStatus::Invalid {
+        verdict.decision=Decision::Deny;
+        verdict.finding("INVALID_TRANSACTION_SIGNATURE", "critical",
+            "At least one non-zero transaction signature failed Ed25519 verification");
+        // Inspect remains informational; a security check rejects provably invalid signatures.
+        if v.command=="check" {
+            return (json!({"inspection":parsed,"verdict":verdict}),20);
+        }
+    }
     if v.command=="check" {
         match (&v.intent,&v.trusted_key) {
             (Some(path),Some(key))=>{
