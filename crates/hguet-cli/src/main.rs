@@ -154,6 +154,105 @@ fn rpc_intent_risks(
 }
 
 /// Security classifications of *simulated*, single-provider token CPI data.
+/// Compare a selected, untrusted RPC simulation against independently signed
+/// per-mint limits. This is anomaly detection only: neither a CPI instruction
+/// list nor a net balance snapshot proves actual gross source debits.
+fn rpc_signed_token_cap_findings(
+    intent:&PaymentIntentPayload,
+    status:&str,
+    effects:&hguet_rpc::SimulationEffects,
+)->Vec<(&'static str,&'static str,&'static str)> {
+    if status!="rpc_succeeded" {return vec![];}
+    let Some(limits)=intent.token_spend_limits.as_ref() else {return vec![];};
+    let caps=limits.iter().filter_map(|item|
+        item.max_debit_raw.parse::<u64>().ok().map(|n|(&item.mint,n)))
+        .collect::<std::collections::BTreeMap<_,_>>();
+    let mut declared=std::collections::BTreeMap::<&str,u128>::new();
+    let mut unknown=!effects.cpi.captured||
+        effects.cpi.opaque_token_instruction_count>0;
+    let mut unlisted=false;
+    for ix in &effects.cpi.token_instructions {
+        // Only the checked debit opcodes have explicit mint identities.
+        if matches!(ix.operation.as_str(),"transfer_checked"|"burn_checked") {
+            match (ix.mint.as_deref(),ix.amount_raw.as_deref()) {
+                (Some(mint),Some(raw))=>{
+                    if !caps.contains_key(&mint.to_string()) {unlisted=true;}
+                    if let Ok(n)=raw.parse::<u64>() {
+                        let sum=declared.entry(mint).or_insert(0);
+                        if let Some(next)=sum.checked_add(u128::from(n)){*sum=next;}
+                        else {unknown=true;}
+                    }else{unknown=true;}
+                }
+                _=>{unknown=true;}
+            }
+        } else if matches!(ix.operation.as_str(),
+            "transfer"|"burn"|"approve"|"approve_checked"|"revoke"|
+            "set_authority"|"close_account"|"freeze_account"|"thaw_account") {
+            unknown=true;
+        }
+    }
+    // TransferCheckedWithFee is a Token-2022 extension. The typed fields
+    // are still single-provider CPI declarations, not verified fee effects.
+    for hint in &effects.cpi.token_2022_extension_observations {
+        if hint.operation=="transfer_checked_with_fee" && hint.layout_checked {
+            match (hint.mint.as_deref(),hint.declared_amount_raw.as_deref()){
+                (Some(mint),Some(raw))=>{
+                    if !caps.contains_key(&mint.to_string()){unlisted=true;}
+                    if let Ok(n)=raw.parse::<u64>(){
+                        let sum=declared.entry(mint).or_insert(0);
+                        if let Some(next)=sum.checked_add(u128::from(n)){*sum=next;}
+                        else {unknown=true;}
+                    }else{unknown=true;}
+                }
+                _=>{unknown=true;}
+            }
+        }else{unknown=true;}
+    }
+    let over=declared.iter().any(|(mint,total)|
+        caps.get(&mint.to_string()).is_some_and(|cap|*total>u128::from(*cap)));
+    let mut net_over=false;
+    if let Some(rows)=&effects.token_deltas {
+        let mut losses=std::collections::BTreeMap::<&str,u128>::new();
+        for row in rows {
+            if !row.complete_pair {unknown=true;continue;}
+            if let Some(raw)=&row.delta_raw_amount {
+                match raw.parse::<i128>() {
+                    Ok(value) if value<0=>{
+                        let sum=losses.entry(row.mint.as_str()).or_insert(0);
+                        if let Some(next)=sum.checked_add(value.unsigned_abs()) {*sum=next;}
+                        else {unknown=true;}
+                    }
+                    Ok(_)=>{},
+                    Err(_)=>{unknown=true;}
+                }
+            }else{unknown=true;}
+        }
+        net_over=losses.iter().any(|(mint,total)|
+            caps.get(&mint.to_string()).is_some_and(|cap|*total>u128::from(*cap)));
+        if losses.keys().any(|mint|!caps.contains_key(&mint.to_string())){
+            unlisted=true;
+        }
+    } else {unknown=true;}
+    let mut findings=Vec::new();
+    if unlisted {
+        findings.push(("RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS","high",
+            "Selected RPC reports CPI token debits or simulated net token losses involving a mint absent from independently signed per-mint limits; this is advisory and requires independent verification"));
+    }
+    if over {
+        findings.push(("RPC_SIGNED_TOKEN_CPI_OVER_CAP","high",
+            "Selected RPC reports checked CPI token debits whose summed raw amount exceeds the independently signed per-mint cap; this does not establish exact executed gross spending"));
+    }
+    if net_over {
+        findings.push(("RPC_SIGNED_TOKEN_NET_LOSS_OVER_CAP","high",
+            "Selected RPC reports observed token-account net losses above a signed mint cap; incoming transfers, other account owners and omitted snapshots prevent exact attribution"));
+    }
+    if unknown {
+        findings.push(("RPC_SIGNED_TOKEN_CAP_INCOMPLETE","high",
+            "CPI or token balance data is missing, opaque, unchecked or has unsupported authority/fee semantics; no full per-mint spending bound can be established"));
+    }
+    findings
+}
+
 fn token_cpi_findings(
     status: &str,
     items: &[hguet_rpc::TokenCpiInstruction],
@@ -594,6 +693,12 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verdict.finding(code,severity,message);
                 }
                 if let Some(ref intent) = verified_intent {
+                    if intent.token_spend_limits.is_some() {
+                        for (code,severity,message) in rpc_signed_token_cap_findings(
+                            intent,&evidence.status,effects) {
+                            verdict.finding(code,severity,message);
+                        }
+                    }
                     // Only compare provider observations to independently
                     // verified intent; an agent-supplied intent is not trusted.
                     let payer_balances = effects.lamport_deltas.as_ref()
