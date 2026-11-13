@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/payment-quote.schema.json",
+  "title": "HGUET signed native SOL invoice price quote v0.2 DRAFT",
+  "description": "Domain HGUET-SOL-QUOTE/v1, JCS canonical bytes, accountless single paid Cloud check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "quote_id",
+    "environment",
+    "network",
+    "genesis_hash",
+    "asset",
+    "receiver",
+    "memo_reference",
+    "message_sha256",
+    "intent_sha256",
+    "requested_profile",
+    "requested_capabilities",
+    "data_scope",
+    "claim_secret_sha256",
+    "usd_price_micros",
+    "sol_usd_price_micros",
+    "oracle_source_id",
+    "oracle_published_at",
+    "oracle_confidence_bps",
+    "lamports_due",
+    "issued_at",
+    "expires_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "native_sol_price_quote"
+    },
+    "quote_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "environment": {
+      "enum": [
+        "production",
+        "sandbox"
+      ]
+    },
+    "network": {
+      "enum": [
+        "mainnet",
+        "devnet",
+        "testnet"
+      ]
+    },
+    "genesis_hash": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "asset": {
+      "const": "SOL"
+    },
+    "receiver": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44
+    },
+    "memo_reference": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 120
+    },
+    "message_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "intent_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requested_profile": {
+      "enum": [
+        "strict",
+        "review",
+        "explore"
+      ]
+    },
+    "requested_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 96
+      },
+      "uniqueItems": true,
+      "maxItems": 64
+    },
+    "data_scope": {
+      "enum": [
+        "metadata_only",
+        "raw_transaction"
+      ]
+    },
+    "claim_secret_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "usd_price_micros": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 40
+    },
+    "sol_usd_price_micros": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 40
+    },
+    "oracle_source_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "oracle_published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "oracle_confidence_bps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "lamports_due": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 40
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
