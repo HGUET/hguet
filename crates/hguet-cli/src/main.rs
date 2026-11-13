@@ -1043,6 +1043,7 @@ mod rpc_intent_tests {
             expires_at_unix: 200,
             allowed_program_ids: vec![bs58::encode([1u8; 32]).into_string()],
             max_spend_lamports: "100".into(),
+            token_spend_limits:None,
         }
     }
 
