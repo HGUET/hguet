@@ -10,7 +10,9 @@
 //! - use replaceRecentBlockhash=true AND sigVerify=false (they conflict)
 //! - no wallet keys, seeds, accounts, balances, or Cloud requests.
 mod alt;
+mod effects;
 pub use alt::LookupResolution;
+pub use effects::SimulationEffects;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -151,6 +153,7 @@ pub struct SimulationEvidence {
     pub inner_instruction_groups: Option<usize>,
     pub replacement_blockhash_present: bool,
     pub lookup_resolution: Option<LookupResolution>,
+    pub effect_analysis: SimulationEffects,
     pub limitation: String,
 }
 
@@ -216,6 +219,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
         Some(Value::Number(v)) => Some(v.as_u64().ok_or(RpcError::InvalidResponse)?),
         Some(_) => return Err(RpcError::InvalidResponse)
     };
+    let effect_analysis=effects::inspect_simulation_effects(body,&decoded,lookup_resolution.as_ref())?;
     Ok(SimulationEvidence {
         network: network.into(),
         verified_genesis_hash: genesis,
@@ -230,6 +234,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
         replacement_blockhash_present: body.get("replacementBlockhash")
             .is_some_and(|x| !x.is_null()),
         lookup_resolution,
+        effect_analysis,
         limitation: "Single-provider RPC simulation is advisory, uses replacement blockhash and does not verify resulting onchain execution, CPI completeness, authorization, or future account state".into(),
     })
 }
