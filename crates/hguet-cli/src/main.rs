@@ -571,6 +571,10 @@ fn aggregate_token_findings(
         out.push(("RPC_AGGREGATE_UNLISTED_SOURCE","high",
             "Selected RPC observes CPI checked debits or negative net changes for a token source outside the independently signed source scopes"));
     }
+    if report.wire_rpc_alt_identity_dependent_instructions>0 {
+        out.push(("RPC_AGGREGATE_WIRE_ALT_IDENTITY_UNTRUSTED","high",
+            "Some direct token instruction program or account identities depend on single-provider ALT lookup; only compiled instruction indices and data bytes are intrinsic to signed wire"));
+    }
     if report.opaque_direct_token_instructions>0||
        report.opaque_rpc_cpi_token_instructions>0||
        report.unattributed_direct_debit_instructions>0||
@@ -1213,6 +1217,7 @@ mod aggregate_token_reporting_tests {
                 rpc_cpi_or_net_outside_signed_source_list:false,
             }],
             opaque_direct_token_instructions:0,
+            wire_rpc_alt_identity_dependent_instructions:0,
             opaque_rpc_cpi_token_instructions:0,
             unattributed_direct_debit_instructions:0,
             unattributed_cpi_debit_instructions:0,
@@ -1263,12 +1268,14 @@ mod aggregate_token_reporting_tests {
         r.sources[0].rpc_cpi_or_net_outside_signed_source_list=true;
         r.unattributed_cpi_debit_instructions=1;
         r.opaque_rpc_cpi_token_instructions=1;
+        r.wire_rpc_alt_identity_dependent_instructions=1;
         r.authority_or_nondebit_operations_observed=true;
         let flags=aggregate_token_findings(&r).iter().map(|f|f.0)
             .collect::<Vec<_>>();
         for flag in [
             "RPC_AGGREGATE_UNLISTED_MINT",
             "RPC_AGGREGATE_UNLISTED_SOURCE",
+            "RPC_AGGREGATE_WIRE_ALT_IDENTITY_UNTRUSTED",
             "RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE",
             "RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS",
         ]{
