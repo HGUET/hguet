@@ -34,7 +34,7 @@ Wire input ──> versioned parser ──> account resolution ──> instructi
 
 The “Effect Graph” is an **in-memory, deterministic and bounded evidence structure**, not a graph database. Each edge identifies the related account/mint/authority/program nodes, optional amount and mint, source instruction/CPI path, context slot, evidence source and attribution category. Separate RPC mint/account state snapshots remain **non-atomic** with the simulation. An observed net balance change must **never** be equated to a specific CPI gross transfer or treated as authorization.
 
-The first implementation is in `crates/hguet-rpc/src/effect_graph.rs` and is exposed as `rpc_analysis.effect_graph`. Its explicit `evidence_gaps`, `alerts`, `execution_proven=false`, `spend_limit_enforced=false` and `security_coverage=partial_untrusted_rpc` preserve unresolved execution risks; CLI warnings cannot grant `ALLOW`. See [implementation details](../implementation/README.md).
+The first implementation is in `crates/hguet-rpc/src/effect_graph.rs` and is exposed as `rpc_analysis.effect_graph`. Original-wire direct token instructions are now preserved by `hguet-core` and decoded separately in `crates/hguet-rpc/src/direct_token.rs`. Their transfer/authority declarations are attributed to `original_wire`, never as verified RPC balance effects; offline ALT lookups remain unresolved until explicitly fetched. Its explicit `evidence_gaps`, `alerts`, `execution_proven=false`, `spend_limit_enforced=false` and `security_coverage=partial_untrusted_rpc` preserve unresolved execution risks; CLI warnings cannot grant `ALLOW`. See [implementation details](../implementation/README.md).
 
 ## 2. Solana formats and canonical identity
 
