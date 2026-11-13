@@ -14,11 +14,15 @@ mod effects;
 mod extension_semantics;
 mod mint_state;
 mod mint_rpc;
+mod token_account_rpc;
+mod token_account_state;
 mod token_semantics;
 pub use token_semantics::TokenCpiInstruction;
 pub use extension_semantics::Token2022ExtensionObservation;
 pub use mint_rpc::{MintRpcSnapshot, MintAccountObservation};
 pub use mint_state::{Token2022MintState, MintExtension, MintTransferFeeConfig, MintTransferHook, FeeSchedule};
+pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
+pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -163,6 +167,7 @@ pub struct SimulationEvidence {
     pub lookup_resolution: Option<LookupResolution>,
     pub effect_analysis: SimulationEffects,
     pub mint_snapshot: Option<MintRpcSnapshot>,
+    pub token_account_snapshot: Option<TokenAccountRpcSnapshot>,
     pub limitation: String,
 }
 
@@ -236,6 +241,13 @@ pub fn simulate_with<T: JsonRpcTransport>(
     let mint_snapshot=if status=="rpc_succeeded" {
         mint_rpc::fetch_candidate_mints(transport,endpoint,slot,&effect_analysis)?
     } else { None };
+    // A second, separately slot-scoped observation: only token holding
+    // accounts appearing in paired simulation balance metadata. This does
+    // not re-create the simulation bank nor resolve CPI-only accounts.
+    let token_account_snapshot=if status=="rpc_succeeded" {
+        token_account_rpc::fetch_candidate_token_accounts(
+            transport,endpoint,slot,&effect_analysis,mint_snapshot.as_ref())?
+    } else { None };
     Ok(SimulationEvidence {
         network: network.into(),
         verified_genesis_hash: genesis,
@@ -252,6 +264,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
         lookup_resolution,
         effect_analysis,
         mint_snapshot,
+        token_account_snapshot,
         limitation: "Single-provider RPC simulation is advisory, uses replacement blockhash and does not verify resulting onchain execution, CPI completeness, authorization, or future account state".into(),
     })
 }
@@ -288,6 +301,24 @@ mod tests {
                     Ok(json!({"jsonrpc":"2.0","id":4,"result":{
                         "context":{"slot":60001},
                         "value":accounts
+                    }}))
+                },
+                5 => {
+                    let mint=bs58::decode(self.simulation["value"]["preTokenBalances"][0]["mint"]
+                        .as_str().ok_or(RpcError::InvalidResponse)?)
+                        .into_vec().map_err(|_|RpcError::InvalidResponse)?;
+                    if mint.len()!=32 {return Err(RpcError::InvalidResponse);}
+                    let keys=request["params"][0].as_array().ok_or(RpcError::InvalidResponse)?;
+                    let entries=keys.iter().map(|_|{
+                        let mut data=vec![0u8;166];
+                        data[..32].copy_from_slice(&mint);
+                        data[32..64].fill(3);
+                        data[108]=1;data[165]=2;
+                        json!({"owner":crate::token_semantics::TOKEN_2022_PROGRAM,
+                            "executable":false,"data":[STANDARD.encode(data),"base64"]})
+                    }).collect::<Vec<_>>();
+                    Ok(json!({"jsonrpc":"2.0","id":5,"result":{
+                        "context":{"slot":60002},"value":entries
                     }}))
                 },
                 _ => Err(RpcError::InvalidResponse)
@@ -337,6 +368,11 @@ mod tests {
         let result=simulate_with(&provider,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
         assert_eq!(result.mint_snapshot.as_ref().unwrap().context_slot,60001);
         assert!(!result.mint_snapshot.as_ref().unwrap().atomic_with_simulation);
+        assert_eq!(result.token_account_snapshot.as_ref().unwrap().context_slot,60002);
+        assert!(!result.token_account_snapshot.as_ref().unwrap().atomic_with_simulation);
+        assert_eq!(result.token_account_snapshot.as_ref().unwrap().accounts.len(),1);
+        assert_eq!(result.token_account_snapshot.as_ref().unwrap().accounts[0]
+            .mint_matches_simulation_report,Some(true));
         let effects=result.effect_analysis;
         assert_eq!(effects.lamport_deltas.as_ref().unwrap()[0].delta_lamports,"-500");
         assert_eq!(effects.token_deltas.as_ref().unwrap()[0].delta_raw_amount.as_deref(),Some("-1"));
@@ -380,6 +416,7 @@ mod tests {
         let r=simulate_with(&f,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
         assert_eq!(r.status,"rpc_failed");
         assert!(r.mint_snapshot.is_none());
+        assert!(r.token_account_snapshot.is_none());
         assert_eq!(f.calls.get(),2); // genesis + simulation only, no mint read
         assert!(!f.requests.borrow().iter().any(|x|x["id"]==4));
     }
