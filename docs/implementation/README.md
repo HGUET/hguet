@@ -26,6 +26,33 @@ Canonical public contracts:
 - [Final SecurityVerdict](../../protocol/v1/security-verdict.schema.json)
 - [Cloud and SOL quote contracts](../../protocol/v1/README.md)
 
+## Restrictive offline local policies
+
+A separate Rust crate `hguet-policy` implements **restrictive-only** local rules. A policy can forbid programs and direct SOL recipients, constrain the selected Solana network, and cap the sum of **top-level native System transfers**. It **never** authorizes spending or promotes `UNKNOWN` to `ALLOW`. Untested program-internal transfers, CPI, token effects, Solana network fees and v0 ALT addresses remain outside this limited evidence.
+
+Example test policy:
+
+```toml
+version = 1
+network = "devnet"
+max_declared_system_transfer_lamports = "499"
+
+# List Base58 Solana 32-byte public keys, not token labels.
+denied_program_ids = []
+denied_sol_recipients = []
+# Optional positive allowlists: allowed_program_ids = ["..."]
+# Optional positive allowlists: allowed_sol_recipients = ["..."]
+```
+
+```sh
+cargo run -p hguet -- policy validate tests/fixtures/policy-devnet-deny.toml --json
+cargo run -p hguet -- check TRANSACTION.bin --mode local --network devnet \
+  --intent signed-intent.json --trusted-key PINNED_INTENT_SIGNER \
+  --policy /path/to/trusted-user-policy.toml --json
+```
+
+The policy file and trusted intent authority must come from **independent user-controlled configuration**, never an AI agent's self-reported permission. A malicious agent could bypass the CLI entirely; the customer's actual wallet/signer still must enforce security decisions. An invalid policy is rejected before use. A matching/empty restrictive policy is **not** evidence of safe execution.
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
