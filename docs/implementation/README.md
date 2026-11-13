@@ -171,13 +171,33 @@ The current byte-level **mint-state** decoders cover:
 - `TransferHook` (type 14): optional update authority and hook program pubkey.
 - `NonTransferable` (type 9): presence with exactly empty payload.
 
-Other mint extension types, including confidential transfer configuration, default account state, pausable, interest-bearing, pointer and metadata extensions, remain **present-but-not-semantically-validated**. Account-side Token-2022 extension state is not yet read.
+Other mint extension types, including confidential transfer configuration, default account state, pausable, interest-bearing, pointer and metadata extensions, remain **present-but-not-semantically-validated**. Account-side Token-2022 extensions are inspected separately as **non-atomic RPC evidence**, with only a limited subset of payloads decoded; see the following section.
 
 The CLI now reports advisory `RPC_MINT_TRANSFER_FEE_CONFIG`, `RPC_MINT_TRANSFER_HOOK_ACTIVE`, `RPC_MINT_PERMANENT_DELEGATE_ACTIVE`, `RPC_MINT_CONFIDENTIAL_EXTENSION`, `RPC_MINT_UNKNOWN_EXTENSION`, `RPC_MINT_OPAQUE_EXTENSION_STATE`, `RPC_MINT_STATE_MISSING`, and `RPC_MINT_STATE_NON_ATOMIC` as appropriate. The risk checks do not promote any transaction to `ALLOW`. Even a mint with no detected extension is **not evidence of full transaction safety**, because CPI can move funds through other accounts, mint state can change, and simulated results are provider-supplied.
 
-This is **single-provider snapshot correlation**, not verified on-chain finality or a signer-enforced authorization policy. The next stages require transaction-instruction-to-mint provenance, authenticated account/mint state, consistency across providers and slots, Token-2022 account-side TLVs, and signer-controlled enforcement.
+This is **single-provider snapshot correlation**, not verified on-chain finality or a signer-enforced authorization policy. The next stages require transaction-instruction-to-mint provenance, authenticated and atomic account/mint state, consistency across providers and slots, more complete Token-2022 extension semantics, and signer-controlled enforcement.
 
 Source: [Solana `getMultipleAccounts`](https://solana.com/docs/rpc/http/getmultipleaccounts), [official Token-2022 TLV layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/mod.rs.html), [Token-2022 extension IDs](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/enum.ExtensionType.html).
+
+## Token-2022 token-account state and correlation (implemented, advisory)
+
+After a **successful** opt-in simulation, HGUET may make one further `getMultipleAccounts` request to the *same selected RPC* for up to **16 token holding account addresses** derived from paired token-balance metadata. This is distinct from the previously implemented mint lookup. No extra call occurs without candidate accounts, in offline mode, or after a failed simulation. Excessive candidates or a conflicting account→mint mapping are rejected rather than truncated.
+
+The request uses `encoding=base64`, `commitment=confirmed`, and `minContextSlot=<simulation slot>`. The JSON output includes `rpc_analysis.token_account_snapshot`, with both `simulation_slot` and `context_slot` and explicit `atomic_with_simulation=false`. A minimum slot is **not** a pinned transaction bank; a later account may have changed after simulation. HGUET does not equate its current amount with either the simulated pre- or post-balance, and never treats cross-slot agreement as proof of safe execution.
+
+For Token-2022-owned token accounts the reader validates the 165-byte SPL Token account base, its COption delegate/native/close-authority tags, initialized/frozen state, and, when extensions are present, `account_type=2` at offset 165 with TLV starting at offset 166. It rejects malformed, repeated, truncated and mint-only extensions. It recognizes:
+
+- **Account base:** mint identity, owner authority, raw balance, delegate and delegated raw amount, frozen state, native reserve and close authority.
+- **TransferFeeAmount** (type 2): exact `u64` withheld raw tokens on this account, not total paid fees.
+- **MemoTransfer** (8), **CpiGuard** (11), **TransferHookAccount** (15): exact one-byte boolean flags, including required inbound memo, CPI restrictions and in-transfer hook flag.
+- **ImmutableOwner** (7), **NonTransferableAccount** (13): exact empty-payload presence.
+- **ConfidentialTransferAccount** (5), **ConfidentialTransferFeeAmount** (17), **PausableAccount** (27), unknown future types: explicit **opaque** presence, never default-safe.
+
+For each token account, HGUET reports whether the later snapshot's base mint and authority agree with simulation-reported mint/owner, plus whether its mint appeared in the separate Token-2022 mint snapshot. This is **cross-slot correlation**, not an independent proof or a hard local `DENY`. A disagreement generates `RPC_TOKEN_ACCOUNT_MINT_MISMATCH` or `RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH`. Missing mint correlation, missing holding accounts, frozen state, active delegate, withheld fees, required memo, CPI Guard, non-transferability, confidential/unknown extensions and non-atomicity are surfaced as distinct advisory CLI findings.
+
+**Scope limit:** only accounts appearing in complete token-balance metadata are fetched; CPI-only accounts, omitted metadata, token-program hooks, multisig authorization, alternate mint states, final settlement and other program-controlled accounts remain unverified. A successful snapshot **always retains `UNKNOWN`** for security approval. The wallet/signer must enforce any authorization independently. More account reads are disclosed to the chosen third-party RPC provider; no Cloud endpoint is contacted in local mode.
+
+References: [Solana getMultipleAccounts](https://solana.com/docs/rpc/http/getmultipleaccounts), [official Token Account base struct](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/state/struct.Account.html), [Token-2022 extension identifiers](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/enum.ExtensionType.html), [Transfer Fee Account](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/transfer_fee/struct.TransferFeeAmount.html), [CPI Guard](https://docs.rs/spl-token-2022-interface/latest/spl_token_2022_interface/extension/cpi_guard/struct.CpiGuard.html).
 
 ## Planned default Cloud server (configured, not active)
 
