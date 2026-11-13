@@ -19,6 +19,8 @@
     "capabilities_unavailable",
     "risk_snapshot_id",
     "ruleset_version",
+    "evidence_digest",
+    "sources",
     "findings",
     "coverage",
     "issued_at",
@@ -193,6 +195,61 @@
     "expires_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "evidence_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Digest of independently retained/source-attributed evidence manifest used by signed assessment."
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 128,
+      "description": "Source provenance; unavailable sources belong in capabilities_unavailable/coverage. No automatic claim of accuracy.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "kind",
+          "observed_at",
+          "evidence_sha256"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "observed_slot": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "freshness_seconds": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
     }
   }
 }
