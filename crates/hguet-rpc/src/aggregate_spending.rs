@@ -76,6 +76,9 @@ pub struct AggregateTokenSpending {
     pub mints:Vec<AggregateMintView>,
     pub sources:Vec<AggregateSourceView>,
     pub opaque_direct_token_instructions:usize,
+    /// Original instruction bytes are signed wire, but program/account IDs
+    /// referenced through ALT were resolved from one untrusted RPC provider.
+    pub wire_rpc_alt_identity_dependent_instructions:usize,
     pub opaque_rpc_cpi_token_instructions:usize,
     pub unattributed_direct_debit_instructions:usize,
     pub unattributed_cpi_debit_instructions:usize,
@@ -197,9 +200,13 @@ pub fn analyze_aggregate_token_spending(
     let mut direct_unknown=0usize;
     let mut cpi_unknown=0usize;
     let mut opaque_direct=0usize;
+    let mut alt_dependent=0usize;
     let mut authority_ops=false;
     let mut seen_wire=BTreeSet::new();
     for item in &direct.recognized {
+        if item.program_address_from_lookup||item.account_addresses_from_lookup {
+            alt_dependent+=1;
+        }
         if !seen_wire.insert(item.instruction_index){
             return Err(RpcError::InvalidResponse);
         }
@@ -220,6 +227,7 @@ pub fn analyze_aggregate_token_spending(
         }
     }
     for item in &direct.opaque {
+        if item.program_address_from_lookup {alt_dependent+=1;}
         if !seen_wire.insert(item.instruction_index){
             return Err(RpcError::InvalidResponse);
         }
@@ -342,6 +350,7 @@ pub fn analyze_aggregate_token_spending(
         signed_caps_supplied_by_verified_caller:verified_intent.is_some(),
         mints:mint_results,sources:source_results,
         opaque_direct_token_instructions:opaque_direct,
+        wire_rpc_alt_identity_dependent_instructions:alt_dependent,
         opaque_rpc_cpi_token_instructions:unknown_cpi,
         unattributed_direct_debit_instructions:direct_unknown,
         unattributed_cpi_debit_instructions:cpi_unknown,
@@ -586,6 +595,16 @@ mod tests {
         p.token_source_limits.as_mut().unwrap().push(duplicate);
         assert_eq!(analyze_aggregate_token_spending("rpc_succeeded",600,
             &d,&e,None,Some(&p)).unwrap_err(),RpcError::InvalidResponse);
+    }
+    #[test]
+    fn direct_token_alt_accounts_are_not_silently_reported_as_static_wire_identity(){
+        let mut d=direct(vec![token_ix("transfer_checked",3,Some(2),15,0)]);
+        d.recognized[0].account_addresses_from_lookup=true;
+        let e=effects(vec![],Some(vec![]));
+        let r=analyze(&d,&e,None);
+        assert_eq!(r.mints[0].wire_checked_debit_raw,"15");
+        assert_eq!(r.wire_rpc_alt_identity_dependent_instructions,1);
+        assert!(!r.total_gross_token_spend_proven);
     }
     #[test]
     fn failed_simulation_and_forged_authorization_are_not_accepted(){
