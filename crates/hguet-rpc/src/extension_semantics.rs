@@ -20,6 +20,8 @@ pub struct Token2022ExtensionObservation {
     /// Even true is NOT proof of on-chain execution or mint account state.
     pub layout_checked: bool,
     pub mint: Option<String>,
+    /// Source account for exact checked-fee transfers only; absent for other extensions.
+    pub source_account: Option<String>,
     pub authority: Option<String>,
     pub new_authority: Option<String>,
     pub hook_program_id: Option<String>,
@@ -92,7 +94,7 @@ pub fn inspect_token_2022_extension(
         parent_instruction_index:parent_index,inner_instruction_index:inner_index,
         opcode:tag,sub_opcode:if matches!(tag,26|27|28|30|33|34|36|37|39|40|41|42|43|44|46) { sub } else { None },
         family,operation,layout_checked:false,mint:accounts.first().cloned(),
-        authority:None,new_authority:None,hook_program_id:None,
+        source_account:None,authority:None,new_authority:None,hook_program_id:None,
         declared_amount_raw:None,expected_fee_raw:None,
         fee_basis_points:None,maximum_fee_raw:None,
     };
@@ -101,6 +103,7 @@ pub fn inspect_token_2022_extension(
         (26,Some(1)) if bytes.len()==19 && accounts.len()>=4 => {
             if let (Some(amount),Some(fee))=(read_u64(bytes,2),read_u64(bytes,11)) {
                 result.layout_checked=true;
+                result.source_account=accounts.first().cloned();
                 result.mint=accounts.get(1).cloned();
                 result.authority=accounts.get(3).cloned();
                 result.declared_amount_raw=Some(amount.to_string());
