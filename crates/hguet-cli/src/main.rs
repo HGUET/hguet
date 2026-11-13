@@ -806,6 +806,7 @@ mod signed_token_cap_rpc_tests {
             token_spend_limits:Some(vec![TokenSpendLimit {
                 mint:key(2),max_debit_raw:"100".into(),
             }]),
+            token_source_limits:None,
         }
     }
     fn checked(mint:u8,amount:&str)->TokenCpiInstruction {
