@@ -98,6 +98,16 @@
       "id": "interop-v1",
       "request": "Solana transaction format v1 with inline addresses and fixed config",
       "expected": "parse according to current v1 format or explicit UNKNOWN if unsupported"
+    },
+    {
+      "id": "interop-pricing-expired",
+      "request": "Cloud check references an expired or wrong capability quote",
+      "expected": "reject before reservation and do not charge"
+    },
+    {
+      "id": "interop-pricing-cap",
+      "request": "server quoted price above CLI configured max credit-unit fee",
+      "expected": "fail before check, do not silently accept revised price"
     }
   ]
 }
