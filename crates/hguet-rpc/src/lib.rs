@@ -12,6 +12,7 @@
 mod alt;
 mod effects;
 mod effect_graph;
+mod direct_token;
 mod extension_semantics;
 mod mint_state;
 mod mint_rpc;
@@ -26,6 +27,7 @@ pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
 pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
+pub use direct_token::{inspect_direct_tokens, DirectTokenAnalysis, DirectTokenInstruction, OpaqueDirectTokenInstruction};
 pub use effect_graph::{EffectGraph,EffectNode,EffectEdge,GraphSourceSlot};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
@@ -168,6 +170,7 @@ pub struct SimulationEvidence {
     pub replacement_blockhash_present: bool,
     pub lookup_resolution: Option<LookupResolution>,
     pub effect_analysis: SimulationEffects,
+    pub direct_token_analysis: DirectTokenAnalysis,
     pub mint_snapshot: Option<MintRpcSnapshot>,
     pub token_account_snapshot: Option<TokenAccountRpcSnapshot>,
     pub effect_graph: EffectGraph,
@@ -188,6 +191,10 @@ pub fn simulate_with<T: JsonRpcTransport>(
     let lookup_resolution = if decoded.lookup_table_count > 0 {
         Some(alt::resolve_v0_lookups(transport, endpoint, &decoded)?)
     } else { None };
+    // Decode original message bytes, not simulated transaction metadata.
+    // Only ALT addresses (if any) are resolved through the selected RPC.
+    let direct_token_analysis=direct_token::inspect_direct_tokens(
+        &decoded, lookup_resolution.as_ref())?;
     let mut request = json!({
         "jsonrpc": "2.0", "id": 2, "method": "simulateTransaction",
         "params": [STANDARD.encode(wire), {
@@ -252,7 +259,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
             transport,endpoint,slot,&effect_analysis,mint_snapshot.as_ref())?
     } else { None };
     let effect_graph=effect_graph::correlate_effects(
-        &decoded,status,slot,&effect_analysis,
+        &decoded,status,slot,&effect_analysis,Some(&direct_token_analysis),
         mint_snapshot.as_ref(),token_account_snapshot.as_ref(),
     )?;
     Ok(SimulationEvidence {
@@ -270,6 +277,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
             .is_some_and(|x| !x.is_null()),
         lookup_resolution,
         effect_analysis,
+        direct_token_analysis,
         mint_snapshot,
         token_account_snapshot,
         effect_graph,
