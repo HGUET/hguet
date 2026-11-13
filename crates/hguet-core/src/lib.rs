@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MAX_TX: usize = 4096;
 const MAX_INTENT: usize = 16_384;
 const INTENT_DOMAIN: &[u8] = b"HGUET-PAYMENT-INTENT\0";
 
@@ -55,131 +54,13 @@ impl SecurityVerdict {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct ParsedTransaction {
-    pub wire_format: String,
-    pub transaction_bytes: usize,
-    pub transaction_sha256: String,
-    pub message_sha256: String,
-    pub required_signatures: usize,
-    pub signature_count: usize,
-    pub static_account_count: usize,
-    pub total_address_count: usize,
-    pub instruction_count: usize,
-    pub lookup_table_count: usize,
-    pub unresolved_lookup_addresses: usize,
-    pub program_ids: Vec<String>,
-    pub limitations: Vec<String>,
-}
+pub mod solana_engine;
+pub use solana_engine::{
+    parse_transaction, ParsedTransaction, SystemTransfer, TransactionSignatureStatus, V1Resources,
+};
 
-fn hex(bytes: impl AsRef<[u8]>) -> String {
-    bytes.as_ref().iter().map(|v| format!("{v:02x}")).collect()
-}
-pub fn sha256_hex(data: &[u8]) -> String { hex(Sha256::digest(data)) }
-
-struct Reader<'a> { input: &'a [u8], at: usize }
-impl<'a> Reader<'a> {
-    fn new(input: &'a [u8]) -> Self { Self { input, at: 0 } }
-    fn take(&mut self, n: usize) -> Result<&'a [u8], String> {
-        let end = self.at.checked_add(n).ok_or("integer overflow")?;
-        if end > self.input.len() { return Err("truncated transaction".into()); }
-        let b = &self.input[self.at..end]; self.at = end; Ok(b)
-    }
-    fn byte(&mut self) -> Result<u8, String> { Ok(self.take(1)?[0]) }
-    fn shortvec(&mut self) -> Result<usize, String> {
-        // Solana compact-u16: canonical representation only, maximum 3 bytes.
-        let first = self.byte()?; let mut n = (first & 0x7f) as usize;
-        if first & 0x80 != 0 {
-            let second = self.byte()?;
-            if second == 0 { return Err("non-canonical shortvec".into()); }
-            n |= ((second & 0x7f) as usize) << 7;
-            if second & 0x80 != 0 {
-                let third = self.byte()?;
-                if third == 0 || third > 3 { return Err("invalid compact-u16".into()); }
-                n |= (third as usize) << 14;
-                if n < 16384 { return Err("non-canonical shortvec".into()); }
-            } else if n < 128 { return Err("non-canonical shortvec".into()); }
-        }
-        if n > 65535 { return Err("compact-u16 overflow".into()); }
-        Ok(n)
-    }
-}
-
-pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
-    if raw.is_empty() || raw.len() > MAX_TX { return Err("transaction size outside 1..=4096 bytes".into()); }
-    // Solana v1 has a completely different transaction layout (0x81 at byte 0),
-    // and MUST NOT be decoded as legacy. Fail closed until the v1 decoder is tested.
-    if raw[0] == 0x81 { return Err("unsupported Solana v1 transaction: decoder not implemented".into()); }
-    let mut r = Reader::new(raw);
-    let signature_count = r.shortvec()?;
-    if signature_count == 0 || signature_count > 64 { return Err("invalid signature count".into()); }
-    r.take(signature_count.checked_mul(64).ok_or("too many signatures")?)?;
-    let message_start = r.at;
-    let first = *r.input.get(r.at).ok_or("no message")?;
-    let wire_format = if first & 0x80 != 0 {
-        let version = r.byte()? & 0x7f;
-        if version != 0 { return Err(format!("unsupported Solana message version {version}")); }
-        "v0"
-    } else { "legacy" };
-    let required_signatures = r.byte()? as usize;
-    let readonly_signed = r.byte()? as usize;
-    let readonly_unsigned = r.byte()? as usize;
-    if required_signatures == 0 || required_signatures != signature_count || readonly_signed > required_signatures {
-        return Err("invalid message header/signature count".into());
-    }
-    let keys = r.shortvec()?;
-    if keys == 0 || keys > 64 || keys < required_signatures ||
-        readonly_unsigned > keys - required_signatures { return Err("invalid static account count/header".into()); }
-    let key_data = r.take(keys.checked_mul(32).ok_or("account count overflow")?)?.to_vec();
-    r.take(32)?; // recent blockhash
-    let instructions = r.shortvec()?;
-    if instructions > 64 { return Err("too many compiled instructions".into()); }
-    let mut program_indices = Vec::with_capacity(instructions);
-    let mut indexes = Vec::new();
-    for _ in 0..instructions {
-        program_indices.push(r.byte()? as usize);
-        let accounts = r.shortvec()?;
-        if accounts > 256 { return Err("too many instruction account references".into()); }
-        indexes.extend_from_slice(r.take(accounts)?);
-        let data_len = r.shortvec()?;
-        r.take(data_len)?;
-    }
-    let mut lookups = 0usize; let mut writable = 0usize; let mut readonly = 0usize;
-    if wire_format == "v0" {
-        lookups = r.shortvec()?;
-        if lookups > 32 { return Err("too many lookup tables".into()); }
-        for _ in 0..lookups {
-            r.take(32)?; // ALT address
-            let n = r.shortvec()?; if n > 256 { return Err("ALT writable indices too long".into()); }
-            r.take(n)?; writable += n;
-            let n = r.shortvec()?; if n > 256 { return Err("ALT readonly indices too long".into()); }
-            r.take(n)?; readonly += n;
-        }
-    }
-    if r.at != raw.len() { return Err("trailing bytes in transaction".into()); }
-    let total = keys + writable + readonly;
-    if total > 256 { return Err("too many total address references".into()); }
-    for i in program_indices.iter().copied().chain(indexes.iter().map(|v| *v as usize)) {
-        if i >= total { return Err("instruction account index out of range".into()); }
-    }
-    let programs = program_indices.into_iter().map(|i| {
-        if i < keys { bs58::encode(&key_data[i*32..i*32+32]).into_string() }
-        else { "<unresolved-ALT-program>".into() }
-    }).collect();
-    let mut limitations = vec!["No signature cryptographic verification or Solana RPC simulation".into(),
-        "No instruction effects, Token-2022 semantics or CPI decoded".into()];
-    if writable + readonly > 0 {
-        limitations.push("Address Lookup Table addresses are unresolved; remote RPC required".into());
-    }
-    Ok(ParsedTransaction {
-        wire_format: wire_format.into(), transaction_bytes: raw.len(),
-        transaction_sha256: sha256_hex(raw), message_sha256: sha256_hex(&raw[message_start..]),
-        required_signatures, signature_count,
-        static_account_count: keys, total_address_count: total,
-        instruction_count: instructions, lookup_table_count: lookups,
-        unresolved_lookup_addresses: writable + readonly, program_ids: programs,
-        limitations,
-    })
+pub fn sha256_hex(data: &[u8]) -> String {
+    Sha256::digest(data).iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
