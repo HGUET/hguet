@@ -373,7 +373,7 @@ mod tests {
             static_account_count:2,static_account_keys:vec![address(1),address(2)],
             total_address_count:2,instruction_count:1,lookup_table_count:0,
             unresolved_lookup_addresses:0,address_table_lookups:vec![],
-            program_ids:vec![address(8)],system_transfers:vec![SystemTransfer{
+            program_ids:vec![address(8)],compiled_top_level_instructions:vec![],system_transfers:vec![SystemTransfer{
                 instruction_index:0,source:address(1),
                 destination:address(2),lamports:"50".into(),
             }],
