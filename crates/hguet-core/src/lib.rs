@@ -55,6 +55,8 @@ impl SecurityVerdict {
 }
 
 pub mod solana_engine;
+mod token_limits;
+pub use token_limits::{review_declared_token_limits,DeclaredMintDebit,TokenSpendLimitReview};
 pub use solana_engine::{
     parse_transaction, ParsedTransaction, SystemTransfer, TransactionSignatureStatus, V1Resources,
 };
@@ -70,6 +72,14 @@ pub struct SignedPaymentIntent {
     pub signer_pubkey_b58: String,
     pub signature_b58: String,
 }
+/// Raw base-unit upper bound on directly declared checked Token Program
+/// debits for one mint. This is NOT a transaction-wide/onchain spend limit.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TokenSpendLimit {
+    pub mint:String,
+    pub max_debit_raw:String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PaymentIntentPayload {
@@ -82,6 +92,10 @@ pub struct PaymentIntentPayload {
     pub expires_at_unix: u64,
     pub allowed_program_ids: Vec<String>,
     pub max_spend_lamports: String,
+    /// Optional extension of the existing signed v1 payload. Absence keeps
+    /// legacy SOL-only intent semantics and exact-byte signature compatibility.
+    #[serde(default, skip_serializing_if="Option::is_none")]
+    pub token_spend_limits: Option<Vec<TokenSpendLimit>>,
 }
 
 fn decode_fixed_b58<const N: usize>(s: &str, what: &str) -> Result<[u8; N], String> {
@@ -147,6 +161,11 @@ pub fn verify_intent(
     if declared > u128::from(spending_limit) {
         return Err("declared System transfers exceed signed intent max_spend_lamports".into());
     }
+    // Signed mint caps are one-sided direct-wire lower-bound checks only:
+    // unknown direct token instructions must NOT be marked cap-covered.
+    if let Some(ref limits)=intent.token_spend_limits {
+        token_limits::review_declared_token_limits(parsed,limits)?;
+    }
     // Verified intent is NOT proof of total spending, fees or execution success.
     Ok(intent)
 }
@@ -191,6 +210,7 @@ mod tests {
             network:"devnet".into(),message_sha256:p.message_sha256.clone(),
             not_before_unix:1,expires_at_unix:4102444800,
             allowed_program_ids:vec![], max_spend_lamports:"1000".into(),
+            token_spend_limits:None,
         };
         let b=serde_json::to_vec(&payload).unwrap();
         let mut msg=INTENT_DOMAIN.to_vec();msg.extend(&b);
