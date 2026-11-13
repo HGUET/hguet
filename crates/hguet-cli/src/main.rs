@@ -351,6 +351,42 @@ fn effect_graph_findings(
     results
 }
 
+/// Direct SPL Token instructions are decoded from original wire bytes, so
+/// these findings apply offline too. No RPC effect or signer authorization is
+/// assumed even if the instruction is syntactically recognized.
+fn wire_direct_token_findings(
+    analysis:&hguet_rpc::DirectTokenAnalysis,
+)->Vec<(&'static str,&'static str,&'static str)> {
+    let mut findings=Vec::new();
+    if analysis.recognized.iter().any(|ix|matches!(ix.decoded.operation.as_str(),
+        "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
+        "burn"|"burn_checked")) {
+        findings.push(("WIRE_TOKEN_DIRECT_MOVEMENT","medium",
+            "The original transaction declares direct token movement; amounts are unsigned intentions, not verified net effects, final execution or consent"));
+    }
+    if analysis.recognized.iter().any(|ix|ix.decoded.operation=="transfer") {
+        findings.push(("WIRE_TOKEN_DIRECT_UNCHECKED_TRANSFER","high",
+            "Direct Token Transfer uses an unchecked opcode without an explicit mint or decimals; no mint association or spending safety is inferred"));
+    }
+    if analysis.recognized.iter().any(|ix|matches!(ix.decoded.operation.as_str(),
+        "approve"|"approve_checked"|"revoke"|"set_authority"|
+        "close_account"|"freeze_account"|"thaw_account")) {
+        findings.push(("WIRE_TOKEN_DIRECT_AUTHORITY_RISK","high",
+            "Original transaction declares token delegation, authority or account-control instructions; actual authorization and execution are not proven"));
+    }
+    if !analysis.opaque.is_empty() {
+        findings.push(("WIRE_TOKEN_DIRECT_OPAQUE","high",
+            "Original transaction contains token instructions with unsupported or Token-2022 extension semantics; undecoded bytes do not imply safe effects"));
+    }
+    if analysis.recognized.iter().any(|ix|ix.program_address_from_lookup||
+        ix.account_addresses_from_lookup) ||
+       analysis.opaque.iter().any(|ix|ix.program_address_from_lookup) {
+        findings.push(("WIRE_TOKEN_DIRECT_ALT_UNTRUSTED","high",
+            "Top-level token program or account addresses depend on an untrusted RPC address lookup rather than static wire keys"));
+    }
+    findings
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -373,6 +409,28 @@ fn execute(v:Args)->(serde_json::Value,i32){
     verdict.transaction_sha256=Some(parsed.transaction_sha256.clone());
     verdict.coverage.push("wire_structure".into());
     verdict.limitations.extend(parsed.limitations.clone());
+    // The offline path uses ONLY original wire bytes and static accounts.
+    // v0 ALT addresses need separate RPC resolution; do not fabricate them.
+    if parsed.unresolved_lookup_addresses==0 {
+        match hguet_rpc::inspect_direct_tokens(&parsed,None) {
+            Ok(direct)=>{
+                verdict.coverage.push("wire_top_level_instruction_bytes".into());
+                if direct.total_token_program_instructions>0 {
+                    verdict.coverage.push("wire_direct_token_binary_decode".into());
+                }
+                for (code,severity,message) in wire_direct_token_findings(&direct) {
+                    verdict.finding(code,severity,message);
+                }
+            }
+            Err(_)=>{
+                verdict.finding("WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE","high",
+                    "The bounded original-wire token decoder could not establish complete direct token semantics; no safety is inferred");
+            }
+        }
+    } else {
+        verdict.finding("WIRE_TOKEN_DIRECT_ALT_UNRESOLVED","high",
+            "Original v0 transaction references unresolved lookup addresses; full direct-token program/account roles require separately checked ALT evidence");
+    }
     if let Some(path)=&v.policy {
         let local_policy=limited_file(path,65_536)
             .and_then(|bytes| String::from_utf8(bytes).map_err(|_|"policy must be UTF-8".into()))
@@ -578,6 +636,65 @@ fn main(){
         Err(e)=>{
             eprintln!("hguet: {e}\n{}",usage());process::exit(40)
         }
+    }
+}
+
+#[cfg(test)]
+mod wire_direct_token_tests {
+    use super::*;
+    use hguet_rpc::{
+        DirectTokenAnalysis,DirectTokenInstruction,OpaqueDirectTokenInstruction,
+        TokenCpiInstruction,
+    };
+    fn instruction(operation:&str) -> DirectTokenInstruction {
+        DirectTokenInstruction{
+            instruction_index:0,program_address_from_lookup:false,
+            account_addresses_from_lookup:false,
+            decoded:TokenCpiInstruction{
+                parent_instruction_index:0,inner_instruction_index:0,
+                program_id:"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".into(),
+                operation:operation.into(),source_account:None,
+                destination_account:None,mint:None,authority:None,delegate:None,
+                amount_raw:None,decimals:None,authority_type:None,new_authority:None,
+            },
+        }
+    }
+    fn analysis() -> DirectTokenAnalysis {
+        DirectTokenAnalysis {
+            recognized:vec![],opaque:vec![],
+            total_token_program_instructions:0,limitation:"test",
+        }
+    }
+    #[test]
+    fn original_wire_direct_movements_and_authority_ops_raise_distinct_warnings(){
+        let mut a=analysis();
+        a.recognized=vec![instruction("transfer_checked"),instruction("approve_checked")];
+        let codes=wire_direct_token_findings(&a)
+            .into_iter().map(|x|x.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["WIRE_TOKEN_DIRECT_MOVEMENT","WIRE_TOKEN_DIRECT_AUTHORITY_RISK"]);
+        a.recognized=vec![instruction("transfer")];
+        let codes=wire_direct_token_findings(&a)
+            .into_iter().map(|x|x.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec!["WIRE_TOKEN_DIRECT_MOVEMENT","WIRE_TOKEN_DIRECT_UNCHECKED_TRANSFER"]);
+    }
+    #[test]
+    fn opaque_direct_and_lookup_dependent_programs_cannot_be_authorized(){
+        let mut a=analysis();
+        a.recognized=vec![instruction("revoke")];
+        a.recognized[0].account_addresses_from_lookup=true;
+        a.opaque=vec![OpaqueDirectTokenInstruction{
+            instruction_index:1,program_id:"token2022".into(),
+            program_address_from_lookup:true,
+            token_2022_extension:true,extension_hint:None,
+        }];
+        let codes=wire_direct_token_findings(&a)
+            .into_iter().map(|x|x.0).collect::<Vec<_>>();
+        assert_eq!(codes,vec![
+            "WIRE_TOKEN_DIRECT_AUTHORITY_RISK",
+            "WIRE_TOKEN_DIRECT_OPAQUE",
+            "WIRE_TOKEN_DIRECT_ALT_UNTRUSTED",
+        ]);
+        assert!(wire_direct_token_findings(&analysis()).is_empty());
     }
 }
 
