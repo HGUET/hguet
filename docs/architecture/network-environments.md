@@ -1,8 +1,8 @@
-> **v0.2 payment update:** SOL payments are now **per-check, accountless**, priced by [current-day USD→SOL reference and transaction complexity](pricing-policy.md). No prepaid service credits, balance or USDC. Mainnet/Devnet/Testnet still have isolated payment/verification environments. This note supersedes earlier account/credit examples in this file.
+> **current draft payment update:** SOL payments are now **per-check, accountless**, priced by [current-day USD→SOL reference and transaction complexity](pricing-policy.md). No prepaid service credits, balance or USDC. Mainnet/Devnet/Testnet still have isolated payment/verification environments. This note supersedes earlier account/credit examples in this file.
 
 # Solana clusters and SOL-first Cloud billing
 
-**Status:** v0.1 proposed design; no payment processor or three-cluster server is implemented. Updated 2026-11-13.
+**Status:** Unreleased draft; older examples below have been superseded; no payment processor or three-cluster server is implemented. Updated 2026-11-13.
 
 ## Decision: one cluster-aware security engine, separated billing environments
 
