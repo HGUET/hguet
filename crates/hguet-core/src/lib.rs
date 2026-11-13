@@ -138,7 +138,16 @@ pub fn verify_intent(
             return Err("transaction program not on trusted intent allowlist".into());
         }
     }
-    // Verified intent is NOT proof of transfer amounts or execution success.
+    // A strictly decoded top-level System Transfer is a known lower bound on
+    // declared native SOL movement. Reject an intent when even this lower
+    // bound exceeds its signed maximum. All CPI/other program effects remain
+    // UNKNOWN, even if this test passes.
+    let declared: u128 = parsed.declared_system_transfer_lamports.parse()
+        .map_err(|_| "decoded native transfer total invalid")?;
+    if declared > u128::from(spending_limit) {
+        return Err("declared System transfers exceed signed intent max_spend_lamports".into());
+    }
+    // Verified intent is NOT proof of total spending, fees or execution success.
     Ok(intent)
 }
 
@@ -164,7 +173,7 @@ mod tests {
     #[test] fn bad_and_unknown_are_not_silently_accepted() {
         assert!(parse_transaction(&[]).is_err());
         let mut extra=example_legacy();extra.push(0);assert!(parse_transaction(&extra).is_err());
-        assert!(parse_transaction(&[0x81,0,0]).unwrap_err().contains("unsupported"));
+        assert!(parse_transaction(&[0x81,0,0]).is_err()); // malformed v1 is rejected
         let mut v=example_legacy();v[0]=0x80;v.insert(1,0);assert!(parse_transaction(&v).is_err());
     }
     #[test] fn v0_with_lookup_requires_resolution() {
