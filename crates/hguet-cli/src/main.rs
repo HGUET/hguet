@@ -1001,6 +1001,67 @@ mod signed_token_cap_rpc_tests {
         assert!(codes(&legacy,&e).is_empty());
         assert!(rpc_signed_token_cap_findings(&intent(),"rpc_unavailable",&e).is_empty());
     }
+    fn scoped_intent() -> PaymentIntentPayload {
+        let mut intent=intent();
+        intent.token_source_limits=Some(vec![hguet_core::TokenSourceLimit{
+            mint:key(2),source_token_account:key(3),
+            authority:key(5),max_debit_raw:"100".into(),
+        }]);
+        intent
+    }
+    #[test]
+    fn source_scoped_rpc_cpi_anomalies_remain_advisory(){
+        let checked_good=checked(2,"60");
+        let e=effects(vec![checked_good.clone(),checked(2,"50")],vec![]);
+        let findings=rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_succeeded",&e,None);
+        let codes=findings.iter().map(|x|x.0).collect::<Vec<_>>();
+        assert!(codes.contains(&"RPC_SIGNED_SOURCE_CPI_OVER_CAP"));
+        assert!(codes.contains(&"RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE"));
+        let mut outside=checked_good;
+        outside.source_account=Some(key(6));
+        let findings=rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_succeeded",
+            &effects(vec![outside],vec![]),None);
+        assert!(findings.iter().any(|x|x.0=="RPC_SIGNED_SOURCE_CPI_OUTSIDE_SCOPE"));
+        assert!(rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_failed",&e,None).is_empty());
+    }
+    #[test]
+    fn later_token_account_authority_conflict_is_not_mistaken_for_execution(){
+        use hguet_rpc::{TokenAccountRpcSnapshot,TokenAccountObservation,Token2022AccountState};
+        let state=Token2022AccountState{
+            token_account:key(3),mint:key(2),token_authority:key(6),
+            amount_raw:"10".into(),delegate:None,delegated_amount_raw:"0".into(),
+            account_state:"initialized",native_reserve_lamports:None,
+            close_authority:None,transfer_fee_withheld_raw:None,
+            requires_incoming_memo:None,cpi_guard_locked:None,
+            transfer_hook_transferring:None,immutable_owner:false,
+            non_transferable_account:false,confidential_extension_present:false,
+            opaque_extension_count:0,unknown_extension_count:0,
+            extensions:vec![],limitation:"synthetic".into(),
+        };
+        let snapshot=TokenAccountRpcSnapshot{
+            context_slot:501,simulation_slot:500,atomic_with_simulation:false,
+            accounts:vec![TokenAccountObservation{
+                address:key(3),simulation_reported_mint:key(2),
+                status:"token_2022".into(),state:Some(state),
+                mint_matches_simulation_report:Some(true),
+                authority_matches_simulation_report:Some(false),
+                matching_mint_state_observed:true,
+            }],
+            limitation:"synthetic".into(),
+        };
+        let e=effects(vec![checked(2,"5")],vec![]);
+        let findings=rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_succeeded",&e,Some(&snapshot));
+        let codes=findings.iter().map(|x|x.0).collect::<Vec<_>>();
+        assert!(codes.contains(&"RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT"));
+        assert!(!codes.contains(&"RPC_SIGNED_SOURCE_CPI_OVER_CAP"));
+        // A matching *later* snapshot is not a permission grant either.
+        assert!(rpc_signed_source_scope_findings(
+            &scoped_intent(),"rpc_failed",&e,Some(&snapshot)).is_empty());
+    }
 }
 
 #[cfg(test)]
