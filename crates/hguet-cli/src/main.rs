@@ -2,13 +2,14 @@ mod cloud_config;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{parse_transaction, unix_now, verify_intent, Decision, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus};
 use serde_json::json;
+use hguet_policy::LocalPolicy;
 use std::{env, fs, io::Read, process};
 
 fn usage() -> &'static str {
     "HGUET unreleased CLI (offline prototype)\n\
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]\n\
+  hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--encoding binary|base64|base58] [--json]\n\
   hguet config show [--json]\n\
   hguet --help\n\
   hguet --version\n\
@@ -22,6 +23,7 @@ struct Args {
     encoding: String,
     intent: Option<String>,
     trusted_key: Option<String>,
+    policy: Option<String>,
     mode: String,
     offline: bool,
 }
@@ -30,7 +32,7 @@ fn parse_args() -> Result<Args, String> {
     let cmd=a.next().ok_or("missing command")?;
     if cmd=="--help" || cmd=="-h" || cmd=="--version" {
         return Ok(Args{command:cmd,file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
-            intent:None,trusted_key:None,mode:"local".into(),offline:false});
+            intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:false});
     }
     if cmd=="config" {
         let sub=a.next().ok_or("missing config subcommand")?;
@@ -39,14 +41,14 @@ fn parse_args() -> Result<Args, String> {
             if opt!="--json" || a.next().is_some() { return Err("unexpected config option".into()); }
         }
         return Ok(Args{command:"config-show".into(),file:String::new(),network:"mainnet".into(),encoding:"binary".into(),
-            intent:None,trusted_key:None,mode:"local".into(),offline:true});
+            intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:true});
     }
     if cmd!="inspect" && cmd!="check" { return Err("unknown command".into()); }
     let file=a.next().ok_or("missing transaction path")?;
     if file.starts_with('-') && file!="-" { return Err("invalid transaction path".into()); }
     if file=="-" { return Err("stdin not yet supported; use a bounded file".into()); }
     let mut v=Args{command:cmd,file,network:"mainnet".into(),encoding:"binary".into(),
-        intent:None,trusted_key:None,mode:"local".into(),offline:false};
+        intent:None,trusted_key:None,policy:None,mode:"local".into(),offline:false};
     while let Some(flag)=a.next(){
         match flag.as_str(){
             "--offline"=>v.offline=true,
@@ -55,6 +57,7 @@ fn parse_args() -> Result<Args, String> {
             "--network"=>v.network=a.next().ok_or("missing --network value")?,
             "--intent"=>v.intent=Some(a.next().ok_or("missing --intent value")?),
             "--trusted-key"=>v.trusted_key=Some(a.next().ok_or("missing --trusted-key value")?),
+            "--policy"=>v.policy=Some(a.next().ok_or("missing --policy path")?),
             "--mode"=>v.mode=a.next().ok_or("missing --mode value")?,
             _=>return Err(format!("unknown option {flag}")),
         }
@@ -63,6 +66,7 @@ fn parse_args() -> Result<Args, String> {
     if !["binary","base64","base58"].contains(&v.encoding.as_str()) { return Err("unsupported encoding".into()); }
     if v.mode!="local" {return Err("Cloud/payment not implemented; no real funds may be sent".into());}
     if v.command=="inspect" && !v.offline { return Err("inspect must be explicitly --offline".into()); }
+    if v.command=="inspect" && v.policy.is_some() { return Err("--policy requires check command".into()); }
     if v.command=="check" && v.intent.is_none() { return Err("--intent FILE required".into()); }
     Ok(v)
 }
@@ -107,6 +111,25 @@ fn execute(v:Args)->(serde_json::Value,i32){
     verdict.transaction_sha256=Some(parsed.transaction_sha256.clone());
     verdict.coverage.push("wire_structure".into());
     verdict.limitations.extend(parsed.limitations.clone());
+    if let Some(path)=&v.policy {
+        let local_policy=limited_file(path,65_536)
+            .and_then(|bytes| String::from_utf8(bytes).map_err(|_|"policy must be UTF-8".into()))
+            .and_then(|text| LocalPolicy::parse_and_validate(&text));
+        match local_policy {
+            Ok(policy)=>{
+                let evaluation=policy.evaluate(&v.network,&parsed);
+                verdict.coverage.push("local_restrictive_policy".into());
+                for finding in evaluation.unknowns { verdict.findings.push(finding); }
+                if !evaluation.hard_denies.is_empty() {
+                    verdict.decision=Decision::Deny;
+                    verdict.findings.extend(evaluation.hard_denies);
+                    return (json!({"inspection":parsed,"verdict":verdict}),20);
+                }
+                verdict.findings.extend(evaluation.hard_denies);
+            }
+            Err(err)=>return (json!({"code":"BAD_POLICY","error":err}),40)
+        }
+    }
     if parsed.transaction_signature_status == TransactionSignatureStatus::Invalid {
         verdict.decision=Decision::Deny;
         verdict.finding("INVALID_TRANSACTION_SIGNATURE", "critical",
