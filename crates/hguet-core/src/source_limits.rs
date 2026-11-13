@@ -14,6 +14,7 @@ const MAX_SOURCE_LIMITS:usize=32;
 
 #[derive(Debug,Clone,Serialize)]
 pub struct DeclaredSourceDebit {
+    pub token_program:String,
     pub mint:String,
     pub source_token_account:String,
     pub declared_authority:String,
@@ -90,6 +91,7 @@ pub fn review_declared_source_limits(
     }
     let debits=checked_direct_debits(parsed)?;
     let mut totals=BTreeMap::<(String,String),u128>::new();
+    let mut programs=BTreeMap::<(String,String),String>::new();
     for debit in &debits {
         // Exactly one authority role, no multisig or unknown trailing accounts.
         if debit.account_count!=debit.exact_single_authority_count {
@@ -99,6 +101,11 @@ pub fn review_declared_source_limits(
             return Err("direct token instruction authority is not a required signer".into());
         }
         let key=(debit.mint.clone(),debit.source_token_account.clone());
+        if let Some(previous)=programs.insert(key.clone(),debit.token_program.clone()) {
+            if previous!=debit.token_program {
+                return Err("same signed source has incompatible token program identities".into());
+            }
+        }
         let (authority,limit)=signed.get(&key)
             .ok_or("direct token debit source or mint is missing from signed token_source_limits")?;
         if authority!=&debit.authority {
@@ -115,6 +122,7 @@ pub fn review_declared_source_limits(
     let results=totals.into_iter().map(|((mint,source_token_account),raw)|{
         let (authority,limit)=&signed[&(mint.clone(),source_token_account.clone())];
         DeclaredSourceDebit{
+            token_program:programs[&(mint.clone(),source_token_account.clone())].clone(),
             mint,source_token_account,declared_authority:authority.clone(),
             declared_raw:raw.to_string(),signed_limit_raw:limit.to_string(),
         }
