@@ -40,6 +40,13 @@ pub struct V1Resources {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct AddressTableLookup {
+    pub table_address: String,
+    pub writable_indexes: Vec<u8>,
+    pub readonly_indexes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ParsedTransaction {
     pub wire_format: String,
     pub transaction_bytes: usize,
@@ -53,6 +60,7 @@ pub struct ParsedTransaction {
     pub instruction_count: usize,
     pub lookup_table_count: usize,
     pub unresolved_lookup_addresses: usize,
+    pub address_table_lookups: Vec<AddressTableLookup>,
     pub program_ids: Vec<String>,
     pub system_transfers: Vec<SystemTransfer>,
     /// This is a lower bound for explicitly decoded System Program Transfer instructions.
@@ -164,7 +172,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     let mut r = Reader::new(raw);
     let (wire_format, required, readonly_signed, readonly_unsigned,
          signatures, message_start, key_bytes, instruction_data, lookup_count, unresolved,
-         resource_config, max_accounts, message_end) = if is_v1 {
+         address_table_lookups, resource_config, max_accounts, message_end) = if is_v1 {
         r.u8()?; // 0x81, explicitly the first byte of the entire transaction
         let required = r.u8()? as usize;
         let signed_ro = r.u8()? as usize;
@@ -195,7 +203,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         let signatures = r.take(required.checked_mul(64).ok_or("signature overflow")?)?.to_vec();
         if r.cursor != raw.len() { return Err("trailing v1 bytes".into()); }
         ("v1",required,signed_ro,unsigned_ro,signatures,0,keys,instructions,0,0,
-            Some(config),MAX_V1_ACCOUNTS,message_end)
+            Vec::new(),Some(config),MAX_V1_ACCOUNTS,message_end)
     } else {
         let required = r.compact_u16()?;
         if required == 0 || required > 64 { return Err("invalid legacy/v0 signature count".into()); }
@@ -228,24 +236,28 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         }
         let mut tables = 0;
         let mut unresolved = 0usize;
+        let mut lookup_descriptors = Vec::new();
         if format == "v0" {
             tables = r.compact_u16()?;
             if tables > 32 { return Err("too many ALT tables".into()); }
             for _ in 0..tables {
-                r.take(32)?;
+                let table_address = bs58::encode(r.take(32)?).into_string();
                 let w = r.compact_u16()?;
                 if w > 64 { return Err("too many writable ALT entries".into()); }
-                r.take(w)?;
+                let writable_indexes = r.take(w)?.to_vec();
                 let rd = r.compact_u16()?;
                 if rd > 64 { return Err("too many readonly ALT entries".into()); }
-                r.take(rd)?;
+                let readonly_indexes = r.take(rd)?.to_vec();
                 unresolved = unresolved.checked_add(w).and_then(|n| n.checked_add(rd))
                     .ok_or("lookup address count overflow")?;
+                lookup_descriptors.push(AddressTableLookup {
+                    table_address, writable_indexes, readonly_indexes
+                });
             }
         }
         if r.cursor != raw.len() { return Err("trailing legacy/v0 bytes".into()); }
         (format,required,signed_ro,unsigned_ro,signatures,start,keys,instructions,
-            tables,unresolved,None,64,raw.len())
+            tables,unresolved,lookup_descriptors,None,64,raw.len())
     };
 
     let key_count = key_bytes.len() / 32;
@@ -323,7 +335,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         static_account_count: key_count, total_address_count: total,
         instruction_count: instruction_data.len(),
         lookup_table_count: lookup_count, unresolved_lookup_addresses: unresolved,
-        program_ids: programs, system_transfers,
+        address_table_lookups, program_ids: programs, system_transfers,
         declared_system_transfer_lamports: declared.to_string(),
         resource_config, limitations,
     })
