@@ -61,6 +61,30 @@
       "type": "string",
       "pattern": "^[1-9][0-9]*$",
       "maxLength": 20
+    },
+    "token_spend_limits": {
+      "description": "Optional signed per-mint strict limit on the sum of direct, checked SPL Token and Token-2022 declared source debits in raw integer units (not UI decimals). An empty list allows no direct token debits. Unknown direct token opcodes and uncovered mints are rejected by local Rust verification; CPI and custom-program debits remain UNKNOWN, not an enforced total spend cap. Absence keeps backward-compatible SOL-only intent semantics.",
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mint", "max_debit_raw"],
+        "properties": {
+          "mint": {
+            "description": "Canonical Base58 string decoding to exactly 32 bytes; verified by Rust, including uniqueness across entries.",
+            "type": "string",
+            "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+          },
+          "max_debit_raw": {
+            "description": "Canonical unsigned u64 in mint base units, 0 permitted to prohibit a direct debit; Rust verifies u64 range and the sum of checked debit instructions.",
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 20
+          }
+        }
+      }
     }
   }
 }
