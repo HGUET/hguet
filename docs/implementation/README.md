@@ -53,6 +53,40 @@ cargo run -p hguet -- check TRANSACTION.bin --mode local --network devnet \
 
 The policy file and trusted intent authority must come from **independent user-controlled configuration**, never an AI agent's self-reported permission. A malicious agent could bypass the CLI entirely; the customer's actual wallet/signer still must enforce security decisions. An invalid policy is rejected before use. A matching/empty restrictive policy is **not** evidence of safe execution.
 
+## Opt-in Solana JSON-RPC simulation (implemented first slice)
+
+The public CLI includes `hguet-rpc`, a **read-only** JSON-RPC client. No RPC connection is made by `inspect --offline`, `policy validate`, `config show`, or `check` without `--rpc-url`. There is **no** HGUET Cloud connection in this mode.
+
+```sh
+cargo run -p hguet -- check TRANSACTION.bin \
+  --mode local --network devnet \
+  --intent signed-intent.json --trusted-key PINNED_AUTHORITY \
+  --policy /trusted/local-policy.toml \
+  --rpc-url https://api.devnet.solana.com --json
+```
+
+The selected **external Solana RPC provider will receive the entire serialized transaction**. The operator chooses this explicitly; use a provider acceptable for the transaction's privacy. Do not paste a private RPC URL containing an API token into logs or tickets.
+
+Before simulating, the client validates the HTTPS URL (no embedded credentials, fragments or non-HTTPS schemes), parses the transaction locally, calls `getGenesisHash`, and rejects a mismatch against the known Mainnet/Devnet/Testnet genesis. It then requests `simulateTransaction` with:
+
+```json
+{
+  "encoding": "base64",
+  "commitment": "confirmed",
+  "sigVerify": false,
+  "replaceRecentBlockhash": true,
+  "innerInstructions": true
+}
+```
+
+**Why `sigVerify=false`?** Simulation with `replaceRecentBlockhash=true` conflicts with signature verification in the RPC API. The local Solana Engine separately verifies nonzero original Ed25519 transaction signatures. Replacement means a successful simulation does **not** certify future execution of the original signed transaction. Public API method: https://solana.com/docs/rpc/http/simulatetransaction.
+
+JSON output includes optional `rpc_analysis`: verified genesis, context slot, simulated message SHA-256, `rpc_succeeded` or `rpc_failed`, compute units and bounded counts of returned logs/inner-instruction groups. Private logs themselves are **not** printed. On RPC error or mismatched network, `simulation_status=rpc_unavailable` plus an explicit reason code is returned in the **UNKNOWN** verdict. Any successful simulation remains `UNKNOWN`, not `ALLOW`; known independent local hard DENY still wins **before** contacting RPC.
+
+The transport sets a response size limit (1 MiB), request size limit, short network timeouts, and **no redirects**. Unit tests inject a mock JSON-RPC transport and cover wrong genesis, malformed responses, conflicting status, success, simulation error, no accidental RPC before offline validation, and mutually compatible blockhash/signature options. Tests do **not** claim live Devnet simulation succeeded.
+
+Still outstanding: **v0 Address Lookup Table resolution**, account-state/balance delta inspection, complete CPI and Token-2022 analysis, RPC multi-provider cross-checks and trusted policy enforcement at the external signer. Until those exist, remote simulation alone cannot justify `ALLOW`.
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
