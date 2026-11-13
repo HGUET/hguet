@@ -90,7 +90,7 @@ Two repositories, one product:
 | Repository | Visibility | Responsibility |
 | --- | --- | --- |
 | **[HGUET/hguet](https://github.com/HGUET/hguet)** | Public | Rust CLI, local checks, public protocol, tests, integrations |
-| **HGUET/server** | Private | Threat intelligence, network monitoring, accounts, billing, advanced risk analysis |
+| **HGUET/server** | Private | Threat intelligence, network monitoring, SOL payment verification and advanced risk analysis |
 
 The planned commercial transport is authenticated post-quantum-capable TLS 1.3, built from maintained cryptographic libraries, **not a custom cipher or VPN**. Exact algorithms and mutual authentication must pass implementation and interoperability tests before any security claims.
 
@@ -117,11 +117,11 @@ The full Rust CLI specification is published in **[docs/architecture/README.md](
 | Document | What it specifies |
 | --- | --- |
 | [Rust implementation blueprint](docs/architecture/implementation-blueprint.md) | Crate boundaries, typed interfaces, pipeline and build plan |
-| [CLI commands & configuration](docs/architecture/cli-interface.md) | Command syntax, output, registration, SOL-only payment, local state |
+| [CLI commands & configuration](docs/architecture/cli-interface.md) | Command syntax, output, anonymous SOL payment, local state |
 | [Solana engine](docs/architecture/solana-engine.md) | Legacy/v0/v1, ALT, CPI, simulation, RPC evidence and failures |
 | [Security & threat model](docs/architecture/security.md) | Trusted intent, limits, bypass threats, risk and privacy |
 | [Verdict schema](docs/architecture/verdict-schema.md) | JSON contract and ALLOW/WARN/DENY/UNKNOWN decision rules |
-| [Cloud transport](docs/architecture/cloud-protocol.md) | PQ TLS, binary protocol, accounts and idempotent billing |
+| [Cloud transport](docs/architecture/cloud-protocol.md) | PQ TLS, signed quotes, one-shot SOL claims and risk responses |
 | [Testing and roadmap](docs/architecture/testing-roadmap.md) | Security test matrix, milestones and release criteria |
 | [Architecture decisions](docs/architecture/decisions.md) | Chosen and deferred scope |
 | [Technical references](docs/architecture/references.md) | Official Solana, payment protocol and cryptography references |
