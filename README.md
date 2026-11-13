@@ -20,6 +20,19 @@
 > [!IMPORTANT]
 > **Project status — early development.** HGUET is being designed and built. The functionality and commands described below are **planned**, not a released or audited security product. Do not rely on this repository to protect live funds yet.
 
+## Implementation status — first Rust code (unreleased)
+
+**Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0 wire-structure** parsing, bounded input, SHA-256 message/transaction hashes, independent pinned-key **Ed25519 PaymentIntent verification**, an explicit UNKNOWN/DENY SecurityVerdict and real CI build/unit/JSON smoke checks.
+
+**Not working yet:** Solana v1 decoding, address-lookup resolution, onchain simulation, CPI/token effects, spending-cap enforcement, Cloud networking, SOL settlement and signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
+
+```sh
+cargo test --workspace
+cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json
+```
+
+The synthetic sample deliberately contains placeholder signatures and is **not a valid authorized payment**. See the [implementation README](docs/implementation/README.md) and [actual Rust CI](https://github.com/HGUET/hguet/actions/workflows/rust-ci.yml). No HGUET product release has been published.
+
 ## Why HGUET?
 
 A Solana transaction can simulate successfully and still be **the wrong payment**.
@@ -35,7 +48,7 @@ Autonomous agents need a practical way to verify **what will happen**, **whether
 | Decode Solana transactions and instructions | Fresh threat and incident signals |
 | RPC simulation and balance-change inspection | Multi-source network health and correlation |
 | Trusted payment-intent validation | Reputation and change monitoring for programs |
-| Local policy and spending checks | Cross-session agent payment behavior |
+| Local policy and spending checks | Optional authorized session analysis (future; not available anonymously) |
 | x402 / MPP payment safety checks | Enriched, signed security reports |
 | Stable JSON verdicts for automation | Paid, usage-based intelligence |
 
