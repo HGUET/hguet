@@ -24,14 +24,14 @@ Priority: hard `DENY` > missing mandatory coverage `UNKNOWN` > `WARN` > `ALLOW`.
 
 ## 2. Example response
 
-This payload is **illustrative** and NOT a real HGUET check:
+This payload is **illustrative** and NOT a real HGUET check; the displayed build label is not a released product version:
 
 ```json
 {
   "schema_version": 1,
   "tool": {
     "name": "hguet",
-    "version": "0.1.0-dev",
+    "version": "unreleased-draft",
     "mode": "local",
     "profile": "strict"
   },
