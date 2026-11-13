@@ -1105,6 +1105,87 @@ fn main(){
 }
 
 #[cfg(test)]
+mod cpi_source_reporting_tests {
+    use super::*;
+    use hguet_rpc::{CpiSourceCoverage,CpiSourceEvidence,CpiSourceClaim};
+    fn report()->CpiSourceCoverage{
+        CpiSourceCoverage{
+            simulation_slot:500,cpi_account_context_slot:Some(502),
+            atomic_with_simulation:false,cpi_captured:true,
+            opaque_token_instruction_count:0,token_2022_extension_instruction_count:0,
+            unsupported_or_missing_cpi_source_semantics:false,
+            entries:vec![CpiSourceEvidence{
+                claim:CpiSourceClaim{
+                    parent_instruction_index:0,inner_instruction_index:1,
+                    operation:"transfer_checked".into(),source_account:"src".into(),
+                    declared_program:"token".into(),declared_mint:Some("mint".into()),
+                    declared_authority:Some("key".into()),
+                    declared_raw_amount:Some("100".into()),
+                },
+                observation_source:"cpi_source_rpc",context_slot:Some(502),
+                account_status:"legacy_token",observed_mint:Some("mint".into()),
+                observed_owner:Some("key".into()),observed_delegate:None,
+                program_matches_cpi:Some(true),mint_matches_cpi:Some(true),
+                authority_relationship:"observed_owner",
+                later_balance_covers_declared:Some(true),
+                later_delegate_allowance_covers_declared:None,
+                frozen_at_observation:Some(false),authorization_proven:false,
+            }],
+            unobserved_sources:0,
+            total_gross_token_spending_proven:false,
+            authorization_proven:false,security_coverage:"partial_untrusted_rpc",
+            limitation:"test",
+        }
+    }
+    #[test]
+    fn matching_cpi_owner_and_token_state_are_never_authorization(){
+        let r=report();
+        let flags=cpi_source_coverage_findings(&r).iter().map(|x|x.0)
+            .collect::<Vec<_>>();
+        assert_eq!(flags,vec!["RPC_CPI_SOURCE_NON_ATOMIC"]);
+        assert!(!r.authorization_proven);
+        assert!(!r.total_gross_token_spending_proven);
+    }
+    #[test]
+    fn incomplete_and_unchecked_cpi_expose_missing_asset_and_source(){
+        let mut r=report();
+        r.unsupported_or_missing_cpi_source_semantics=true;
+        r.entries[0].claim.operation="transfer".into();
+        r.entries[0].claim.declared_mint=None;
+        r.entries[0].account_status="missing";
+        r.entries[0].observed_owner=None;
+        r.unobserved_sources=1;
+        let flags=cpi_source_coverage_findings(&r).iter().map(|x|x.0)
+            .collect::<Vec<_>>();
+        for expected in [
+            "RPC_CPI_SOURCE_SEMANTICS_INCOMPLETE",
+            "RPC_CPI_SOURCE_UNOBSERVED",
+            "RPC_CPI_SOURCE_UNCHECKED_MINT",
+        ]{assert!(flags.contains(&expected),"missing {expected}");}
+    }
+    #[test]
+    fn conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns(){
+        let mut r=report();
+        let x=&mut r.entries[0];
+        x.program_matches_cpi=Some(false);
+        x.mint_matches_cpi=Some(false);
+        x.authority_relationship="unmatched_or_mint_delegate_unobserved";
+        x.later_delegate_allowance_covers_declared=Some(false);
+        x.later_balance_covers_declared=Some(false);
+        x.frozen_at_observation=Some(true);
+        let flags=cpi_source_coverage_findings(&r).iter().map(|x|x.0)
+            .collect::<Vec<_>>();
+        for expected in [
+            "RPC_CPI_SOURCE_PROGRAM_MISMATCH","RPC_CPI_SOURCE_MINT_MISMATCH",
+            "RPC_CPI_SOURCE_AUTHORITY_UNRESOLVED",
+            "RPC_CPI_SOURCE_DELEGATE_ALLOWANCE_LOW",
+            "RPC_CPI_SOURCE_BALANCE_LOW","RPC_CPI_SOURCE_FROZEN",
+        ]{assert!(flags.contains(&expected),"missing {expected}");}
+        assert!(!r.authorization_proven);
+    }
+}
+
+#[cfg(test)]
 mod authority_observation_report_tests {
     use super::*;
     use hguet_rpc::{SourceAuthorityObservation,SourceAuthorityReview};
