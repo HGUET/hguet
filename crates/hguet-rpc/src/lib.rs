@@ -274,6 +274,22 @@ mod tests {
             match id {
                 1 => Ok(json!({"jsonrpc":"2.0","id":1,"result":self.genesis})),
                 2 => Ok(json!({"jsonrpc":"2.0","id":2,"result":self.simulation})),
+                4 => {
+                    // This mock explicitly represents a later, separate mint
+                    // account read; it is not a simulated atomic snapshot.
+                    let mut mint=vec![0u8;82];
+                    mint[45]=1; // initialized Token-2022 base mint
+                    let keys=request["params"][0].as_array().ok_or(RpcError::InvalidResponse)?;
+                    let accounts=keys.iter().map(|_|json!({
+                        "owner":crate::token_semantics::TOKEN_2022_PROGRAM,
+                        "executable":false,
+                        "data":[STANDARD.encode(&mint),"base64"]
+                    })).collect::<Vec<_>>();
+                    Ok(json!({"jsonrpc":"2.0","id":4,"result":{
+                        "context":{"slot":60001},
+                        "value":accounts
+                    }}))
+                },
                 _ => Err(RpcError::InvalidResponse)
             }
         }
@@ -319,6 +335,8 @@ mod tests {
             "fee":500,"loadedAddresses":{"writable":[],"readonly":[]}
         }});
         let result=simulate_with(&provider,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
+        assert_eq!(result.mint_snapshot.as_ref().unwrap().context_slot,60001);
+        assert!(!result.mint_snapshot.as_ref().unwrap().atomic_with_simulation);
         let effects=result.effect_analysis;
         assert_eq!(effects.lamport_deltas.as_ref().unwrap()[0].delta_lamports,"-500");
         assert_eq!(effects.token_deltas.as_ref().unwrap()[0].delta_raw_amount.as_deref(),Some("-1"));
