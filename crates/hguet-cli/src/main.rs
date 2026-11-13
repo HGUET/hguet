@@ -216,11 +216,17 @@ fn rpc_signed_source_scope_findings(
             continue;
         };
         match observed.state.as_ref() {
-            Some(state) if observed.status=="token_2022"=>{
-                if state.mint!=scope.mint || state.token_authority!=scope.authority {
+            Some(state) if observed.status=="token_2022" ||
+                observed.status=="legacy_token"=>{
+                // A delegate may legitimately be the instruction authority.
+                // The later allowance still cannot prove execution-time power.
+                if state.mint!=scope.mint ||
+                    (state.token_authority!=scope.authority &&
+                     state.delegate.as_deref()!=Some(scope.authority.as_str())) {
                     account_conflict=true;
                 }
-                if !observed.matching_mint_state_observed {uncertain=true;}
+                if observed.status=="token_2022" &&
+                    !observed.matching_mint_state_observed {uncertain=true;}
             }
             _=>{uncertain=true;}
         }
@@ -517,6 +523,51 @@ fn token_account_snapshot_findings(
 
 /// Correlation compares evidence sources, but never attributes simulated
 /// net flows to a particular CPI or proves that later state was the bank state.
+/// Later single-provider account state can show owner/delegate *agreement*,
+/// but it cannot authenticate historical execution-time permissions.
+fn source_authority_findings(
+    review:&hguet_rpc::SourceAuthorityReview,
+)->Vec<(&'static str,&'static str,&'static str)> {
+    let mut findings=Vec::new();
+    if review.sources.is_empty(){return findings;}
+    findings.push(("RPC_SOURCE_AUTHORITY_NON_ATOMIC","medium",
+        "Source authority roles are compared to a later RPC account read, never an authenticated execution-bank state"));
+    if review.sources.iter().any(|s|matches!(s.account_observation,
+        "unobserved"|"missing"|"other_program")) {
+        findings.push(("RPC_SOURCE_AUTHORITY_UNOBSERVED","high",
+            "A signed source has no supported token-account state in the later snapshot; permission is unresolved"));
+    }
+    if review.sources.iter().any(|s|s.program_matches_wire==Some(false)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_PROGRAM_CONFLICT","high",
+            "Observed token account owner program differs from direct Token/Token-2022 instruction program"));
+    }
+    if review.sources.iter().any(|s|s.mint_matches_signed_scope==Some(false)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_MINT_CONFLICT","high",
+            "Token-account mint in later RPC snapshot differs from independently signed source scope"));
+    }
+    if review.sources.iter().any(|s|s.authority_relationship=="unmatched") {
+        findings.push(("RPC_SOURCE_AUTHORITY_ROLE_UNMATCHED","high",
+            "Signed source authority is neither owner nor delegate in later account state; historical state is unknown"));
+    }
+    if review.sources.iter().any(|s|s.delegate_allowance_covers_declared==Some(false)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_DELEGATE_ALLOWANCE_LOW","high",
+            "Later delegate allowance is smaller than signed direct declared debit; execution-time allowance is unverified"));
+    }
+    if review.sources.iter().any(|s|s.later_account_balance_covers_declared==Some(false)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_BALANCE_LOW","medium",
+            "Later token-account balance is smaller than declared debit; it could be post-simulation and does not prove execution was impossible"));
+    }
+    if review.sources.iter().any(|s|s.frozen_at_observation==Some(true)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_FROZEN","high",
+            "Signed source token account was frozen at later observed slot; transferability at execution was not established"));
+    }
+    if review.sources.iter().any(|s|s.restricted_or_opaque_extensions==Some(true)) {
+        findings.push(("RPC_SOURCE_AUTHORITY_EXTENSION_UNRESOLVED","high",
+            "Observed source carries restricted or opaque Token-2022 extensions; deeper execution-time semantics remain unknown"));
+    }
+    findings
+}
+
 fn effect_graph_findings(
     graph: &hguet_rpc::EffectGraph,
 ) -> Vec<(&'static str, &'static str, &'static str)> {
@@ -800,6 +851,26 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 for (code,severity,message) in effect_graph_findings(&evidence.effect_graph) {
                     verdict.finding(code,severity,message);
                 }
+                let mut signed_source_authority_evidence=None;
+                if evidence.status=="rpc_succeeded" {
+                    if let Some(ref review)=signed_token_source_review {
+                        match hguet_rpc::correlate_signed_source_authority(
+                            review,evidence.token_account_snapshot.as_ref(),
+                            evidence.context_slot) {
+                            Ok(result)=>{
+                                verdict.coverage.push("rpc_signed_source_authority_correlations_advisory".into());
+                                for (code,severity,message) in source_authority_findings(&result) {
+                                    verdict.finding(code,severity,message);
+                                }
+                                signed_source_authority_evidence=Some(result);
+                            }
+                            Err(_)=>{
+                                verdict.finding("RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID","high",
+                                    "Authority correlation is inconsistent across later RPC snapshots; signer ownership or transfer permissions cannot be inferred");
+                            }
+                        }
+                    }
+                }
                 if let Some(ref intent) = verified_intent {
                     if intent.token_spend_limits.is_some() {
                         for (code,severity,message) in rpc_signed_token_cap_findings(
@@ -851,6 +922,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 return (json!({"inspection":parsed,"rpc_analysis":evidence,
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
+                    "signed_source_authority_evidence":signed_source_authority_evidence,
                     "verdict":verdict}),30)
             }
             Err(err)=>{
