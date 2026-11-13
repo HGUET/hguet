@@ -24,6 +24,8 @@ The `signed_cloud_assessment` field is a detached-signature wrapper around JCS-c
 
 Solana wire bytes may be sent only under `DataScope.DATA_SCOPE_RAW_TRANSACTION` with `raw_transaction_consent=true`; a metadata-only request cannot assert full independent simulation.
 
+A `PriceQuoteRequest` asks for an authenticated price for the intended capabilities, network, profile and data-sharing scope. `PriceQuoteResult` carries quote ID, schedule, signed maximum price and expiry. The client validates the `HGUET-PRICE-QUOTE/v1` signature and its own cap **before** sending `CheckRequest.accepted_quote_id`. Invalid or expired quotes fail closed.
+
 `maximum_charge_units` is a nonnegative decimal string in authenticated tariff units. No floating-point monetary calculations. Client can set 0 to forbid a charge; server rejects rather than raises the ceiling.
 
 ## Security requirements before implementation
