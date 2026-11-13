@@ -43,4 +43,5 @@ jobs:
       - name: End-to-end offline CLI JSON smoke
         run: |
           cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json > /tmp/hguet-inspect.json
-          python scripts/check_cli_smoke.py /tmp/hguet-inspect.json
+          cargo run -p hguet -- inspect tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline --json > /tmp/hguet-v1.json
+          python scripts/check_cli_smoke.py /tmp/hguet-inspect.json /tmp/hguet-v1.json
