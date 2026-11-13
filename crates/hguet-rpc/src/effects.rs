@@ -387,7 +387,7 @@ mod tests {
             required_signatures:1,signature_count:1,transaction_signature_status:TransactionSignatureStatus::Unsigned,
             static_account_count:2, static_account_keys:vec![a,b],total_address_count:2,
             instruction_count:1,lookup_table_count:0,unresolved_lookup_addresses:0,
-            address_table_lookups:vec![], program_ids:vec![],
+            address_table_lookups:vec![], program_ids:vec![],compiled_top_level_instructions:vec![],
             system_transfers:Vec::<SystemTransfer>::new(),declared_system_transfer_lamports:"0".into(),
             resource_config:None, limitations:vec![],
         }
