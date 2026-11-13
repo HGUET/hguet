@@ -253,6 +253,31 @@ The Cloud pay-per-check fee **still uses native SOL only**, independently of the
 
 Reference: [Token-2022 checked fee transfer layout](https://docs.rs/spl-token-2022-interface/latest/src/spl_token_2022_interface/extension/transfer_fee/instruction.rs.html), [Token Program checked transfer format](https://solana.com/docs/tokens/basics/transfer-tokens).
 
+## Signed source-account / signer-role limits (implemented, direct-wire scope)
+
+The independently Ed25519-signed `PaymentIntentPayload` v1 supports a second **optional** field, `token_source_limits`, in addition to the existing optional `token_spend_limits`. Existing exact-byte SOL-only and mint-only signed intents remain valid **without changing version or signature domain**. Every entry contains `mint`, `source_token_account`, `authority` (canonical 32-byte Base58 pubkeys) and `max_debit_raw` (canonical unsigned `u64`), with at most **32 distinct source accounts**. Duplicate sources, even under different mints or authorities, invalid keys, malformed numbers and unsupported source shapes fail verification before RPC.
+
+Signed example **field only**, not a usable payment destination:
+
+```json
+"token_source_limits": [{
+  "mint": "<canonical-mint-pubkey>",
+  "source_token_account": "<canonical-SPL-token-account-pubkey>",
+  "authority": "<canonical-transaction-required-signer-pubkey>",
+  "max_debit_raw": "500000"
+}]
+```
+
+When provided, HGUET inspects **every** original-wire Token/Token-2022 instruction and fails closed on anything except the small strict checked-debit subset: direct `TransferChecked`, `BurnChecked`, and `TransferCheckedWithFee`, requiring **exactly** four, three, or four token account-role entries respectively. This intentionally excludes multisig and instructions with extra hook accounts until full authorization semantics are implemented. For each checked debit it binds the mint, **source token account** (instruction role 0), and **authority** (role 3, 2, or 3) to an exact signed scope and sums raw debits in checked `u128` per source. Every authority must be one of the **first `num_required_signatures` static transaction keys**. An absent scope, non-required signer, different authority, duplicate source, excess amount, unresolved ALT or unknown direct token opcode triggers signed-intent rejection and a CLI `DENY` (not a false zero debit).
+
+If both optional fields are present, **both constraints apply**: the sum per mint and the sum for each bound source+authority must each remain within the respective signed maximum. A signed `token_source_limits: []` forbids any direct Token Program debit (rather than granting an implicit wildcard). The CLI reports `signed_token_source_review` with declared raw amounts, exact source/mint/authority, signed source ceiling, `transaction_required_signer_role_checked`, `transaction_signatures_verified`, `token_account_owner_verified=false`, and `total_spending_proven=false`. A verified signed source restriction adds the advisory finding `SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE`; **it never promotes to `ALLOW`**.
+
+**Critical distinction:** The message's signer *role* is not a verified onchain token-account owner/delegate. An unsigned pre-signing transaction can satisfy the *required-signer placement check*, while `transaction_signatures_verified=false`. Even complete Ed25519 transaction signatures prove only who signed the message, **not** that the stated key owns or can spend tokens from the account. Frozen state, permanent delegates, multisig, program authority, mint-account state, CPI/hook flows, fees and total gross spending require separate evidence and enforcement. RPC simulation remains advisory, not authorization.
+
+The optional source scope governs the **protected transaction**, not HGUET Cloud billing. The proposed pay-per-check Cloud payment continues to use native SOL only. No real transfer, wallet secret, server deployment or automatic transaction signing is performed.
+
+References: [Solana message signer ordering](https://solana.com/docs/core/transactions/transaction-structure), [SPL TransferChecked source/mint/owner roles](https://solana.com/docs/tokens/basics/transfer-tokens).
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
