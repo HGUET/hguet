@@ -26,7 +26,7 @@ pub use mint_state::{Token2022MintState, MintExtension, MintTransferFeeConfig, M
 pub use token_account_rpc::{TokenAccountRpcSnapshot, TokenAccountObservation};
 pub use token_account_state::{Token2022AccountState, TokenAccountExtension};
 pub use alt::LookupResolution;
-pub use effects::SimulationEffects;
+pub use effects::{SimulationEffects,CpiObservation,TokenBalanceDelta,NativeBalanceDelta};
 pub use direct_token::{inspect_direct_tokens, DirectTokenAnalysis, DirectTokenInstruction, OpaqueDirectTokenInstruction};
 pub use effect_graph::{EffectGraph,EffectNode,EffectEdge,GraphSourceSlot};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
