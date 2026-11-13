@@ -43,6 +43,30 @@ def main():
     ]:
         invalid = dict(intent, token_spend_limits=bad_limits)
         assert list(Draft202012Validator(schemas["payment-intent"]).iter_errors(invalid)), bad_limits
+    # Signed source-account scopes are independent from mint-wide caps.
+    source = {
+        "mint": synthetic_mint,
+        "source_token_account": "6" * 32,
+        "authority": "7" * 32,
+        "max_debit_raw": "90",
+    }
+    source_intent = dict(intent, token_source_limits=[source])
+    check(schemas["payment-intent"], source_intent)
+    check(schemas["payment-intent"], dict(intent, token_source_limits=[]))
+    for invalid_cap in [
+        dict(source, max_debit_raw="00"),
+        dict(source, max_debit_raw="-1"),
+        dict(source, max_debit_raw="184467440737095516160"),
+        dict(source, source_token_account="invalid!"),
+        dict(source, authority="invalid!"),
+        dict(source, extra="unexpected"),
+    ]:
+        invalid = dict(intent, token_source_limits=[invalid_cap])
+        assert list(Draft202012Validator(schemas["payment-intent"]).iter_errors(invalid)), invalid_cap
+    too_many = [dict(source, source_token_account=str(i % 8 + 1) * 32)
+                for i in range(33)]
+    assert list(Draft202012Validator(schemas["payment-intent"]).iter_errors(
+        dict(intent, token_source_limits=too_many)))
     verdict = {
         "schema_version":1,"kind":"security_verdict","decision":"UNKNOWN",
         "network":"devnet","message_sha256":"ab"*32,
