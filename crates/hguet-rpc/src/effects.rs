@@ -39,6 +39,8 @@ pub struct CpiObservation {
     pub captured: bool,
     pub group_count: Option<usize>,
     pub instruction_count: Option<usize>,
+    pub invoked_program_ids: Vec<String>,
+    pub requires_semantic_review: bool,
     pub limitations: Vec<String>,
 }
 
@@ -108,7 +110,7 @@ fn token_rows(items: &[Value], keys: &[String])
     for item in items {
         let value=item.as_object().ok_or(RpcError::InvalidResponse)?;
         let index=value.get("accountIndex").and_then(Value::as_u64)
-            .ok_or(RpcError::InvalidResponse)? as usize;
+            .and_then(|n|usize::try_from(n).ok()).ok_or(RpcError::InvalidResponse)?;
         if index>=keys.len() { return Err(RpcError::InvalidResponse); }
         let mint=value.get("mint").and_then(Value::as_str)
             .filter(|x|valid_pubkey(x)).ok_or(RpcError::InvalidResponse)?.to_owned();
@@ -246,6 +248,7 @@ pub fn inspect_simulation_effects(
             missing.push("cpi_recording".into());
             CpiObservation {
                 captured:false,group_count:None,instruction_count:None,
+                invoked_program_ids:vec![],requires_semantic_review:true,
                 limitations:vec!["CPI recording missing; unknown effects cannot be ruled out".into()]
             }
         }
@@ -253,10 +256,11 @@ pub fn inspect_simulation_effects(
             if groups.len()>MAX_CPI_GROUPS { return Err(RpcError::TooLarge); }
             let mut count=0usize;
             let mut seen=BTreeSet::new();
+            let mut programs=BTreeSet::new();
             for group in groups {
                 let group=group.as_object().ok_or(RpcError::InvalidResponse)?;
                 let index=group.get("index").and_then(Value::as_u64)
-                    .ok_or(RpcError::InvalidResponse)? as usize;
+                    .and_then(|n|usize::try_from(n).ok()).ok_or(RpcError::InvalidResponse)?;
                 if index>=parsed.instruction_count || !seen.insert(index) {
                     return Err(RpcError::InvalidResponse);
                 }
@@ -267,21 +271,30 @@ pub fn inspect_simulation_effects(
                     return Err(RpcError::InvalidResponse);
                 }
                 for ix in items {
-                    if let Some(id)=ix.get("programIdIndex") {
-                        if id.as_u64().is_none_or(|x|x>=keys.len() as u64) {
-                            return Err(RpcError::InvalidResponse);
-                        }
-                    }
-                    if let Some(id)=ix.get("programId") {
-                        if id.as_str().is_none_or(|s|!valid_pubkey(s)) {
-                            return Err(RpcError::InvalidResponse);
-                        }
-                    }
+                    let indexed=if let Some(id)=ix.get("programIdIndex") {
+                        let index=id.as_u64().and_then(|n|usize::try_from(n).ok())
+                            .ok_or(RpcError::InvalidResponse)?;
+                        Some(keys.get(index).ok_or(RpcError::InvalidResponse)?.as_str())
+                    } else { None };
+                    let named=if let Some(id)=ix.get("programId") {
+                        Some(id.as_str().filter(|s|valid_pubkey(s))
+                            .ok_or(RpcError::InvalidResponse)?)
+                    } else { None };
+                    let program=match (indexed,named) {
+                        (Some(i),Some(n)) if i==n=>i,
+                        (Some(_),Some(_))=>return Err(RpcError::InvalidResponse),
+                        (Some(i),None)=>i,
+                        (None,Some(n))=>n,
+                        (None,None)=>return Err(RpcError::InvalidResponse)
+                    };
+                    programs.insert(program.to_owned());
                 }
             }
             observed.push("cpi_recording".into());
             CpiObservation {
                 captured:true,group_count:Some(groups.len()),instruction_count:Some(count),
+                invoked_program_ids:programs.into_iter().collect(),
+                requires_semantic_review:count>0,
                 limitations:vec!["CPI list is provided by one RPC, not semantically decoded into verified token/native effects".into()]
             }
         }
