@@ -409,6 +409,14 @@ mod tests {
         assert_eq!(p.declared_system_transfer_lamports,"75");
         assert_eq!(p.system_transfers.len(),1);
         assert_eq!(p.system_transfers[0].lamports,"75");
+        assert_eq!(p.compiled_top_level_instructions.len(),1);
+        let ci=&p.compiled_top_level_instructions[0];
+        assert_eq!(ci.instruction_index,0);
+        assert_eq!(ci.program_index,2);
+        assert_eq!(ci.account_indices,vec![0,1]);
+        let mut raw=2u32.to_le_bytes().to_vec();
+        raw.extend(75u64.to_le_bytes());
+        assert_eq!(ci.data_base58,bs58::encode(raw).into_string());
         let unsigned=parse_transaction(&legacy(&[(75,0,1)],false)).unwrap();
         assert_eq!(unsigned.transaction_signature_status,TransactionSignatureStatus::Unsigned);
         let mut forged=legacy(&[(75,0,1)],true);
@@ -436,6 +444,8 @@ mod tests {
         assert_eq!(p.transaction_signature_status,TransactionSignatureStatus::Verified);
         assert_eq!(p.message_sha256,sha256_hex(&wire[..wire.len()-64]));
         assert_eq!(p.declared_system_transfer_lamports,"100");
+        assert_eq!(p.compiled_top_level_instructions[0].program_index,2);
+        assert_eq!(p.compiled_top_level_instructions[0].account_indices,vec![0,1]);
         assert_eq!(p.resource_config.unwrap().priority_fee_lamports,Some(99));
         let mut bad=wire.clone();bad[4]=0xff;bad[5]=0xff;
         assert!(parse_transaction(&bad).is_err());
