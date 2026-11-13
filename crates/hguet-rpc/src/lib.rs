@@ -11,8 +11,10 @@
 //! - no wallet keys, seeds, accounts, balances, or Cloud requests.
 mod alt;
 mod effects;
+mod extension_semantics;
 mod token_semantics;
 pub use token_semantics::TokenCpiInstruction;
+pub use extension_semantics::Token2022ExtensionObservation;
 pub use alt::LookupResolution;
 pub use effects::SimulationEffects;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
