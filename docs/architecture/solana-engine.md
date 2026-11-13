@@ -36,7 +36,11 @@ The “Effect Graph” is an **in-memory, deterministic and bounded evidence str
 
 The first implementation is in `crates/hguet-rpc/src/effect_graph.rs` and is exposed as `rpc_analysis.effect_graph`. Original-wire direct token instructions are now preserved by `hguet-core` and decoded separately in `crates/hguet-rpc/src/direct_token.rs`. Their transfer/authority declarations are attributed to `original_wire`, never as verified RPC balance effects; offline ALT lookups remain unresolved until explicitly fetched. Its explicit `evidence_gaps`, `alerts`, `execution_proven=false`, `spend_limit_enforced=false` and `security_coverage=partial_untrusted_rpc` preserve unresolved execution risks; CLI warnings cannot grant `ALLOW`. See [implementation details](../implementation/README.md).
 
-## 2. Solana formats and canonical identity
+### Signed per-mint direct debit caps
+
+The unreleased CLI now accepts optional `token_spend_limits` in the separately signed `PaymentIntent` v1. For each canonical mint it rejects direct checked token debits whose summed raw amount exceeds the independently signed ceiling. Unchecked transfers, token authority changes, unsupported direct Token-2022 extensions, unresolved ALT and uncovered mint identities fail signed-intent validation rather than being treated as zero outflow. This is a bound on **declared direct instruction arguments**, not proven gross onchain spending. CPI/raw token account differences are compared to these caps only as advisory single-provider RPC findings; the Effect Graph's `spend_limit_enforced=false` remains correct for total transaction spending. See [implementation details](../implementation/README.md).
+
+
 
 Current official Solana docs describe **legacy**, **v0**, and **v1** transaction formats; v1 has different size and account/resource-limit semantics. The implementation must be version-aware.
 
