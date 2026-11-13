@@ -1,0 +1,29 @@
+name: Public Interoperability Contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install protobuf compiler and JSON Schema validator
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y protobuf-compiler
+          python -m pip install 'jsonschema>=4,<5'
+      - name: Compile public draft Protobuf schema
+        run: |
+          protoc --proto_path=protocol/v1 --descriptor_set_out=/tmp/hguet-protocol.desc protocol/v1/hguet.proto
+      - name: Validate signed CloudAssessment schema and draft contract cases
+        run: python scripts/validate_contract.py
