@@ -25,4 +25,14 @@ Canonical public contracts:
 - [Final SecurityVerdict](../../protocol/v1/security-verdict.schema.json)
 - [Cloud and SOL quote contracts](../../protocol/v1/README.md)
 
+## Planned default Cloud server (configured, not active)
+
+The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
+
+```sh
+cargo run -p hguet -- config show --json
+```
+
+The result explicitly reports `cloud.available=false`. `--mode cloud` is still refused: no actual Cloud transport, TLS trust validation, paid check or SOL transfer is implemented. The SSH operator user `debian@` must never be copied into this public endpoint; no private keys, server certs or payment receiver secrets are in this repository. The hostname alone is not proof of server identity.
+
 No customer seed keys, real SOL invoice address or active Cloud endpoint is used.
