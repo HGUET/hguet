@@ -37,9 +37,11 @@
       "const": "cloud_assessment"
     },
     "network": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 96
+      "enum": [
+        "mainnet",
+        "devnet",
+        "testnet"
+      ]
     },
     "genesis_hash": {
       "type": "string",
