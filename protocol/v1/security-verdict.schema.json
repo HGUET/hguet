@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/security-verdict.schema.json",
+  "title": "HGUET local final SecurityVerdict — unreleased draft",
+  "description": "Produced by public CLI, not signed by HGUET Cloud. UNKNOWN is required when mandatory execution evidence is unavailable. In current CLI prototype ALLOW is NEVER emitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "decision",
+    "network",
+    "message_sha256",
+    "transaction_sha256",
+    "intent_status",
+    "simulation_status",
+    "coverage",
+    "findings",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "security_verdict"
+    },
+    "decision": {
+      "enum": [
+        "ALLOW",
+        "WARN",
+        "DENY",
+        "UNKNOWN"
+      ]
+    },
+    "network": {
+      "enum": [
+        "mainnet",
+        "devnet",
+        "testnet"
+      ]
+    },
+    "message_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "transaction_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "intent_status": {
+      "enum": [
+        "not_checked",
+        "signature_verified",
+        "rejected",
+        "unverified_no_independent_trust_key"
+      ]
+    },
+    "simulation_status": {
+      "const": "not_performed"
+    },
+    "coverage": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 120
+      }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "severity",
+          "summary"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "string",
+        "maxLength": 512
+      }
+    }
+  }
+}

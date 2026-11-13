@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/signed-payment-intent.schema.json",
+  "title": "HGUET Signed PaymentIntent envelope — unreleased draft",
+  "description": "payload_b64 is exact raw UTF-8 JSON of payment-intent.schema.json, not a reserialized object. The pinned authority is a CLI input, NEVER trusted from this envelope. Signature verifies domain-separated raw payload bytes with strict Ed25519.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "payload_b64",
+    "signer_pubkey_b58",
+    "signature_b58"
+  ],
+  "properties": {
+    "payload_b64": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 22000
+    },
+    "signer_pubkey_b58": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 44
+    },
+    "signature_b58": {
+      "type": "string",
+      "minLength": 80,
+      "maxLength": 90
+    }
+  }
+}
