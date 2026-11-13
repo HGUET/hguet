@@ -257,7 +257,7 @@ mod tests {
         assert!(!r.extensions[0].layout_checked);
     }
     #[test]
-    fn 165_byte_account_base_has_no_tlv_and_never_invents_flags(){
+    fn base_165_byte_account_has_no_tlv_and_never_invents_flags(){
         let buf=account();
         let r=parse(&buf[..165]).unwrap();
         assert!(r.extensions.is_empty());
