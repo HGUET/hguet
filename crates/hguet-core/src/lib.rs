@@ -56,6 +56,7 @@ impl SecurityVerdict {
 
 pub mod solana_engine;
 mod token_limits;
+#[cfg(test)] mod token_intent_tests;
 pub use token_limits::{review_declared_token_limits,DeclaredMintDebit,TokenSpendLimitReview};
 pub use solana_engine::{
     parse_transaction, ParsedTransaction, SystemTransfer, TransactionSignatureStatus, V1Resources,
