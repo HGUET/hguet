@@ -32,7 +32,8 @@ CLI local check (free)
 ## Pricing and cluster policy
 
 - **All invoices are native SOL**, expressed in integer **lamports**; never USDC, SPL mints, fiat card payments or internal credit balances in v0.2.
-- Product tariff may be expressed in **integer USD microdollars** and converted into lamports using an independently sourced **SOL/USD** feed. Check actual price update time, confidence and data-source quality; reject stale or implausible prices.
+- Product tariff uses **integer USD microdollars** converted to lamports using a **cached current-day SOL/USD reference** (last source update ≤24 hours). Refresh in the background daily, preferably every 4–12 hours; do not fetch oracle data on every request. Approximate ±5% deviation relative to credible independent observations is tolerable; >5% conflict requires repricing source review or pausing new quotes. The signed invoice **always requires exact lamports**, not ±5% underpayment.
+- **[Complexity-based pricing tiers](../../docs/architecture/pricing-policy.md)**: Basic $0.001 / Standard $0.003 / Complex $0.006 / Extended from $0.010 are **illustrative unapproved launch targets**. Quote binds policy version, highest-required tier, bounded complexity metrics, requested features, risk subjects and client fee cap.
 - Conversion: `lamports = ceil(usd_price_micros * 1_000_000_000 / sol_usd_price_micros)` using checked integer arithmetic.
 - Signed quote freezes the lamports amount until expiry; user max price cap is binding, no silent repricing.
 - Mainnet: real SOL and production receiver. Devnet/Testnet: **test** SOL and sandbox receiver. All quotes and receipts bind environment + network **and genesis hash**, never interchangeable.
