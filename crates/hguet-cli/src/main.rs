@@ -1532,7 +1532,7 @@ mod token_2022_extension_tests {
         hguet_rpc::Token2022ExtensionObservation {
             parent_instruction_index:0,inner_instruction_index:0,
             opcode:26,sub_opcode:Some(1),family,operation:"test",
-            layout_checked:false,mint:None,authority:None,new_authority:None,
+            layout_checked:false,mint:None,source_account:None,authority:None,new_authority:None,
             hook_program_id:None,declared_amount_raw:None,expected_fee_raw:None,
             fee_basis_points:None,maximum_fee_raw:None,
         }
