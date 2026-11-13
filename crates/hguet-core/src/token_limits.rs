@@ -112,7 +112,7 @@ pub(crate) fn checked_direct_debits(parsed:&ParsedTransaction)
             .ok_or_else(||"direct token account index outside message".to_string()).cloned();
         result.push(CheckedDirectDebit {
             mint:key(mint_role)?,source_token_account:key(0)?,authority:key(auth_role)?,
-            amount_raw:amount,instruction_index:i,
+            amount_raw:amount,
             account_count:ix.account_indices.len(),exact_single_authority_count:expected_count,
         });
     }
