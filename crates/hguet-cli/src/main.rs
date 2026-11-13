@@ -387,6 +387,13 @@ fn wire_direct_token_findings(
     findings
 }
 
+fn signed_sol_intent_cannot_cap_direct_tokens(analysis:&hguet_rpc::DirectTokenAnalysis)->bool{
+    analysis.recognized.iter().any(|ix|matches!(ix.decoded.operation.as_str(),
+        "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
+        "burn"|"burn_checked"|"approve"|"approve_checked")) ||
+    !analysis.opaque.is_empty()
+}
+
 fn execute(v:Args)->(serde_json::Value,i32){
     let mut verdict=SecurityVerdict::unknown(&v.network);
     let data=match read_transaction(&v.file,&v.encoding){
@@ -494,10 +501,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
     }
     if verified_intent.is_some() {
         if let Some(ref direct)=offline_direct_analysis {
-            if direct.recognized.iter().any(|ix|matches!(ix.decoded.operation.as_str(),
-                "transfer"|"transfer_checked"|"mint_to"|"mint_to_checked"|
-                "burn"|"burn_checked"|"approve"|"approve_checked")) ||
-                !direct.opaque.is_empty() {
+            if signed_sol_intent_cannot_cap_direct_tokens(direct) {
                 verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
                     "The independently verified PaymentIntent caps native SOL lamports only; it has no per-mint token amount caps, so direct token movement, allowances and opaque token instructions are not covered by an enforceable token-spend limit");
             }
@@ -708,6 +712,22 @@ mod wire_direct_token_tests {
             "WIRE_TOKEN_DIRECT_ALT_UNTRUSTED",
         ]);
         assert!(wire_direct_token_findings(&analysis()).is_empty());
+    }
+    #[test]
+    fn signed_lamport_only_intent_does_not_cap_direct_token_moves_or_approvals() {
+        let mut a=analysis();
+        assert!(!signed_sol_intent_cannot_cap_direct_tokens(&a));
+        a.recognized=vec![instruction("transfer_checked")];
+        assert!(signed_sol_intent_cannot_cap_direct_tokens(&a));
+        a.recognized=vec![instruction("approve")];
+        assert!(signed_sol_intent_cannot_cap_direct_tokens(&a));
+        a.recognized.clear();
+        a.opaque=vec![OpaqueDirectTokenInstruction{
+            instruction_index:0,program_id:"opaque".into(),
+            program_address_from_lookup:false,token_2022_extension:true,
+            extension_hint:None,
+        }];
+        assert!(signed_sol_intent_cannot_cap_direct_tokens(&a));
     }
 }
 
