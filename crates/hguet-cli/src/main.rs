@@ -857,10 +857,29 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     verdict.finding(code,severity,message);
                 }
                 let mut signed_source_authority_evidence=None;
+                let mut signed_source_account_snapshot=None;
                 if evidence.status=="rpc_succeeded" {
                     if let Some(ref review)=signed_token_source_review {
-                        match hguet_rpc::correlate_signed_source_authority_with_mints(
+                        // This optional second batch reads only signed, USED
+                        // sources not already present in the earlier balance-
+                        // based snapshot. No reads for unverified/absent intent.
+                        match hguet_rpc::fetch_missing_signed_sources(
+                            &HttpsTransport::default(),endpoint,evidence.context_slot,
+                            review,evidence.token_account_snapshot.as_ref()) {
+                            Ok(extra)=>{
+                                if extra.is_some(){
+                                    verdict.coverage.push("rpc_extra_signed_source_account_read_non_atomic".into());
+                                }
+                                signed_source_account_snapshot=extra;
+                            }
+                            Err(err)=>{
+                                verdict.finding("RPC_SIGNED_SOURCE_ADDITIONAL_READ_UNAVAILABLE","high",
+                                    format!("Supplemental signed source account read failed ({:?}); no omitted source account may be treated as observed",err.code()));
+                            }
+                        }
+                        match hguet_rpc::correlate_signed_source_authority_with_additional_sources(
                             review,evidence.token_account_snapshot.as_ref(),
+                            signed_source_account_snapshot.as_ref(),
                             evidence.mint_snapshot.as_ref(),evidence.context_slot) {
                             Ok(result)=>{
                                 verdict.coverage.push("rpc_signed_source_authority_correlations_advisory".into());
@@ -871,7 +890,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                             }
                             Err(_)=>{
                                 verdict.finding("RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID","high",
-                                    "Authority correlation is inconsistent across later RPC snapshots; signer ownership or transfer permissions cannot be inferred");
+                                    "Source authority correlation is inconsistent across separate RPC slots; no signer ownership or transfer permission can be inferred");
                             }
                         }
                     }
@@ -927,6 +946,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 return (json!({"inspection":parsed,"rpc_analysis":evidence,
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
+                    "signed_source_account_snapshot":signed_source_account_snapshot,
                     "signed_source_authority_evidence":signed_source_authority_evidence,
                     "verdict":verdict}),30)
             }
@@ -992,6 +1012,7 @@ mod authority_observation_report_tests {
     fn report() -> SourceAuthorityReview {
         SourceAuthorityReview {
             simulation_slot:600,token_account_context_slot:Some(601),
+            missing_signed_source_context_slot:None,
             mint_context_slot:None,
             atomic_with_simulation:false,authorization_proven:false,
             total_spending_proven:false,limitation:"fixture",
