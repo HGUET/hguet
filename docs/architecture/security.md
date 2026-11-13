@@ -73,7 +73,7 @@ An authorized payment intent is **not** simply an arbitrary `intent.json` genera
 
 - `schema_version`; `intent_id` random identifier; `purpose` human-readable description.
 - `network`/genesis binding; `allowed_fee_payer` or signer constraints.
-- `agent_id` and `tenant_id` scopes where independently known.
+- Optional agent/session scopes only when independently authorized; these are **not** HGUET Cloud accounts, and anonymous checks cannot imply global spending history.
 - `recipient`, `asset_mint`, `token_program`; amount in **integer base units**.
 - `max_amount` or `exact_amount`, optional cumulative budget reference.
 - `allowed_program_ids` and `denied_operation_classes`.
