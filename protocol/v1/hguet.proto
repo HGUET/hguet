@@ -85,6 +85,8 @@ message ClientEvidence {
 
 // Complexity metrics are bounded declarations, NOT trusted proof of execution.
 // Metadata-only mode charges only the actually supplied/allowed subjects.
+// verified_from_raw_transaction is an OUTPUT claim only after server validation;
+// incoming boolean must NOT be treated as proof of work complexity.
 message ComplexityMetrics {
   uint32 transaction_bytes = 1;
   uint32 top_level_instructions = 2;
@@ -110,7 +112,10 @@ message PriceQuoteRequest {
   string maximum_lamports = 9;          // unsigned decimal integer; user cap
   repeated Subject subjects = 10;      // present for metadata-only intelligence
   bytes subjects_sha256 = 11;          // canonical subject set binding, exactly 32 bytes
-  ComplexityMetrics complexity = 12;   // for a transparent, bounded quote
+  ComplexityMetrics complexity = 12;   // client declares bounded scope; server verifies if raw
+  bytes transaction_sha256 = 13;        // original tx wire hash, 32 bytes or absent
+  bytes raw_transaction = 14;           // optional pre-quote bounded input for validated complexity
+  bool raw_transaction_consent = 15;    // required when raw bytes included
 }
 message PriceQuoteResult {
   ResultCode result = 1;
