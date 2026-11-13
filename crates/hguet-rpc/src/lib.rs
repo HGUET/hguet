@@ -9,6 +9,8 @@
 //! - bounded request/response sizes and deadlines
 //! - use replaceRecentBlockhash=true AND sigVerify=false (they conflict)
 //! - no wallet keys, seeds, accounts, balances, or Cloud requests.
+mod alt;
+pub use alt::LookupResolution;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -148,6 +150,7 @@ pub struct SimulationEvidence {
     pub inner_instructions_present: bool,
     pub inner_instruction_groups: Option<usize>,
     pub replacement_blockhash_present: bool,
+    pub lookup_resolution: Option<LookupResolution>,
     pub limitation: String,
 }
 
@@ -162,7 +165,10 @@ pub fn simulate_with<T: JsonRpcTransport>(
     // Reject malformed, unknown or unsupported wire formats before any RPC call.
     let decoded = hguet_core::parse_transaction(wire).map_err(|_| RpcError::InvalidResponse)?;
     let genesis = verify_rpc_genesis(transport, endpoint, network)?;
-    let request = json!({
+    let lookup_resolution = if decoded.lookup_table_count > 0 {
+        Some(alt::resolve_v0_lookups(transport, endpoint, &decoded)?)
+    } else { None };
+    let mut request = json!({
         "jsonrpc": "2.0", "id": 2, "method": "simulateTransaction",
         "params": [STANDARD.encode(wire), {
             "encoding": "base64",
@@ -172,11 +178,19 @@ pub fn simulate_with<T: JsonRpcTransport>(
             "innerInstructions": true
         }]
     });
+    if let Some(ref lookup) = lookup_resolution {
+        // Avoid simulating at an older bank context than the observed lookup.
+        // This still does NOT give an atomic single-slot snapshot.
+        request["params"][1]["minContextSlot"]=json!(lookup.context_slot);
+    }
     let reply = checked_result(transport.post_json(endpoint,&request)?,2)?;
     let result = reply.as_object().ok_or(RpcError::InvalidResponse)?;
     let slot = result.get("context").and_then(|c| c.get("slot"))
         .and_then(Value::as_u64).filter(|slot| *slot > 0)
         .ok_or(RpcError::InvalidResponse)?;
+    if lookup_resolution.as_ref().is_some_and(|lookup| slot<lookup.context_slot) {
+        return Err(RpcError::InvalidResponse);
+    }
     let body = result.get("value").and_then(Value::as_object)
         .ok_or(RpcError::InvalidResponse)?;
     if !body.contains_key("err") { return Err(RpcError::InvalidResponse); }
@@ -215,6 +229,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
         inner_instruction_groups,
         replacement_blockhash_present: body.get("replacementBlockhash")
             .is_some_and(|x| !x.is_null()),
+        lookup_resolution,
         limitation: "Single-provider RPC simulation is advisory, uses replacement blockhash and does not verify resulting onchain execution, CPI completeness, authorization, or future account state".into(),
     })
 }
