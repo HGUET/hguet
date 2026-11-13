@@ -56,4 +56,29 @@ if len(sys.argv)>3:
     assert "RPC_SIMULATION_ONLY" not in codes
     assert "WIRE_TOKEN_DIRECT_ALT_UNRESOLVED" not in codes
     print("PASS: original-wire TransferChecked detected offline, no ALLOW or simulated effects")
+if len(sys.argv)>5:
+    permitted = json.loads(Path(sys.argv[4]).read_text())
+    rejected = json.loads(Path(sys.argv[5]).read_text())
+    for value in (permitted,rejected):
+        Draft202012Validator(schema).validate(value["verdict"])
+    assert permitted["verdict"]["decision"]=="UNKNOWN"
+    assert permitted["verdict"]["intent_status"]=="signature_verified"
+    assert permitted["verdict"]["simulation_status"]=="not_performed"
+    assert "signed_direct_token_debit_limits" in permitted["verdict"]["coverage"]
+    review = permitted["signed_token_spend_review"]
+    assert review["limits_enforced_on_direct_wire_declarations"] is True
+    assert review["total_spending_proven"] is False
+    assert review["coverage"]=="direct_checked_wire_declarations_only"
+    assert review["decoded_direct_debit_instructions"]==1
+    assert len(review["debits"])==1
+    assert review["debits"][0]["declared_raw"]=="1234"
+    assert review["debits"][0]["signed_limit_raw"]=="1234"
+    assert any(f["code"]=="SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE"
+               for f in permitted["verdict"]["findings"])
+    assert rejected["verdict"]["decision"]=="DENY"
+    assert rejected["verdict"]["intent_status"]=="rejected"
+    assert rejected["verdict"]["simulation_status"]=="not_performed"
+    assert any(f["code"]=="INTENT_REJECTED" and "exceed" in f["summary"]
+               for f in rejected["verdict"]["findings"])
+    print("PASS: exact-byte signed mint cap permits equal raw declared amount and rejects 1 over")
 print("PASS: legacy and v1 CLI JSON validated; unsupported onchain effects remain UNKNOWN")
