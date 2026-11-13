@@ -1184,6 +1184,99 @@ fn main(){
 }
 
 #[cfg(test)]
+mod aggregate_token_reporting_tests {
+    use super::*;
+    use hguet_rpc::{AggregateTokenSpending,AggregateMintView,AggregateSourceView};
+    fn sample()->AggregateTokenSpending{
+        AggregateTokenSpending{
+            simulation_slot:601,simulation_status:"rpc_succeeded",
+            signed_caps_supplied_by_verified_caller:true,
+            mints:vec![AggregateMintView{
+                mint:"mint".into(),signed_mint_cap_raw:Some("100".into()),
+                wire_checked_debit_raw:"70".into(),
+                rpc_cpi_checked_debit_raw:"70".into(),
+                rpc_negative_account_net_raw:"70".into(),
+                wire_exceeds_signed_cap:false,
+                rpc_cpi_exceeds_signed_cap:false,
+                rpc_negative_net_exceeds_signed_cap:false,
+                rpc_cpi_or_net_outside_signed_mint_list:false,
+            }],
+            sources:vec![AggregateSourceView{
+                mint:"mint".into(),source_token_account:"source".into(),
+                signed_source_cap_raw:Some("100".into()),
+                wire_checked_debit_raw:"70".into(),
+                rpc_cpi_checked_debit_raw:"70".into(),
+                rpc_negative_account_net_raw:"70".into(),
+                wire_exceeds_signed_cap:false,
+                rpc_cpi_exceeds_signed_cap:false,
+                rpc_negative_net_exceeds_signed_cap:false,
+                rpc_cpi_or_net_outside_signed_source_list:false,
+            }],
+            opaque_direct_token_instructions:0,
+            opaque_rpc_cpi_token_instructions:0,
+            unattributed_direct_debit_instructions:0,
+            unattributed_cpi_debit_instructions:0,
+            incomplete_token_balance_rows:0,
+            missing_token_balance_snapshot:false,
+            cpi_source_coverage_missing_or_incomplete:false,
+            authority_or_nondebit_operations_observed:false,
+            any_signed_cap_warning:false,
+            wire_cpi_and_net_amounts_never_added:true,
+            total_gross_token_spend_proven:false,
+            onchain_spend_limit_enforced:false,
+            execution_proven:false,
+            security_coverage:"partial_untrusted_rpc",limitation:"test",
+        }
+    }
+    #[test]
+    fn matched_three_70_views_do_not_raise_210_cap_warning(){
+        let r=sample();
+        let flags=aggregate_token_findings(&r).iter().map(|f|f.0)
+            .collect::<Vec<_>>();
+        assert_eq!(flags,vec!["RPC_AGGREGATE_TOKEN_NON_ADDITIVE"]);
+        assert!(!r.total_gross_token_spend_proven);
+        assert!(!r.onchain_spend_limit_enforced);
+    }
+    #[test]
+    fn cpi_and_net_mint_source_cap_risks_are_reported_separately(){
+        let mut r=sample();
+        r.mints[0].rpc_cpi_exceeds_signed_cap=true;
+        r.sources[0].rpc_cpi_exceeds_signed_cap=true;
+        r.mints[0].rpc_negative_net_exceeds_signed_cap=true;
+        r.sources[0].rpc_negative_net_exceeds_signed_cap=true;
+        let flags=aggregate_token_findings(&r).iter().map(|f|f.0)
+            .collect::<Vec<_>>();
+        for flag in [
+            "RPC_AGGREGATE_CPI_MINT_CAP_RISK",
+            "RPC_AGGREGATE_CPI_SOURCE_CAP_RISK",
+            "RPC_AGGREGATE_NET_MINT_CAP_RISK",
+            "RPC_AGGREGATE_NET_SOURCE_CAP_RISK",
+        ] {
+            assert!(flags.contains(&flag),"missing {flag}");
+        }
+        assert!(!flags.contains(&"RPC_AGGREGATE_WIRE_CAP_ANOMALY"));
+    }
+    #[test]
+    fn uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings(){
+        let mut r=sample();
+        r.mints[0].rpc_cpi_or_net_outside_signed_mint_list=true;
+        r.sources[0].rpc_cpi_or_net_outside_signed_source_list=true;
+        r.unattributed_cpi_debit_instructions=1;
+        r.opaque_rpc_cpi_token_instructions=1;
+        r.authority_or_nondebit_operations_observed=true;
+        let flags=aggregate_token_findings(&r).iter().map(|f|f.0)
+            .collect::<Vec<_>>();
+        for flag in [
+            "RPC_AGGREGATE_UNLISTED_MINT",
+            "RPC_AGGREGATE_UNLISTED_SOURCE",
+            "RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE",
+            "RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS",
+        ]{
+            assert!(flags.contains(&flag),"missing {flag}");
+        }
+    }
+}
+#[cfg(test)]
 mod cpi_source_reporting_tests {
     use super::*;
     use hguet_rpc::{CpiSourceCoverage,CpiSourceEvidence,CpiSourceClaim};
