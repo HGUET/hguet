@@ -22,15 +22,16 @@
 
 ## Implementation status — first Rust code (unreleased)
 
-**Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0 wire-structure** parsing, bounded input, SHA-256 message/transaction hashes, independent pinned-key **Ed25519 PaymentIntent verification**, an explicit UNKNOWN/DENY SecurityVerdict and real CI build/unit/JSON smoke checks.
+**Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0/v1 wire-format** decoding, bounded inputs, SHA-256 message/transaction hashes, local verification of provided **Ed25519 transaction signatures**, detection of top-level native **SOL System transfers**, and independently trusted **Ed25519 PaymentIntent** verification including a lower-bound spend-cap check. The prototype emits explicit UNKNOWN/DENY SecurityVerdicts and has Rust unit / end-to-end JSON smoke tests.
 
 **Future server address:** `vps-d0669a91.vps.ovh.net:443` is currently the hardcoded default for *future* opt-in Cloud use. `hguet config show --json` displays it offline. Cloud transport remains disabled until authenticated TLS and the signed-protocol workflow are implemented.
 
-**Not working yet:** Solana v1 decoding, address-lookup resolution, onchain simulation, CPI/token effects, spending-cap enforcement, Cloud networking, SOL settlement and signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
+**Not working yet:** v0 address-lookup resolution, RPC simulation, runtime CPI/Token-2022 effects, **full** spend-cap enforcement (including program-internal transfers and transaction fees), Cloud networking, SOL settlement or signed Cloud assessments. **Do not rely on this prototype to approve live funds.** It never emits ALLOW.
 
 ```sh
 cargo test --workspace
 cargo run -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json
+cargo run -p hguet -- inspect tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline --json
 ```
 
 The synthetic sample deliberately contains placeholder signatures and is **not a valid authorized payment**. See the [implementation README](docs/implementation/README.md) and [actual Rust CI](https://github.com/HGUET/hguet/actions/workflows/rust-ci.yml). No HGUET product release has been published.
