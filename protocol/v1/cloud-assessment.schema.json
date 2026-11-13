@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/cloud-assessment.schema.json",
+  "title": "HGUET CloudAssessment V1 (draft)",
+  "description": "Canonical JCS payload signed by private HGUET server; not the final CLI SecurityVerdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "tenant_scope",
+    "request_id",
+    "network",
+    "genesis_hash",
+    "message_sha256",
+    "intent_sha256",
+    "requested_profile",
+    "capabilities_performed",
+    "capabilities_unavailable",
+    "risk_snapshot_id",
+    "ruleset_version",
+    "findings",
+    "coverage",
+    "issued_at",
+    "expires_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "cloud_assessment"
+    },
+    "tenant_scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "network": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "genesis_hash": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "message_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "intent_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requested_profile": {
+      "enum": [
+        "strict",
+        "review",
+        "explore"
+      ]
+    },
+    "capabilities_performed": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 96
+      }
+    },
+    "capabilities_unavailable": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 96
+      }
+    },
+    "risk_snapshot_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "ruleset_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "severity",
+          "enforcement",
+          "evidence_refs"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "enforcement": {
+            "enum": [
+              "inform",
+              "warn",
+              "hard_deny"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "passed",
+        "unknown"
+      ],
+      "properties": {
+        "required": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 96
+          }
+        },
+        "passed": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 96
+          }
+        },
+        "unknown": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 96
+          }
+        }
+      }
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
