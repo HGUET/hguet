@@ -150,9 +150,10 @@ Read these companion specifications:
 3. [Intent & policy security model](security.md) — attacker model, authorization, spending, TOCTOU, privacy.
 4. [Verdict schema](verdict-schema.md) — stable JSON structure, precedence, evidence and examples.
 5. [Cloud protocol & PQ transport](cloud-protocol.md) — versioning, transport, enrollment and usage billing.
-6. [Testing, roadmap & release gates](testing-roadmap.md) — repeatable criteria and CI.
-7. [Architectural decisions](decisions.md) — accepted vs deferred choices.
-8. [Primary technical references](references.md) — external specs and compatibility checklist.
+6. [Rust implementation blueprint](implementation-blueprint.md) — crate interfaces, typed pipeline, dependency direction and first tickets.
+7. [Testing, roadmap & release gates](testing-roadmap.md) — repeatable criteria and CI.
+8. [Architectural decisions](decisions.md) — accepted vs deferred choices.
+9. [Primary technical references](references.md) — external specs and compatibility checklist.
 
 ## 7. Project-wide invariants
 
