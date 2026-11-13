@@ -287,6 +287,49 @@ mod tests {
             assert_eq!(validate_endpoint(bad),Err(RpcError::InvalidEndpoint),"{bad}");
         }
     }
+    #[test] fn simulation_exposes_exact_balance_and_token_effects_without_allow() {
+        let mut provider=fake(DEVNET_GENESIS,Value::Null);
+        let mint=bs58::encode([4u8;32]).into_string();
+        let token_row=|amount:&str|json!({
+            "accountIndex":0,"mint":mint,
+            "uiTokenAmount":{"amount":amount,"decimals":9}
+        });
+        provider.simulation=json!({"context":{"slot":60000},"value":{
+            "err":null,"preBalances":[5000],"postBalances":[4500],
+            "preTokenBalances":[token_row("999999999999")],
+            "postTokenBalances":[token_row("999999999998")],
+            "innerInstructions":[],"logs":[],"unitsConsumed":123,
+            "fee":500,"loadedAddresses":{"writable":[],"readonly":[]}
+        }});
+        let result=simulate_with(&provider,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
+        let effects=result.effect_analysis;
+        assert_eq!(effects.lamport_deltas.as_ref().unwrap()[0].delta_lamports,"-500");
+        assert_eq!(effects.token_deltas.as_ref().unwrap()[0].delta_raw_amount.as_deref(),Some("-1"));
+        assert!(effects.cpi.captured);
+        assert!(effects.cpi.invoked_program_ids.is_empty());
+        assert_eq!(effects.simulated_fee_lamports.as_deref(),Some("500"));
+        assert!(effects.missing_fields.is_empty());
+        assert_eq!(effects.security_coverage,"partial_untrusted_rpc");
+    }
+
+    #[test] fn incomplete_or_forged_rpc_effects_fail_closed() {
+        let mut provider=fake(DEVNET_GENESIS,Value::Null);
+        provider.simulation=json!({"context":{"slot":100},"value":{
+            "err":null,"preBalances":[1,2],"postBalances":[1],
+            "innerInstructions":[]}
+        });
+        assert_eq!(simulate_with(&provider,"https://rpc.example","devnet",&legacy_unsigned()).unwrap_err(),
+            RpcError::InvalidResponse);
+        provider.simulation=json!({"context":{"slot":100},"value":{
+            "err":null,"preBalances":[1],
+            "innerInstructions":null}
+        });
+        let r=simulate_with(&provider,"https://rpc.example","devnet",&legacy_unsigned()).unwrap();
+        assert!(r.effect_analysis.lamport_deltas.is_none());
+        assert!(!r.effect_analysis.cpi.captured);
+        assert!(!r.effect_analysis.missing_fields.is_empty());
+    }
+
     #[test] fn network_genesis_checked_before_any_simulation() {
         let fake=fake(MAINNET_GENESIS,Value::Null);
         let err=simulate_with(&fake,"https://example.org","devnet",&legacy_unsigned()).unwrap_err();
