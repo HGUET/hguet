@@ -45,6 +45,14 @@ hguet
 
 **Avoid “hguet pay”**: it implies wallet or transfer execution and violates the non-custodial product mandate.
 
+### Cloud mode and wallet distinction
+
+`--mode cloud` is canonical. A future `--cloud` shorthand is a convenience alias only; neither may be selected automatically by local-mode defaults. `hguet topup 10 --asset USDC` expresses a **human amount** of 10 USDC. The protocol translates it into a precise integer base-unit quote after mint/network verification; the server never trusts unvalidated float conversions.
+
+All enrollment, invoice display, balance, usage, and status actions happen through CLI. **The actual USDC transfer is signed by the customer's external wallet**, not by HGUET CLI. A Cloud-signed assessment does not make the composite local verdict server-signed.
+
+See the [shared interoperability contract](interoperability.md) and [public protocol draft](../../protocol/v1/README.md).
+
 ## 2. First-run examples
 
 Free analysis, no HGUET registration:
