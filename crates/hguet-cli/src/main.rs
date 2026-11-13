@@ -108,7 +108,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
                 match result {
                     Ok(_)=>{
                         verdict.intent_status="signature_verified".into();
-                        verdict.coverage.push("independently_pinned_intent_signature".into();
+                        verdict.coverage.push("independently_pinned_intent_signature".into());
                     }
                     Err(e)=>{
                         verdict.intent_status="rejected".into();
