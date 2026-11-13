@@ -2,7 +2,7 @@
 //! The instruction list is supplied by ONE untrusted RPC node. These are
 //! instruction claims, not a verified state transition, gross debit or consent.
 //! Token-2022 extensions are intentionally opaque pending dedicated decoders.
-use crate::RpcError;
+use crate::{extension_semantics::{inspect_token_2022_extension, Token2022ExtensionObservation}, RpcError};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -36,11 +36,11 @@ pub struct TokenCpiInstruction {
 
 pub(crate) enum TokenCpiDecode {
     Recognized(TokenCpiInstruction),
-    Opaque { extension: bool, missing_compiled: bool },
+    Opaque { extension: bool, missing_compiled: bool, observation: Option<Token2022ExtensionObservation> },
 }
 
 fn opaque(extension: bool, missing_compiled: bool) -> TokenCpiDecode {
-    TokenCpiDecode::Opaque { extension, missing_compiled }
+    TokenCpiDecode::Opaque { extension, missing_compiled, observation: None }
 }
 
 /// Called only for canonical Token or Token-2022 program IDs previously
@@ -191,7 +191,13 @@ pub(crate) fn decode_token_cpi(
         // Remaining base token instructions and ALL Token-2022 extensions
         // are opaque: their effects, including hooks and confidential flows,
         // may be security-critical.
-        _ => return Ok(opaque(extension, false)),
+        _ => return Ok(TokenCpiDecode::Opaque {
+            extension,
+            missing_compiled:false,
+            observation:if extension {
+                inspect_token_2022_extension(&bytes,&accounts,parent_index,inner_index)
+            } else { None },
+        }),
     }
     Ok(TokenCpiDecode::Recognized(item))
 }
