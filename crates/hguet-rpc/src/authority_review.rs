@@ -331,9 +331,9 @@ mod tests {
             limitation:"test".into(),
         };
         let token=snap("token_2022",Some(state(4,None,250,0)));
-        let signed=signed(TOKEN_2022_PROGRAM,5,"100");
+        let scope=signed(TOKEN_2022_PROGRAM,5,"100");
         let r=correlate_signed_source_authority_with_mints(
-            &signed,Some(&token),Some(&mint),600).unwrap();
+            &scope,Some(&token),Some(&mint),600).unwrap();
         assert_eq!(r.sources[0].authority_relationship,"observed_permanent_delegate");
         assert_eq!(r.sources[0].mint_permanent_delegate_matches_authority,Some(true));
         assert_eq!(r.sources[0].observed_mint_permanent_delegate.as_deref(),
