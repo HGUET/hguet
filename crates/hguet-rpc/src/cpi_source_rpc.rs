@@ -280,7 +280,10 @@ pub fn correlate_cpi_source_coverage(
     let claims=cpi_source_claims(effects)?;
     let (existing,_)=existing_address_sets(simulation_slot,primary,signed)?;
     if let Some(c)=cpi {
-        if c.simulation_slot!=simulation_slot||c.context_slot<simulation_slot||
+        let min_slot=simulation_slot
+            .max(primary.map_or(simulation_slot,|p|p.context_slot))
+            .max(signed.map_or(simulation_slot,|p|p.context_slot));
+        if c.simulation_slot!=simulation_slot||c.context_slot<min_slot||
            c.atomic_with_simulation||c.accounts.len()>MAX_CPI_SOURCE_QUERIES {
             return Err(RpcError::InvalidResponse);
         }
@@ -289,6 +292,21 @@ pub fn correlate_cpi_source_coverage(
             if !canonical(&item.address)||!seen.insert(&item.address)||
                 existing.contains(&item.address) {
                 return Err(RpcError::InvalidResponse);
+            }
+            let source_claims=claims.iter().filter(|x|x.source_account==item.address)
+                .collect::<Vec<_>>();
+            if source_claims.is_empty() ||
+               source_claims.iter().any(|x|x.declared_program!=item.declared_program) {
+                return Err(RpcError::InvalidResponse);
+            }
+            match (item.status,item.state.as_ref()) {
+                ("missing",None) if item.program_matches_cpi.is_none()=>{},
+                ("other_program",None) if item.program_matches_cpi==Some(false)=>{},
+                ("legacy_token",Some(state)) if state.token_account==item.address &&
+                    item.program_matches_cpi==Some(item.declared_program==TOKEN_PROGRAM)=>{},
+                ("token_2022",Some(state)) if state.token_account==item.address &&
+                    item.program_matches_cpi==Some(item.declared_program==TOKEN_2022_PROGRAM)=>{},
+                _=>return Err(RpcError::InvalidResponse),
             }
         }
     }
@@ -568,6 +586,29 @@ mod tests {
                 "data":["!!!","base64"]}])};
         assert_eq!(fetch_missing_cpi_sources(&f,"https://example.org",600,
             &e,None,None).unwrap_err(),RpcError::InvalidResponse);
+    }
+    #[test]
+    fn supplemental_snapshot_cannot_claim_unrelated_source_or_older_bank(){
+        let e=effects(vec![claim("transfer_checked",3,Some(2))]);
+        let extra=CpiSourceRpcSnapshot{
+            simulation_slot:600,context_slot:602,atomic_with_simulation:false,
+            accounts:vec![CpiSourceAccountObservation{
+                address:key(4),declared_program:TOKEN_PROGRAM.into(),
+                program_matches_cpi:None,status:"missing",state:None,
+            }],
+            limitation:"test",
+        };
+        assert_eq!(correlate_cpi_source_coverage(600,&e,None,None,Some(&extra))
+            .unwrap_err(),RpcError::InvalidResponse);
+        let mut wrong=extra;
+        wrong.accounts[0].address=key(3);
+        wrong.accounts[0].declared_program=TOKEN_2022_PROGRAM.into();
+        assert_eq!(correlate_cpi_source_coverage(600,&e,None,None,Some(&wrong))
+            .unwrap_err(),RpcError::InvalidResponse);
+        wrong.accounts[0].declared_program=TOKEN_PROGRAM.into();
+        wrong.context_slot=599;
+        assert_eq!(correlate_cpi_source_coverage(600,&e,None,None,Some(&wrong))
+            .unwrap_err(),RpcError::InvalidResponse);
     }
     #[test]
     fn checked_fee_extension_source_is_distinguished_from_opaque_fee_flow(){
