@@ -50,7 +50,6 @@ pub(crate) struct CheckedDirectDebit {
     pub source_token_account:String,
     pub authority:String,
     pub amount_raw:u64,
-    pub instruction_index:usize,
     pub account_count:usize,
     pub exact_single_authority_count:usize,
 }
