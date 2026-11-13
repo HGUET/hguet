@@ -118,7 +118,7 @@ def main():
     cases = load("contract-cases.json")
     assert cases["status"] == "design_targets_not_executed"
     assert cases["protocol_major"] == 1 and cases["protocol_minor"] == 0
-    assert cases["design_version"] == "0.2-SOL-pay-per-check"
+    assert cases["design_status"] == "unreleased-draft-sol-pay-per-check"
     ids = [c["id"] for c in cases["cases"]]
     assert len(ids) >= 25 and len(set(ids)) == len(ids)
 
