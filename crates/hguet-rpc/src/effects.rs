@@ -476,6 +476,61 @@ mod tests {
         assert_eq!(r.cpi.missing_compiled_token_data_count,0);
         assert_eq!(r.security_coverage,"partial_untrusted_rpc");
     }
+    #[test] fn classify_observed_fee_hook_delegate_and_confidential_extensions_without_authorization() {
+        let mut t=tx();
+        t.static_account_keys = (1..=5).map(|i|bs58::encode([i;32]).into_string()).collect();
+        t.static_account_keys[0]=crate::token_semantics::TOKEN_2022_PROGRAM.into();
+        t.static_account_count=5;
+        t.total_address_count=5;
+        let mut fee=vec![26,1];
+        fee.extend(100u64.to_le_bytes());
+        fee.push(9);
+        fee.extend(4u64.to_le_bytes());
+        let mut delegate=vec![35];
+        delegate.extend([7u8;32]);
+        let mut hook=vec![36,1];
+        hook.extend([9u8;32]);
+        let data=json!({"innerInstructions":[{"index":0,"instructions":[
+            {"programIdIndex":0,"accounts":[1,2,3,4],
+             "data":bs58::encode(&fee).into_string()},
+            {"programIdIndex":0,"accounts":[1],
+             "data":bs58::encode(&delegate).into_string()},
+            {"programIdIndex":0,"accounts":[1,2],
+             "data":bs58::encode(&hook).into_string()},
+            {"programIdIndex":0,"accounts":[1,2],
+             "data":bs58::encode([27u8,3,0]).into_string()}
+        ]}]});
+        let r=inspect_simulation_effects(data.as_object().unwrap(),&t,None).unwrap();
+        assert!(r.cpi.token_instructions.is_empty());
+        assert_eq!(r.cpi.opaque_token_instruction_count,4);
+        assert_eq!(r.cpi.token_2022_extension_instruction_count,4);
+        assert_eq!(r.cpi.token_2022_extension_observations.len(),4);
+        assert_eq!(r.cpi.token_2022_extension_observations[0].family,"transfer_fee");
+        assert!(r.cpi.token_2022_extension_observations[0].layout_checked);
+        assert_eq!(r.cpi.token_2022_extension_observations[0].expected_fee_raw.as_deref(),Some("4"));
+        assert_eq!(r.cpi.token_2022_extension_observations[1].family,"permanent_delegate");
+        assert!(r.cpi.token_2022_extension_observations[1].layout_checked);
+        assert_eq!(r.cpi.token_2022_extension_observations[2].family,"transfer_hook");
+        assert!(r.cpi.token_2022_extension_observations[2].layout_checked);
+        assert_eq!(r.cpi.token_2022_extension_observations[3].family,"confidential_transfer");
+        assert!(!r.cpi.token_2022_extension_observations[3].layout_checked);
+        assert_eq!(r.security_coverage,"partial_untrusted_rpc");
+    }
+
+    #[test] fn truncated_fee_extension_is_only_family_hint() {
+        let mut t=tx();
+        t.static_account_keys[0]=crate::token_semantics::TOKEN_2022_PROGRAM.into();
+        let data=json!({"innerInstructions":[{"index":0,"instructions":[
+            {"programIdIndex":0,"accounts":[0,1],
+             "data":bs58::encode([26u8,1,99]).into_string()}
+        ]}]});
+        let r=inspect_simulation_effects(data.as_object().unwrap(),&t,None).unwrap();
+        assert_eq!(r.cpi.token_2022_extension_observations.len(),1);
+        assert!(!r.cpi.token_2022_extension_observations[0].layout_checked);
+        assert_eq!(r.cpi.token_2022_extension_observations[0].declared_amount_raw,None);
+        assert_eq!(r.cpi.token_2022_extension_observations[0].expected_fee_raw,None);
+        assert_eq!(r.cpi.opaque_token_instruction_count,1);
+    }
     #[test] fn provider_supplied_parsed_token_cpi_is_not_trusted_as_binary_decode() {
         let mut t = tx();
         t.static_account_keys[0] = crate::token_semantics::TOKEN_PROGRAM.into();
