@@ -5,7 +5,7 @@
 ## Files
 
 - [hguet.proto](hguet.proto): framed Protobuf messages for registration, devices, invoices, prepaid balance, cloud checks and status.
-- [cloud-assessment.schema.json](cloud-assessment.schema.json): canonical JSON data signed by HGUET Server for **CloudAssessment only**.
+- [cloud-assessment.schema.json](cloud-assessment.schema.json): canonical JSON data signed by HGUET Server for **CloudAssessment only**, including risk-source provenance and evidence manifest digest.
 - [contract-cases.json](contract-cases.json): cross-repo conformance test scenarios (requirements, not completed test results).
 - [Unified interoperability contract](../../docs/architecture/interoperability.md): normative roles, signing, precedence and billing policy.
 
