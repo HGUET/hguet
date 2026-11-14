@@ -517,7 +517,8 @@ def resilience():
         outputs.append(out)
     winners = sum(1 for out in outputs if b"signer_refusal" in out)
     check(tag + "8 concurrent clients with one intent_id: exactly one reaches the signer, journal has one marker",
-          winners == 1 and len(journal()) == 1, (winners, journal()))
+          winners == 1 and len(journal()) == 1,
+          (winners, journal(), [out[:40] for out in outputs]))
     check(tag + "all services still running", gw.poll() is None and backend.poll() is None)
     stop(gw)
     stop(backend)
