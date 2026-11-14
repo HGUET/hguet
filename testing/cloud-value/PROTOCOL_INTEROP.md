@@ -82,8 +82,11 @@ answer, and `combine()` leaves the local verdict untouched.
 ## 6. Questions for the protocol owners (not decided here)
 
 1. `Subject.category` has no value for a lookup table (`alt_table`); how should ALT-based risk be requested?
-2. Exact canonicalisation of `subjects_sha256` ("canonical sorted risk-subject set"). The benchmark uses
-   sha256(JCS(subjects sorted by (type, id))) and says so; confirm or replace.
+2. `subjects_sha256` and `evidence_digest` canonicalisation: the benchmark ADOPTED the HGUET/server S7.1 proposal
+   (`docs/architecture/canonical-contract-s7.md`, 176 vectors): subjects are `{category, network, subject_id}` sorted
+   byte-wise; `evidence_digest` is SHA-256 of the union manifest of the cited records. The proposal is still not
+   confirmed by the public protocol owner as a wire contract; the server cross-check
+   (`scripts/crosscheck_public.py`) reports 0 disagreements.
 3. Definition of `sources[].evidence_sha256` and `evidence_digest` (benchmark: sha256(JCS(record)) and
    sha256(JCS(sorted digests))).
 4. Redaction format of `ClientEvidence.canonical_local_evidence_json` (benchmark sends `{}`).

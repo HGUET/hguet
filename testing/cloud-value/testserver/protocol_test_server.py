@@ -143,7 +143,7 @@ class ProtocolTestServer:
             return self._error("ERROR_BAD_REQUEST", "hash length")
         subjects = [{"type": TYPE_FOR_CATEGORY.get(s["category"], s["category"]), "id": s["subject_id"]}
                     for s in req.get("subjects", [])]
-        if subjects_digest(subjects) != req["subjects_sha256"].hex():
+        if subjects_digest(subjects, req["network"]) != req["subjects_sha256"].hex():
             return self._error("ERROR_BAD_REQUEST", "subjects_sha256 does not match the subject set")
         due = USD_PRICE_MICROS * 10 ** 9 // SOL_USD_MICROS
         if due > int(req["maximum_lamports"]):

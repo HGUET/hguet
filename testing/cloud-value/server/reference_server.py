@@ -28,7 +28,7 @@ sys.path.insert(0, str(CV / "protocol"))
 import crypto_tx as ct  # noqa: E402
 import jcs  # noqa: E402
 import mldsa  # noqa: E402
-from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, fmt_time, parse_time, subjects_digest  # noqa: E402
+from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, evidence_digest, evidence_sha256, fmt_time, parse_time, subjects_digest  # noqa: E402
 
 COST_UNITS_PER_ASSESSMENT = 1.0  # nominal benchmark unit, NOT a price
 KEY_IDS = {"ML-DSA-87": "bench-issuer-mldsa87-1", "TEST-ONLY-ED25519": "bench-issuer-ed25519-1"}
@@ -39,7 +39,7 @@ def load_evidence(directory):
 
 
 def evidence_digest_of(record):
-    return hashlib.sha256(jcs.canonicalize(record)).hexdigest()
+    return evidence_sha256(record)
 
 
 class TestSigner:
@@ -144,7 +144,6 @@ class ReferenceCloudServer:
             passed.append("safety:subject_reputable")  # claimed without any supporting evidence
         unknown = [] if (adverse or benign) else ["subject_reputation"]
         cited = list({r["evidence_id"]: r for r in cited}.values())  # one source entry per evidence record
-        digests = sorted(evidence_digest_of(r) for r in cited)
         return {
             "schema_version": 1, "kind": "cloud_assessment", "network": request["network"],
             "genesis_hash": GENESIS[request["network"]], "message_sha256": request["message_sha256"],
@@ -152,7 +151,7 @@ class ReferenceCloudServer:
             "capabilities_performed": ["subject_reputation_lookup"],
             "capabilities_unavailable": ["onchain_simulation", "alt_resolution"],
             "risk_snapshot_id": "bench-evidence-snapshot-v1", "ruleset_version": "reference-ruleset-1",
-            "evidence_digest": hashlib.sha256(jcs.canonicalize(digests)).hexdigest(),
+            "evidence_digest": evidence_digest(cited),
             "sources": [{"source_id": r["evidence_id"], "kind": r["provenance"]["tier"],
                          "observed_at": r["observed_at"], "evidence_sha256": evidence_digest_of(r),
                          "freshness_seconds": max(0, int(now - parse_time(r["observed_at"])))} for r in cited],
@@ -160,7 +159,7 @@ class ReferenceCloudServer:
             "coverage": {"required": ["subject_reputation"], "passed": passed, "unknown": unknown},
             "issued_at": now_iso, "expires_at": fmt_time(now + 3600),
             "quote_id": request["message_sha256"][:32], "environment": ENVIRONMENT_FOR_NETWORK[request["network"]],
-            "data_scope": request["data_scope"], "subjects_sha256": subjects_digest(request["subjects"]),
+            "data_scope": request["data_scope"], "subjects_sha256": subjects_digest(request["subjects"], request["network"]),
             "transaction_sha256": request["transaction_sha256"],
         }
 

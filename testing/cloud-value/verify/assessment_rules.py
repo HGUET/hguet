@@ -33,7 +33,7 @@ sys.path.insert(0, str(CV / "protocol"))
 import crypto_tx as ct  # noqa: E402
 import jcs  # noqa: E402
 import mldsa  # noqa: E402
-from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, parse_time, subjects_digest  # noqa: E402
+from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, evidence_digest, evidence_sha256, parse_time, subjects_digest  # noqa: E402
 from trust import TrustStore  # noqa: E402
 
 REPO = CV.parents[1]
@@ -67,7 +67,7 @@ def _schema_errors(payload):
 
 
 def _digest(record):
-    return hashlib.sha256(jcs.canonicalize(record)).hexdigest()
+    return evidence_sha256(record)
 
 
 class Registry:
@@ -158,7 +158,7 @@ def verify(signed, request, registry, *, now_iso, mode="strict", trust=None, all
     if (assessment["message_sha256"] != request["message_sha256"]
             or assessment["transaction_sha256"] not in (None, request["transaction_sha256"])
             or assessment["intent_sha256"] not in (None, request["intent_sha256"])
-            or assessment["subjects_sha256"] != subjects_digest(request["subjects"])
+            or assessment["subjects_sha256"] != subjects_digest(request["subjects"], request["network"])
             or (expected_quote_id is not None and assessment["quote_id"] != expected_quote_id)):
         return discard("binding_mismatch")
     if assessment["network"] != request["network"] or assessment["genesis_hash"] != genesis_map.get(request["network"]):
@@ -176,8 +176,9 @@ def verify(signed, request, registry, *, now_iso, mode="strict", trust=None, all
         record = registry.by_id.get(source_id)
         ok = record is not None and _digest(record) == source["evidence_sha256"]
         result["source_status"][source_id] = "digest_ok" if ok else "digest_mismatch_or_unknown"
-    cited_digests = sorted(s["evidence_sha256"] for s in sources.values())
-    if assessment["evidence_digest"] != hashlib.sha256(jcs.canonicalize(cited_digests)).hexdigest():
+    # S7.1: evidence_digest is the digest of the union manifest of the cited records. It can only be recomputed
+    # from records this verifier holds, so a cited source it cannot reproduce makes the digest unverifiable.
+    if any(status != "digest_ok" for status in result["source_status"].values()) or             assessment["evidence_digest"] != evidence_digest([registry.by_id[sid] for sid in sources]):
         return discard("evidence_digest_mismatch")
     result["verified_evidence"] = sorted(
         sid for sid, status in result["source_status"].items()

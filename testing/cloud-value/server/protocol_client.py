@@ -143,7 +143,7 @@ def build_quote_request(request, claim_secret_sha256, maximum_lamports, genesis_
         "profile": request["profile"], "requested_capabilities": ["subject_reputation_lookup"],
         "scope": "DATA_SCOPE_METADATA_ONLY", "claim_secret_sha256": claim_secret_sha256,
         "maximum_lamports": str(maximum_lamports), "subjects": subjects,
-        "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"])),
+        "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"], request["network"])),
         "complexity": {"transaction_bytes": 0, "top_level_instructions": 0, "resolved_accounts": 0, "lookup_tables": 0,
                        "distinct_programs": 0, "risk_subjects": len(subjects), "verified_from_raw_transaction": False},
         "transaction_sha256": bytes.fromhex(request["transaction_sha256"]) if request.get("transaction_sha256") else b"",
@@ -165,7 +165,7 @@ def verify_quote(signed_quote, request, claim_commitment_hex, maximum_lamports, 
         raise ProtocolFailure("quote_schema_invalid", str(errors))
     expected = {"network": request["network"], "genesis_hash": genesis_map[request["network"]],
                 "message_sha256": request["message_sha256"], "claim_secret_sha256": claim_commitment_hex,
-                "subjects_sha256": subjects_digest(request["subjects"]), "data_scope": "metadata_only",
+                "subjects_sha256": subjects_digest(request["subjects"], request["network"]), "data_scope": "metadata_only",
                 "environment": ENVIRONMENT_FOR_NETWORK[request["network"]]}
     for field, value in expected.items():
         if payload[field] != value:
@@ -288,7 +288,7 @@ class RealServerAdapter:
             "profile": request["profile"], "requested_capabilities": ["subject_reputation_lookup"],
             "scope": "DATA_SCOPE_METADATA_ONLY", "raw_transaction_consent": False,
             "evidence": {"canonical_local_evidence_json": b"{}", "subjects": subjects, "local_decision": ""},
-            "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"])),
+            "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"], request["network"])),
         }
         session = self._session()
         try:
