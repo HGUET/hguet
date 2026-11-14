@@ -6,6 +6,7 @@ This directory is the **canonical public contract** shared by `HGUET/hguet` (Rus
 
 ## Files
 
+- [signing-boundary.schema.json](signing-boundary.schema.json) — CLI-only, non-authorizing **block-only** audit report for prospective customer-controlled signer implementations. The schema forbids `ALLOW`, any automated signing permission, or claims of proven bank execution/total spending; it is **not a signed protocol message or authorization token** and does not change PaymentIntent v1 signatures.
 - [hguet.proto](hguet.proto) — TLS-framed Protobuf: `PriceQuoteRequest`, `PriceQuoteResult`, `PaidCheckRequest`, `PaidCheckStatus`, pending `CheckReceipt`, terminal `CheckResult`.
 - [payment-quote.schema.json](payment-quote.schema.json) — JCS-canonical signed SOL/USD quote; **USD tariff is a price reference, not a token transfer**.
 - [payment-receipt.schema.json](payment-receipt.schema.json) — separately signed receipt for **one native SOL payment, one Cloud check**.
