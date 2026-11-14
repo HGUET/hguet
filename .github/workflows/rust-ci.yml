@@ -171,18 +171,18 @@ jobs:
           set -euo pipefail
           # Synthetic only. Root-owned source, policy and ELF, journal owned by
           # another unprivileged UID. No wallet, network connection or Cloud.
-          sudo install -d -m 755 /opt/hguet-ci-protected /opt/hguet-ci-protected/scripts /opt/hguet-ci-protected/bin
+          sudo install -d -m 755 /usr/lib/hguet-ci-protected /usr/lib/hguet-ci-protected/scripts /usr/lib/hguet-ci-protected/bin
           sudo install -d -m 755 /etc/hguet-ci-protected /var/lib/hguet-ci-protected
-          sudo install -m 644 scripts/run_signer_protected.py /opt/hguet-ci-protected/scripts/run_signer_protected.py
-          sudo install -m 644 scripts/run_signer_sandbox.py /opt/hguet-ci-protected/scripts/run_signer_sandbox.py
-          sudo install -m 755 target/debug/hguet-signer-isolate /opt/hguet-ci-protected/bin/hguet-signer-isolate
+          sudo install -m 644 scripts/run_signer_protected.py /usr/lib/hguet-ci-protected/scripts/run_signer_protected.py
+          sudo install -m 644 scripts/run_signer_sandbox.py /usr/lib/hguet-ci-protected/scripts/run_signer_sandbox.py
+          sudo install -m 755 target/debug/hguet-signer-isolate /usr/lib/hguet-ci-protected/bin/hguet-signer-isolate
           sudo install -d -m 700 -o "$(id -u nobody)" -g "$(id -g nobody)" /var/lib/hguet-ci-protected/replay
-          digest="$(sha256sum /opt/hguet-ci-protected/bin/hguet-signer-isolate | cut -d' ' -f1)"
+          digest="$(sha256sum /usr/lib/hguet-ci-protected/bin/hguet-signer-isolate | cut -d' ' -f1)"
           HGUET_TEST_HASH="$digest" python - <<'PY' > /tmp/hguet-ci-protected-policy.json
           import json,os
           print(json.dumps({
               "schema_version":1,"kind":"hguet_protected_signer_policy",
-              "binary":"/opt/hguet-ci-protected/bin/hguet-signer-isolate",
+              "binary":"/usr/lib/hguet-ci-protected/bin/hguet-signer-isolate",
               "binary_sha256":os.environ["HGUET_TEST_HASH"],
               "network":"devnet",
               "trusted_key":"2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ",
@@ -190,9 +190,9 @@ jobs:
           },sort_keys=True))
           PY
           sudo install -m 644 /tmp/hguet-ci-protected-policy.json /etc/hguet-ci-protected/policy.json
-          trap 'sudo rm -rf /opt/hguet-ci-protected /etc/hguet-ci-protected /var/lib/hguet-ci-protected; rm -f /tmp/hguet-ci-protected-policy.json' EXIT
+          trap 'sudo rm -rf /usr/lib/hguet-ci-protected /etc/hguet-ci-protected /var/lib/hguet-ci-protected; rm -f /tmp/hguet-ci-protected-policy.json' EXIT
           python scripts/check_protected_signer_installed.py \
-            /opt/hguet-ci-protected/scripts/run_signer_protected.py \
+            /usr/lib/hguet-ci-protected/scripts/run_signer_protected.py \
             /etc/hguet-ci-protected/policy.json \
             /var/lib/hguet-ci-protected/replay
       - name: Assert signer-preflight is offline, cryptographic and permanently blocked
