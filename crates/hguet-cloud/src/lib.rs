@@ -5,7 +5,11 @@
 //! Every function returns a stable error code that matches the server's golden vectors
 //! (`tests/vectors.rs` reproduces them from `testing/cloud-value/protocol/s7-client-vectors.json`).
 
+mod evidence_validate;
 pub mod proto_policy;
+mod strict_json;
+
+pub use evidence_validate::{validate_client_evidence, EvidenceStatus, CLIENT_EVIDENCE_MAX_BYTES};
 #[rustfmt::skip] // generated file: kept byte-identical to gen_proto_table.py output
 mod proto_table;
 
@@ -198,7 +202,7 @@ pub fn solana_signature(text: &str) -> Result<[u8; 64]> {
 
 pub const CLIENT_EVIDENCE_DECISIONS: [&str; 4] = ["ALLOW", "WARN", "DENY", "UNKNOWN"];
 
-fn code_ok(text: &str) -> bool {
+pub(crate) fn code_ok(text: &str) -> bool {
     let b = text.as_bytes();
     (1..=128).contains(&b.len())
         && b[0].is_ascii_uppercase()
@@ -206,7 +210,7 @@ fn code_ok(text: &str) -> bool {
             .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == b'_')
 }
 
-fn coverage_ok(text: &str) -> bool {
+pub(crate) fn coverage_ok(text: &str) -> bool {
     let b = text.as_bytes();
     (1..=96).contains(&b.len())
         && b[0].is_ascii_lowercase()

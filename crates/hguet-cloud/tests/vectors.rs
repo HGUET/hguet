@@ -3,7 +3,7 @@
 
 use hguet_cloud::{
     build_client_evidence, memo_reference, proto_policy, solana_signature, subjects_sha256_hex,
-    Subject,
+    validate_client_evidence, EvidenceStatus, Subject,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -169,4 +169,46 @@ fn the_envelope_policy_matches_every_proto_policy_vector() {
         n += 1;
     }
     assert!(n >= 20, "too few proto_policy vectors: {n}");
+}
+
+#[test]
+fn the_validator_matches_every_client_evidence_vector() {
+    let mut n = 0;
+    for case in vectors().iter().filter(|c| c["algo"] == "client_evidence") {
+        let input = &case["input"];
+        let bytes = unhex(input["bytes_hex"].as_str().unwrap());
+        let actual = validate_client_evidence(&bytes, input["local_decision"].as_str().unwrap());
+        let expect = &case["expect"];
+        if expect["ok"].as_bool().unwrap() {
+            let want = if expect["result"] == "ABSENT" {
+                EvidenceStatus::Absent
+            } else {
+                EvidenceStatus::Valid
+            };
+            assert_eq!(actual, Ok(want), "{}", case["id"]);
+        } else {
+            assert_eq!(
+                actual.unwrap_err().code(),
+                expect["error"].as_str().unwrap(),
+                "{}",
+                case["id"]
+            );
+        }
+        n += 1;
+    }
+    assert!(n >= 19, "too few client_evidence vectors: {n}");
+}
+
+#[test]
+fn builder_output_always_validates() {
+    let bytes = build_client_evidence("DENY", &["B_CODE".into(), "A_CODE".into()], &["alt".into()])
+        .unwrap();
+    assert_eq!(
+        validate_client_evidence(&bytes, "DENY"),
+        Ok(EvidenceStatus::Valid)
+    );
+    assert_eq!(
+        validate_client_evidence(&bytes, "WARN").unwrap_err().code(),
+        "CLIENT_EVIDENCE_DECISION_MISMATCH"
+    );
 }

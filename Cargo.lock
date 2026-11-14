@@ -253,6 +253,7 @@ name = "hguet-cloud"
 version = "0.0.0"
 dependencies = [
  "bs58",
+ "serde",
  "serde_json",
  "sha2",
 ]

@@ -119,4 +119,4 @@ answer, and `combine()` leaves the local verdict untouched.
 * `hguet-cloud::proto_policy` applies the same critical/unknown-field policy in Rust and reproduces all 22 proto-policy
   vectors; its field table (`proto_table.rs`) is generated from `protocol/v1/hguet.proto` by
   `testing/cloud-value/tools/gen_proto_table.py`, and a test fails if the table drifts from the schema.
-
+* `hguet-cloud::validate_client_evidence` (strict JSON: no duplicate keys/floats/BOM) validates stored or received ClientEvidence and reproduces all 19 client-evidence vectors with the same error codes.
