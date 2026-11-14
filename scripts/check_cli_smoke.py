@@ -7,10 +7,12 @@ from jsonschema import Draft202012Validator
 
 base = Path(__file__).resolve().parents[1]
 schema = json.loads((base/"protocol/v1/security-verdict.schema.json").read_text())
+boundary_schema = json.loads((base/"protocol/v1/signing-boundary.schema.json").read_text())
 report = json.loads(Path(sys.argv[1]).read_text())
 Draft202012Validator(schema).validate(report["verdict"])
 def assert_block_only_signing(report, *, has_pinned_intent=False):
     boundary=report["signing_boundary"]
+    Draft202012Validator(boundary_schema).validate(boundary)
     assert boundary["version"]==1
     assert boundary["signing_gate"]=="block"
     assert boundary["automated_signing_permitted"] is False
