@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-"""Live multi-UID test of the BLOCK-only admission gateway (Linux, needs root).
+"""Live multi-UID test of the BLOCK-only admission architecture (Linux, root).
 
-Three dedicated, unprivileged, throw-away accounts:
-  svc      - runs the admission gateway + protected launcher (service identity)
-  allowed  - the only UID listed in the admission policy
-  denied   - member of the same socket group (so it CAN connect) but NOT admitted
-plus `nobody`, which is outside the socket group.
+Throw-away unprivileged accounts:
+  gw       gateway UID in the SPLIT topology (no access to the replay journal)
+  signer   journal owner / backend UID (also the gateway UID in SINGLE topology)
+  allowed  the only client UID admitted by the gateway
+  denied   same socket group as `allowed` (can connect) but NOT admitted
+  nobody   outside every socket group
 
-Path under test:
-  Unix socket -> SO_PEERCRED -> protected launcher -> replay journal
-  -> Bubblewrap -> BLOCK
+Topology SINGLE: gateway and journal share the signer UID (documented bypass:
+any process under that UID can run the launcher directly).
+Topology SPLIT:  client -> gateway(gw) -> backend(signer, journal owner) ->
+Bubblewrap -> BLOCK. The gateway UID can no longer run the launcher or open the
+journal, closing the gateway-account bypass.
 
-Nothing here signs, holds a key, touches the network or any wallet. The signed
-intent is the public synthetic 0x2a test fixture. Every system object created
-is removed again. Prints SKIP (exit 0) when the environment cannot run it; a
-SKIP is NOT a PASS and callers must report it as such.
+Nothing here signs, holds a key, uses the network or a wallet. The signed intent
+is the public synthetic 0x2a test fixture. All system objects are removed again.
+
+Exit codes: 0 PASS, 1 FAIL. Environment limits print SKIP and exit 0 UNLESS
+HGUET_REQUIRE_LIVE=1, where a SKIP is a FAIL (a skipped security test is not a
+passed one).
 """
 import grp
 import hashlib
@@ -22,7 +27,7 @@ import json
 import os
 import pwd
 import shutil
-import socket
+import signal
 import subprocess
 import sys
 import time
@@ -31,66 +36,76 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BIN = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "target/debug/hguet-signer-isolate").resolve()
 PIN = "2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ"
-LIB = Path("/usr/lib/hguet-t-admission")
-ETC = Path("/etc/hguet-t-admission")
-VAR = Path("/var/lib/hguet-t-admission")
-RUN = Path("/run/hguet-t-admission")
-SOCK = RUN / "admission.sock"
+LIB, ETC, VAR = Path("/usr/lib/hguet-t-admission"), Path("/etc/hguet-t-admission"), Path("/var/lib/hguet-t-admission")
+RUN_GW, RUN_BK = Path("/run/hguet-t-admission"), Path("/run/hguet-t-backend")
+SOCK, BSOCK = RUN_GW / "admission.sock", RUN_BK / "backend.sock"
 JOURNAL = VAR / "replay"
-SVC, ALLOWED, DENIED, GROUP = "hguett-svc", "hguett-ok", "hguett-no", "hguett-clients"
+GW, SIGNER, ALLOWED, DENIED = "hguett-gw", "hguett-sg", "hguett-ok", "hguett-no"
+CLIENTS, BACKEND = "hguett-clients", "hguett-bk"
+USERS, GROUPS = (GW, SIGNER, ALLOWED, DENIED), (CLIENTS, BACKEND)
+REQUIRE_LIVE = os.environ.get("HGUET_REQUIRE_LIVE") == "1"
 
 
 def skip(reason):
-    print("SKIP: " + reason)
+    if REQUIRE_LIVE:
+        print("FAIL: required live test cannot run (HGUET_REQUIRE_LIVE=1): " + reason)
+        sys.exit(1)
+    print("SKIP: " + reason + " -- NOT a pass; the property is unverified here")
     sys.exit(0)
 
 
 if sys.platform != "linux":
     skip("not Linux")
 if os.geteuid() != 0:
-    skip("root is required to create the three test identities")
-for tool in ("useradd", "userdel", "groupadd", "groupdel", "runuser"):
+    skip("root is required to create the test identities")
+for tool in ("useradd", "userdel", "groupadd", "groupdel", "runuser", "usermod", "gpasswd"):
     if not shutil.which(tool):
         skip(tool + " not available")
 if not BIN.exists():
     skip("signer binary not built: " + str(BIN))
 if not Path("/usr/bin/bwrap").exists():
     skip("bubblewrap not installed")
-for leftover in (LIB, ETC, VAR, RUN):
+for leftover in (LIB, ETC, VAR, RUN_GW, RUN_BK):
     if leftover.exists():
         skip("stale test directory present, refusing to touch it: " + str(leftover))
-for name in (SVC, ALLOWED, DENIED, GROUP):
+for name in USERS:
     try:
         pwd.getpwnam(name)
         skip("test account already exists: " + name)
     except KeyError:
         pass
+for name in GROUPS:
+    try:
+        grp.getgrnam(name)
+        skip("test group already exists: " + name)
+    except KeyError:
+        pass
 
 WIRE = (ROOT / "tests/fixtures/legacy-spl-transfer-checked-authority-signer.base64").read_text().strip()
 ENVELOPE = json.loads((ROOT / "tests/fixtures/signed-direct-token-source-cap-equal.json").read_text())
-REQUEST = json.dumps({
-    "schema_version": 1, "kind": "hguet_signer_preflight",
-    "original_transaction_b64": WIRE, "signed_intent": ENVELOPE,
-}).encode()
+REQUEST = json.dumps({"schema_version": 1, "kind": "hguet_signer_preflight",
+                      "original_transaction_b64": WIRE, "signed_intent": ENVELOPE}).encode()
 
 CLIENT = r"""
-import socket, sys
-s = socket.socket(socket.AF_UNIX)
-s.settimeout(30)
+import socket, sys, time
+s = socket.socket(socket.AF_UNIX); s.settimeout(30)
 try:
     s.connect(sys.argv[1])
 except OSError as e:
     print("CONNECT_FAILED " + e.__class__.__name__); sys.exit(3)
+data = sys.stdin.buffer.read()
 try:
-    s.sendall(sys.stdin.buffer.read()); s.shutdown(socket.SHUT_WR)
+    s.sendall(data)
+    if len(sys.argv) > 2:   # slow-drip mode: never finish the request
+        time.sleep(float(sys.argv[2]))
+    s.shutdown(socket.SHUT_WR)
 except OSError:
-    pass  # gateway may refuse and close before reading: that is the point
+    pass
 out = b""
 try:
     while True:
         b = s.recv(65536)
-        if not b:
-            break
+        if not b: break
         out += b
 except OSError:
     pass
@@ -100,204 +115,351 @@ sys.stdout.buffer.write(out)
 failures = []
 
 
-def check(name, condition, detail=""):
-    print(("  ok   " if condition else "  FAIL ") + name + ("" if condition else "  " + str(detail)))
-    if not condition:
+def check(name, ok, detail=""):
+    print(("  ok   " if ok else "  FAIL ") + name + ("" if ok else "  " + repr(detail)[:400]))
+    if not ok:
         failures.append(name)
 
 
-def sh(*cmd, **kw):
-    return subprocess.run(cmd, capture_output=True, timeout=60, **kw)
+def sh(*cmd):
+    return subprocess.run(cmd, capture_output=True, timeout=60)
 
 
 def as_user(user, *cmd, data=b""):
-    return subprocess.run(["runuser", "-u", user, "--", *cmd], input=data,
-                          capture_output=True, timeout=60)
+    return subprocess.run(["runuser", "-u", user, "--", *cmd], input=data, capture_output=True, timeout=60)
 
 
-def start_gateway():
-    proc = subprocess.Popen(
-        ["runuser", "-u", SVC, "--", "/usr/bin/python3",
-         str(LIB / "scripts/run_signer_admission.py"), "--admission", str(ETC / "admission.json")],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    for _ in range(100):
-        if SOCK.exists() or proc.poll() is not None:
-            break
-        time.sleep(0.05)
-    return proc
-
-
-def finish_gateway(proc):
-    try:
-        out, err = proc.communicate(timeout=40)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        out, err = proc.communicate()
-        return -9, out, err
-    return proc.returncode, out, err
+def uid(name):
+    return pwd.getpwnam(name).pw_uid
 
 
 def journal():
     return sorted(os.listdir(JOURNAL))
 
 
-def client(user, data=REQUEST):
-    return as_user(user, "/usr/bin/python3", "-I", "-c", CLIENT, str(SOCK), data=data)
+def clear_journal():
+    for name in journal():
+        os.unlink(JOURNAL / name)
+
+
+def client(user, data=REQUEST, *extra):
+    return as_user(user, "/usr/bin/python3", "-I", "-c", CLIENT, str(SOCK), *extra, data=data)
+
+
+def spawn(user, script, *args):
+    # setpriv execs the target directly (runuser would sit between us and the
+    # service, swallowing SIGTERM), so stop() signals the real service process.
+    return subprocess.Popen(["setpriv", "--reuid", str(uid(user)), "--regid", str(pwd.getpwnam(user).pw_gid),
+                             "--init-groups", "/usr/bin/python3", str(LIB / "scripts" / script), *args],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def wait_for(path, proc):
+    for _ in range(100):
+        if os.path.lexists(path) or proc.poll() is not None:
+            break
+        time.sleep(0.05)
+
+
+def finish(proc, timeout=40):
+    try:
+        out, err = proc.communicate(timeout=timeout)
+        return proc.returncode, out, err
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        out, err = proc.communicate()
+        return -9, out, err
+
+
+def stop(proc):
+    proc.send_signal(signal.SIGTERM)
+    return finish(proc, 10)
+
+
+def direct_launcher(user, data=REQUEST):
+    return as_user(user, "/usr/bin/python3", "-E", "-s", str(LIB / "scripts/run_signer_protected.py"),
+                   "--policy", str(ETC / "policy.json"), data=data)
+
+
+def refused(result):
+    return b"signer_refusal" not in result.stdout
+
+
+def mkdir_owned(path, owner, group, mode):
+    shutil.rmtree(path, ignore_errors=True)
+    path.mkdir(mode=0o700)
+    os.chown(path, uid(owner), grp.getgrnam(group).gr_gid)
+    os.chmod(path, mode)
+
+
+def write_cfg(split):
+    gw_cfg = {"schema_version": 1, "kind": "hguet_signer_admission", "socket_path": str(SOCK),
+              "allowed_client_uid": uid(ALLOWED), "protected_policy": str(ETC / "policy.json")}
+    if split:
+        gw_cfg.update(backend_socket=str(BSOCK), backend_uid=uid(SIGNER))
+    (ETC / "admission.json").write_text(json.dumps(gw_cfg, sort_keys=True))
+    (ETC / "backend.json").write_text(json.dumps({
+        "schema_version": 1, "kind": "hguet_signer_backend", "socket_path": str(BSOCK),
+        "allowed_gateway_uid": uid(GW), "protected_policy": str(ETC / "policy.json")}, sort_keys=True))
+    for name in ("admission.json", "backend.json"):
+        os.chmod(ETC / name, 0o644)
 
 
 def setup():
-    sh("groupadd", "--system", GROUP)
-    sh("useradd", "--system", "--no-create-home", "--shell", "/usr/sbin/nologin", SVC)
-    for user in (ALLOWED, DENIED):
-        sh("useradd", "--system", "--no-create-home", "--shell", "/usr/sbin/nologin",
-           "--groups", GROUP, user)
-    svc = pwd.getpwnam(SVC)
-    for path, mode in ((LIB, 0o755), (LIB / "scripts", 0o755), (LIB / "bin", 0o755),
-                       (ETC, 0o755), (VAR, 0o755)):
-        path.mkdir(mode=mode, parents=True)
-        os.chmod(path, mode)
-    for name in ("run_signer_admission.py", "run_signer_protected.py", "run_signer_sandbox.py"):
+    for group in GROUPS:
+        sh("groupadd", "--system", group)
+    for user, groups in ((GW, BACKEND), (SIGNER, None), (ALLOWED, CLIENTS), (DENIED, CLIENTS)):
+        cmd = ["useradd", "--system", "--no-create-home", "--shell", "/usr/sbin/nologin"]
+        if groups:
+            cmd += ["--groups", groups]
+        sh(*cmd, user)
+    for path in (LIB, LIB / "scripts", LIB / "bin", ETC, VAR):
+        path.mkdir(mode=0o755, parents=True, exist_ok=True)
+        os.chmod(path, 0o755)
+    for name in ("run_signer_admission.py", "run_signer_backend.py",
+                 "run_signer_protected.py", "run_signer_sandbox.py"):
         shutil.copy(ROOT / "scripts" / name, LIB / "scripts" / name)
         os.chmod(LIB / "scripts" / name, 0o644)
     shutil.copy(BIN, LIB / "bin/hguet-signer-isolate")
     os.chmod(LIB / "bin/hguet-signer-isolate", 0o755)
     JOURNAL.mkdir(mode=0o700)
-    os.chown(JOURNAL, svc.pw_uid, svc.pw_gid)
-    os.chmod(JOURNAL, 0o700)
-    # Service-owned socket directory: group may traverse, nobody may write/rename.
-    RUN.mkdir(mode=0o750)
-    os.chown(RUN, svc.pw_uid, grp.getgrnam(GROUP).gr_gid)
-    os.chmod(RUN, 0o2750)  # setgid: the socket inherits the client group
+    os.chown(JOURNAL, uid(SIGNER), pwd.getpwnam(SIGNER).pw_gid)
     digest = hashlib.sha256((LIB / "bin/hguet-signer-isolate").read_bytes()).hexdigest()
     (ETC / "policy.json").write_text(json.dumps({
         "schema_version": 1, "kind": "hguet_protected_signer_policy",
         "binary": str(LIB / "bin/hguet-signer-isolate"), "binary_sha256": digest,
         "network": "devnet", "trusted_key": PIN, "replay_directory": str(JOURNAL)}, sort_keys=True))
-    (ETC / "admission.json").write_text(json.dumps({
-        "schema_version": 1, "kind": "hguet_signer_admission", "socket_path": str(SOCK),
-        "allowed_client_uid": pwd.getpwnam(ALLOWED).pw_uid,
-        "protected_policy": str(ETC / "policy.json")}, sort_keys=True))
-    for name in ("policy.json", "admission.json"):
-        os.chmod(ETC / name, 0o644)
+    os.chmod(ETC / "policy.json", 0o644)
 
 
 def teardown():
-    for user in (ALLOWED, DENIED, SVC):
+    for user in USERS:
         sh("userdel", user)
-    sh("groupdel", GROUP)
-    for path in (LIB, ETC, VAR, RUN):
+    for group in GROUPS:
+        sh("groupdel", group)
+    for path in (LIB, ETC, VAR, RUN_GW, RUN_BK):
         shutil.rmtree(path, ignore_errors=True)
 
 
-def probe_sandbox_as_service():
-    # Fail closed is correct when namespaces are unavailable; but then the live
-    # BLOCK path cannot be exercised and this must be reported as SKIP.
-    result = as_user(SVC, "/usr/bin/bwrap", "--unshare-all", "--unshare-user", "--disable-userns",
-                     "--assert-userns-disabled", "--cap-drop", "ALL", "--ro-bind", "/usr", "/usr",
-                     "--ro-bind-try", "/lib", "/lib", "--ro-bind-try", "/lib64", "/lib64",
-                     "/usr/bin/true")
-    return result.returncode == 0
+def sandbox_works_for(user):
+    r = as_user(user, "/usr/bin/bwrap", "--unshare-all", "--unshare-user", "--disable-userns",
+                "--assert-userns-disabled", "--cap-drop", "ALL", "--ro-bind", "/usr", "/usr",
+                "--ro-bind-try", "/lib", "/lib", "--ro-bind-try", "/lib64", "/lib64", "/usr/bin/true")
+    return r.returncode == 0
 
 
-try:
-    setup()
-    if not probe_sandbox_as_service():
-        teardown()
-        skip("service identity cannot create the required Bubblewrap namespaces")
-    print("admission gateway: multi-UID live test")
+def start_stack(split):
+    """Return (gateway_user, backend_proc_or_None) with fresh socket directories."""
+    gateway_user = GW if split else SIGNER
+    mkdir_owned(RUN_GW, gateway_user, CLIENTS, 0o2750)
+    backend = None
+    if split:
+        mkdir_owned(RUN_BK, SIGNER, BACKEND, 0o2750)
+        backend = spawn(SIGNER, "run_signer_backend.py", "--backend", str(ETC / "backend.json"))
+        wait_for(BSOCK, backend)
+    return gateway_user, backend
 
-    # 1. Unauthorized UID: can connect (shared group) yet is refused by
-    #    SO_PEERCRED before any payload is read and before the journal exists.
-    gw = start_gateway()
+
+def start_gateway(gateway_user):
+    proc = spawn(gateway_user, "run_signer_admission.py", "--admission", str(ETC / "admission.json"))
+    wait_for(SOCK, proc)
+    return proc
+
+
+def common_scenarios(split):
+    tag = "[split] " if split else "[single] "
+    clear_journal()
+    gateway_user, backend = start_stack(split)
+
+    # Unauthorized UID: may connect (shared group), refused by SO_PEERCRED before
+    # any payload is read; the journal is never touched.
+    gw = start_gateway(gateway_user)
     result = client(DENIED)
-    code, out, err = finish_gateway(gw)
-    check("unauthorized UID gets blocked reply, no signer output",
-          b"HGUET_ADMISSION_BLOCKED" in result.stdout and b"signer_refusal" not in result.stdout, result)
-    check("gateway exits 40 and names the UID refusal", code == 40 and b"unauthorized peer UID" in err, (code, err))
-    check("replay journal untouched by unauthorized UID", journal() == [], journal())
-    check("gateway removed its own socket", not SOCK.exists())
+    code, out, err = finish(gw)
+    check(tag + "unauthorized UID gets blocked reply, no signer output",
+          b"HGUET_ADMISSION_BLOCKED" in result.stdout and refused(result), result.stdout)
+    check(tag + "gateway exits 40 naming the UID refusal", code == 40 and b"unauthorized peer UID" in err, (code, err))
+    check(tag + "journal untouched by unauthorized UID", journal() == [], journal())
+    check(tag + "gateway removed its own socket", not SOCK.exists())
 
-    # 2. Peer outside the socket group cannot even connect.
-    gw = start_gateway()
+    # Outsider cannot connect; nobody can unlink/rename the live socket.
+    gw = start_gateway(gateway_user)
     outsider = as_user("nobody", "/usr/bin/python3", "-I", "-c", CLIENT, str(SOCK), data=REQUEST)
-    check("peer outside socket group cannot connect", b"CONNECT_FAILED" in outsider.stdout, outsider)
-
-    # 3. Socket cannot be deleted/renamed/replaced by other UIDs while waiting.
+    check(tag + "peer outside socket group cannot connect", b"CONNECT_FAILED" in outsider.stdout, outsider.stdout)
+    probe = ("import os,sys\nbad=[]\n"
+             "for f in (lambda: os.unlink(sys.argv[1]), lambda: os.rename(sys.argv[1], sys.argv[1]+'.x')):\n"
+             "    try: f(); bad.append(1)\n    except OSError: pass\nprint('BAD' if bad else 'OK')")
     for user in (DENIED, ALLOWED, "nobody"):
-        r = as_user(user, "/usr/bin/python3", "-I", "-c",
-                    "import os,sys\n"
-                    "p=sys.argv[1]\n"
-                    "bad=[]\n"
-                    "for f in (lambda: os.unlink(p), lambda: os.rename(p,p+'.x')):\n"
-                    "    try: f(); bad.append('allowed')\n"
-                    "    except OSError: pass\n"
-                    "print('BAD' if bad else 'OK')", str(SOCK))
-        check("UID %s cannot unlink/rename the admission socket" % user, r.stdout.strip() == b"OK", r)
-    st = os.lstat(SOCK)
-    check("socket is service-owned 0660", st.st_uid == pwd.getpwnam(SVC).pw_uid and (st.st_mode & 0o777) == 0o660,
-          oct(st.st_mode))
+        r = as_user(user, "/usr/bin/python3", "-I", "-c", probe, str(SOCK))
+        check(tag + "UID %s cannot unlink/rename the admission socket" % user, r.stdout.strip() == b"OK", r.stdout)
 
-    # 4. Allowed UID reaches BLOCK through the sandbox; intent is reserved.
+    # Allowed UID -> sandboxed BLOCK; intent reserved.
     result = client(ALLOWED)
-    code, out, err = finish_gateway(gw)
+    code, out, err = finish(gw)
     try:
         refusal = json.loads(result.stdout)["signer_refusal"]
     except (ValueError, KeyError):
         refusal = {}
-    check("allowed UID receives sandboxed BLOCK refusal",
-          code == 20 and refusal.get("signing_gate") == "block"
-          and refusal.get("signing_permitted") is False
-          and refusal.get("signature_created") is False
-          and refusal.get("transaction_broadcast") is False, (code, result.stdout[:200], err[:300]))
-    check("intent signature verified inside sandbox but never approves",
+    check(tag + "allowed UID receives sandboxed BLOCK refusal",
+          code == 20 and refusal.get("signing_gate") == "block" and refusal.get("signing_permitted") is False
+          and refusal.get("signature_created") is False and refusal.get("transaction_broadcast") is False
+          and refusal.get("signer_backend_invoked") is False, (code, result.stdout[:200], err[:300]))
+    check(tag + "signature verified in sandbox yet never approved",
           refusal.get("independent_intent_signature_verified") is True
           and refusal.get("reason_code") == "SIGNER_SIDE_ENFORCEMENT_NOT_IMPLEMENTED", refusal)
-    check("exactly one replay marker reserved", len(journal()) == 1, journal())
-    marker_before = journal()
+    marker = journal()
+    check(tag + "exactly one replay marker reserved", len(marker) == 1, marker)
 
-    # 5. Replay of the same intent_id through the gateway is refused.
-    gw = start_gateway()
+    # Replay of the same intent_id.
+    gw = start_gateway(gateway_user)
     result = client(ALLOWED)
-    code, out, err = finish_gateway(gw)
-    # The gateway deliberately never forwards the child's stderr, so the cause
-    # is confirmed below by invoking the launcher directly as the service UID.
-    check("replayed intent_id refused by gateway, no signer output", code == 40
-          and b"HGUET_ADMISSION_BLOCKED" in result.stdout
-          and b"signer_refusal" not in result.stdout, (code, err[:300], result.stdout[:100]))
-    check("replay did not alter the journal", journal() == marker_before, journal())
+    code, out, err = finish(gw)
+    check(tag + "replayed intent_id refused, no signer output",
+          code == 40 and b"HGUET_ADMISSION_BLOCKED" in result.stdout and refused(result), (code, result.stdout[:100]))
+    check(tag + "replay did not alter the journal", journal() == marker, journal())
+    r = direct_launcher(SIGNER)
+    check(tag + "cause confirmed: REPLAY_BLOCKED", r.returncode == 40 and b"REPLAY_BLOCKED" in r.stderr, r.stderr[:200])
+    return gateway_user, backend, marker
 
-    # 6. Unprivileged callers cannot bypass the gateway by running the launcher.
+
+def single_only(gateway_user, marker):
+    tag = "[single] "
     for user in (ALLOWED, DENIED):
-        r = as_user(user, "/usr/bin/python3", "-E", "-s", str(LIB / "scripts/run_signer_protected.py"),
-                    "--policy", str(ETC / "policy.json"), data=REQUEST)
-        check("UID %s cannot run protected launcher directly" % user,
-              r.returncode == 40 and b"signer_refusal" not in r.stdout, (r.returncode, r.stderr[:200]))
-    check("direct attempts left journal unchanged", journal() == marker_before, journal())
-
-    # 7. KNOWN LIMITATION (documented, asserted so a behaviour change is noticed):
-    #    UID checks are not user authentication. Any process that already runs
-    #    as the service UID can invoke the protected launcher directly,
-    #    bypassing the gateway allow-list. It still gets only BLOCK.
-    r = as_user(SVC, "/usr/bin/python3", "-E", "-s", str(LIB / "scripts/run_signer_protected.py"),
-                "--policy", str(ETC / "policy.json"), data=REQUEST)
-    check("reserved intent_id is the cause of the refusal (REPLAY_BLOCKED)",
-          r.returncode == 40 and b"REPLAY_BLOCKED" in r.stderr, (r.returncode, r.stderr[:200]))
-    for name in journal():
-        os.unlink(JOURNAL / name)
-    r = as_user(SVC, "/usr/bin/python3", "-E", "-s", str(LIB / "scripts/run_signer_protected.py"),
-                "--policy", str(ETC / "policy.json"), data=REQUEST)
+        r = direct_launcher(user)
+        check(tag + "UID %s cannot run protected launcher directly" % user, r.returncode == 40 and refused(r), r.stderr[:200])
+    check(tag + "direct attempts left journal unchanged", journal() == marker, journal())
+    clear_journal()
+    r = direct_launcher(SIGNER)
     try:
         bypass = json.loads(r.stdout)["signer_refusal"]
     except (ValueError, KeyError):
         bypass = {}
-    check("service-UID bypass of gateway exists but is BLOCK-only (known limitation)",
-          r.returncode == 20 and bypass.get("signing_permitted") is False
-          and bypass.get("signature_created") is False, (r.returncode, r.stderr[:200]))
+    check(tag + "KNOWN LIMITATION: service UID bypasses gateway allow-list (BLOCK-only)",
+          r.returncode == 20 and bypass.get("signing_permitted") is False and bypass.get("signature_created") is False,
+          (r.returncode, r.stderr[:200]))
+    clear_journal()
+
+
+def split_only(backend, marker):
+    tag = "[split] "
+    # The gateway account can no longer reach the journal or run the launcher.
+    r = direct_launcher(GW)
+    check(tag + "gateway UID cannot run the protected launcher (bypass closed)",
+          r.returncode == 40 and refused(r), (r.returncode, r.stderr[:200]))
+    listing = as_user(GW, "/usr/bin/python3", "-I", "-c", "import os,sys\nprint(os.listdir(sys.argv[1]))", str(JOURNAL))
+    check(tag + "gateway UID cannot read the replay journal", listing.returncode != 0, listing.stdout)
+    check(tag + "gateway attempts left journal unchanged", journal() == marker, journal())
+
+    # Backend rejects any non-gateway peer, even one inside its socket group.
+    sh("usermod", "-aG", BACKEND, DENIED)
+    r = as_user(DENIED, "/usr/bin/python3", "-I", "-c", CLIENT, str(BSOCK), data=REQUEST)
+    sh("gpasswd", "-d", DENIED, BACKEND)
+    check(tag + "backend refuses non-gateway peer UID before reading payload",
+          b"HGUET_BACKEND_BLOCKED" in r.stdout and refused(r), r.stdout[:200])
+    check(tag + "backend peer refusal left journal unchanged", journal() == marker, journal())
+
+    # Service stop: backend gone -> gateway fails closed; restart keeps the journal.
+    code, out, err = stop(backend)
+    check(tag + "backend stop removes its socket and exits cleanly", code == 0 and not BSOCK.exists(), (code, err[:200]))
+    gw = start_gateway(GW)
+    r = client(ALLOWED)
+    code, out, err = finish(gw)
+    check(tag + "backend down: gateway fails closed, no signer output",
+          code == 40 and refused(r) and b"signer backend unavailable" in err, (code, err[:200]))
+    backend = spawn(SIGNER, "run_signer_backend.py", "--backend", str(ETC / "backend.json"))
+    wait_for(BSOCK, backend)
+    gw = start_gateway(GW)
+    r = client(ALLOWED)
+    code, out, err = finish(gw)
+    check(tag + "after restart the reserved intent_id is still refused",
+          code == 40 and refused(r) and journal() == marker, (code, journal()))
+
+    # Journal filesystem errors: fail closed, no signer output, no marker.
+    clear_journal()
+    for label, mode in (("read-only journal", 0o500), ("group-accessible journal", 0o770)):
+        os.chmod(JOURNAL, mode)
+        gw = start_gateway(GW)
+        r = client(ALLOWED)
+        code, out, err = finish(gw)
+        os.chmod(JOURNAL, 0o700)
+        check(tag + label + ": request refused, nothing reserved",
+              code == 40 and refused(r) and journal() == [], (code, journal()))
+
+    # Corrupted / hostile agent input never reaches the journal.
+    hostile = [b"", b"{", b"not json", b"\xff\xfe\x00", b"x" * 70000,
+               REQUEST.replace(b'"kind"', b'"kind":"dup","kind"', 1),
+               json.dumps({"schema_version": 1}).encode()]
+    for index, payload in enumerate(hostile):
+        gw = start_gateway(GW)
+        r = client(ALLOWED, payload)
+        code, out, err = finish(gw)
+        check(tag + "hostile request #%d refused" % index, code == 40 and refused(r) and journal() == [],
+              (code, journal()))
+
+    # Live slow-drip: total deadline, not per-recv.
+    gw = start_gateway(GW)
+    started = time.monotonic()
+    dripper = subprocess.Popen(["runuser", "-u", ALLOWED, "--", "/usr/bin/python3", "-I", "-c", CLIENT,
+                                str(SOCK), "12"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    dripper.stdin.write(b"{")
+    dripper.stdin.close()
+    code, out, err = finish(gw, 20)
+    elapsed = time.monotonic() - started
+    dripper.kill()
+    dripper.communicate()
+    check(tag + "slow-drip client cut off by the total deadline", code == 40 and elapsed < 10, (code, elapsed))
+    check(tag + "slow-drip left journal empty", journal() == [], journal())
+
+    # Socket substitution: a pre-existing path is refused and never deleted.
+    mkdir_owned(RUN_GW, GW, CLIENTS, 0o2750)
+    decoy = RUN_GW / "admission.sock"
+    decoy.write_text("decoy")
+    os.chown(decoy, uid(GW), 0)
+    gw = start_gateway(GW)
+    code, out, err = finish(gw)
+    check(tag + "pre-existing file at socket path: refused, decoy preserved",
+          code == 40 and b"already exists" in err and decoy.read_text() == "decoy", (code, err[:200]))
+    decoy.unlink()
+    os.symlink("/etc/passwd", decoy)
+    os.lchown(decoy, uid(GW), 0)
+    gw = start_gateway(GW)
+    code, out, err = finish(gw)
+    check(tag + "symlink at socket path: refused, link preserved and target untouched",
+          code == 40 and decoy.is_symlink() and os.readlink(decoy) == "/etc/passwd", (code, err[:200]))
+    decoy.unlink()
+
+    # Corrupted operator policy: refuse to start and expose no socket.
+    for target in ("admission.json", "policy.json"):
+        original = (ETC / target).read_text()
+        for broken in ("{", original[:-1] + ',"extra":1}', "\x00garbage"):
+            (ETC / target).write_text(broken)
+            gw = start_gateway(GW)
+            code, out, err = finish(gw)
+            check(tag + "corrupt %s refused at startup, no socket" % target,
+                  code == 40 and not SOCK.exists(), (code, err[:200]))
+        (ETC / target).write_text(original)
+        os.chmod(ETC / target, 0o644)
+    if backend:
+        stop(backend)
+
+
+try:
+    setup()
+    if not sandbox_works_for(SIGNER):
+        teardown()
+        skip("service identity cannot create the required Bubblewrap namespaces")
+    print("admission architecture: multi-UID live test")
+    write_cfg(split=False)
+    gateway_user, backend, marker = common_scenarios(split=False)
+    single_only(gateway_user, marker)
+    write_cfg(split=True)
+    gateway_user, backend, marker = common_scenarios(split=True)
+    split_only(backend, marker)
 finally:
     teardown()
 
 if failures:
     print("FAIL: " + "; ".join(failures))
     sys.exit(1)
-print("PASS: Unix socket -> SO_PEERCRED -> protected signer -> replay journal -> Bubblewrap -> BLOCK, "
-      "unauthorized/outsider/replay/direct-call refused, socket not removable by others")
+print("PASS: Unix socket -> SO_PEERCRED -> [gateway -> backend ->] replay journal -> Bubblewrap -> BLOCK; "
+      "unauthorized/outsider/replay/direct-call/hostile/timeout/socket-substitution/stop-restart cases refused")

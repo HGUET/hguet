@@ -179,3 +179,59 @@ launcher calls. It prints `SKIP` (not PASS) when root, the user tools or
 Bubblewrap namespaces are unavailable. Live validation on a production host
 and an independent security review are still outstanding. No signing, wallet,
 key custody, spending authorization or broadcast is enabled.
+
+## Split gateway / signer-backend identities (closes the gateway-account bypass)
+
+In the single-UID deployment above, any process under the service UID can run
+`run_signer_protected.py` directly and skip the client allow-list. The split
+topology removes that path for the **gateway** account:
+
+~~~text
+client UID --(SO_PEERCRED allow-list)--> gateway UID
+  --(unix socket; backend UID pinned via SO_PEERCRED)--> signer-backend UID
+  --> replay journal (0700, backend-owned) --> Bubblewrap --> BLOCK
+~~~
+
+* `scripts/run_signer_backend.py` (root-owned, runs as the **backend** UID)
+  is the only process that can open the replay directory. Its root-owned JSON
+  (`hguet_signer_backend`: `socket_path`, `allowed_gateway_uid`,
+  `protected_policy`) pins the single UID allowed to connect; every other peer
+  is refused before a payload byte is read or a marker is created.
+* The gateway admission JSON gains the optional pair `backend_socket` and
+  `backend_uid` (both or neither). With them the gateway never executes the
+  launcher: it relays the already bounded request, verifies the kernel-reported
+  UID of the backend socket equals `backend_uid`, bounds the reply, and
+  re-validates it as an unconditional BLOCK refusal.
+* The gateway UID, client UIDs and backend UID must all differ. The backend
+  socket directory is backend-owned, setgid to a group that contains only the
+  gateway account, non-world-accessible and not group-writable.
+* `--once` serves a single connection; otherwise the backend loops. SIGTERM
+  removes only the socket inode it created. The journal survives restarts; a
+  stale socket left by a crash is a configuration error and is never unlinked
+  automatically (use a service manager that recreates `/run` directories).
+
+**Remaining limits (unchanged trust boundaries):** this is still OS-UID
+isolation, not user authentication. A compromised gateway can submit requests
+as any client (the allow-list lives there); a compromised backend UID can burn
+or inspect journal entries; root compromise defeats everything. All paths are
+BLOCK-only: there is no key, no signing API and no transaction submission
+(enforced by `scripts/check_no_signing_paths.py`).
+
+## Mandatory live checks: SKIP is not a pass
+
+`HGUET_REQUIRE_LIVE=1` turns every environment-limited SKIP in
+`check_signer_sandbox_runtime.py`, `check_signer_admission_users.py` and
+`check_protected_signer_installed.py` into a failure. CI sets it. Without it
+a skipped run prints `SKIP ... NOT a pass`; report it as SKIP, never PASS.
+WSL2 with a recent kernel runs these live; when a host cannot create user
+namespaces use a full Linux VM and do not weaken the sandbox flags.
+
+## Negative-test coverage (`check_signer_admission_users.py`)
+
+Both topologies: unauthorized and outsider UIDs, socket unlink/rename by
+others, replayed `intent_id`. Split topology additionally: gateway UID cannot
+run the launcher or read the journal, backend refuses a non-gateway peer,
+backend stop/restart (journal persists, gateway fails closed while it is down),
+read-only and group-accessible journal, malformed/duplicate-key/oversized
+requests, slow-drip client, pre-existing file or symlink at the socket path,
+and corrupted operator JSON.
