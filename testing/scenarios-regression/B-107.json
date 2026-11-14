@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-107",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xMDciLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJlMGVjODQ1ZTMxMWZlZTg5MWFiOTIyM2QwYzBmNTkxZmQxZDc4MGEzZmI4ZjBkNWU4NGIxZmJkMjVlNTA3ZjI2Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "33vK16nHkFu5ZAxAbXznVTFtGHxV2PaSLViasuBJYMHVemHLK2svnbCQGh9jNFGAD6sXP3ZyzfWHLWVYrkfZiLNz",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "e0ec845e311fee891ab9223d0c0f591fd1d780a3fb8f0d5e84b1fbd25e507f26",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACAziDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8NPYQOLaBUFIghonDlfvRifD0KGrWvJe2yQW6I8zCicnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAgECAAMMAgAAAOgDAAAAAAAAAgEAAQEBSRbGTbHEjjQSQh9+vZhzhf1rjiENiC545ycX+2LrWggBAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "A custom program appears as a static key and is not allowlisted: the violation is proven regardless of the ALT.",
+  "smoke": false,
+  "title": "Unresolved lookup table cannot hide a statically visible forbidden program",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

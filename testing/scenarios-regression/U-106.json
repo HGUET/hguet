@@ -1,0 +1,47 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED"
+    ],
+    "findings_required": [
+      [
+        "INTENT_COVERAGE_INCOMPLETE"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-106",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMDYiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJkMDQ1ZGI5NjY5ZTY1OTcyNWE5YzliMGJlOWJmNWFhYTAyNGIwYWUwZDRlZWRhODhiMDRiY2FiOGIyNTkwNjFiIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "4Y2HACupxUkxSa6gfPayzRVqLxxfwmgX4gt5B2WXNeFQswwJ1H9f29dDnfZnFC3XhDog9X7ibdoDA1ozsr67Mh7r",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "d045db9669e659725a9c9b0be9bf5aaa024b0ae0d4eeda88b04bcab8b259061b",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQAAATiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAQEAAQEBb3556FfWooGme6boL6RnZNzDYwVY3da4MDet3VhqDDIAAQA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The called program is only an ALT index; it can neither be allowed nor refused.",
+  "smoke": false,
+  "title": "Program behind an unresolved lookup table with a valid intent",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

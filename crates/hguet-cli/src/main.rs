@@ -1,8 +1,9 @@
 mod cloud_config;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{
-    parse_transaction, unix_now, verify_intent, Decision, PaymentIntentPayload, SecurityVerdict,
-    SignedPaymentIntent, TransactionSignatureStatus,
+    parse_transaction, unix_now, verify_intent_detailed, Decision, IntentFailure,
+    PaymentIntentPayload, ScopeFinding, SecurityVerdict, SignedPaymentIntent,
+    TransactionSignatureStatus,
 };
 use hguet_policy::LocalPolicy;
 use hguet_rpc::{simulate_with, validate_endpoint, HttpsTransport};
@@ -1141,6 +1142,22 @@ fn signed_sol_intent_cannot_cap_direct_tokens(analysis: &hguet_rpc::DirectTokenA
     }) || !analysis.opaque.is_empty()
 }
 
+/// Structured, evidence-bearing view of account-control review results. Lives next to
+/// (not inside) `verdict` so the public SecurityVerdict schema is unchanged.
+fn scope_review_json(intent_id: &str, findings: &[ScopeFinding]) -> serde_json::Value {
+    json!({
+        "intent_id": intent_id,
+        "findings": findings.iter().map(|f| json!({
+            "code": f.code,
+            "severity": f.severity,
+            "kind": if f.violation { "violation" } else { "coverage_gap" },
+            "gap_reason": f.gap_reason,
+            "summary": f.summary,
+            "evidence_refs": f.evidence_refs,
+        })).collect::<Vec<_>>(),
+    })
+}
+
 fn execute(v: Args) -> (serde_json::Value, i32) {
     let mut verdict = SecurityVerdict::unknown(&v.network);
     let data = match read_transaction(&v.file, &v.encoding) {
@@ -1225,31 +1242,79 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
         }
     }
     let mut verified_intent: Option<PaymentIntentPayload> = None;
+    let mut intent_scope_review = serde_json::Value::Null;
     if v.command == "check" {
         match (&v.intent, &v.trusted_key) {
             (Some(path), Some(key)) => {
-                let result = limited_file(path, 16_384)
+                let envelope = limited_file(path, 16_384)
                     .and_then(|raw| {
                         serde_json::from_slice::<SignedPaymentIntent>(&raw)
                             .map_err(|_| "signed intent envelope JSON malformed".to_string())
                     })
-                    .and_then(|signed| {
-                        unix_now()
-                            .and_then(|now| verify_intent(&signed, key, &v.network, &parsed, now))
-                    });
+                    .and_then(|signed| unix_now().map(|now| (signed, now)));
+                let result = match envelope {
+                    Ok((signed, now)) => {
+                        verify_intent_detailed(&signed, key, &v.network, &parsed, now)
+                    }
+                    Err(message) => Err(IntentFailure::Violation {
+                        message,
+                        findings: vec![],
+                    }),
+                };
                 match result {
-                    Ok(payload) => {
-                        verified_intent = Some(payload);
+                    Ok(verified) => {
+                        if !verified.scope_gaps.is_empty() {
+                            for gap in &verified.scope_gaps {
+                                verdict.finding(gap.code, gap.severity, gap.summary.clone());
+                            }
+                            intent_scope_review =
+                                scope_review_json(&verified.intent.intent_id, &verified.scope_gaps);
+                        }
+                        verified_intent = Some(verified.intent);
                         verdict.intent_status = "signature_verified".into();
                         verdict
                             .coverage
                             .push("independently_pinned_intent_signature".into());
                     }
-                    Err(e) => {
+                    Err(IntentFailure::Coverage { reason, message }) => {
+                        // The signature WAS verified; nothing proves the intent violated.
+                        // Missing coverage is UNKNOWN, never INTENT_REJECTED.
+                        verdict.intent_status = "signature_verified_scope_incomplete".into();
+                        verdict
+                            .coverage
+                            .push("independently_pinned_intent_signature".into());
+                        verdict.finding(
+                            "INTENT_COVERAGE_INCOMPLETE",
+                            "high",
+                            format!("{message} [coverage_reason={reason}]"),
+                        );
+                        return (
+                            json!({"inspection":parsed,
+                            "coverage_gaps":[{"code":"INTENT_COVERAGE_INCOMPLETE","reason":reason,"detail":message,
+                                "violation_proven":false}],
+                            "verdict":verdict}),
+                            30,
+                        );
+                    }
+                    Err(IntentFailure::Violation { message, findings }) => {
                         verdict.intent_status = "rejected".into();
                         verdict.decision = Decision::Deny;
-                        verdict.finding("INTENT_REJECTED", "critical", e);
-                        return (json!({"inspection":parsed,"verdict":verdict}), 20);
+                        verdict.finding("INTENT_REJECTED", "critical", message);
+                        let mut review = serde_json::Value::Null;
+                        if !findings.is_empty() {
+                            for finding in findings.iter().filter(|f| f.violation) {
+                                verdict.finding(
+                                    finding.code,
+                                    finding.severity,
+                                    finding.summary.clone(),
+                                );
+                            }
+                            review = scope_review_json("(rejected intent)", &findings);
+                        }
+                        return (
+                            json!({"inspection":parsed,"intent_scope_review":review,"verdict":verdict}),
+                            20,
+                        );
                     }
                 }
             }
@@ -1282,7 +1347,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                 // verify_intent already ran this same bounded direct-wire check,
                 // but preserve an auditable per-mint summary in the CLI response.
                 // A failure here is never treated as a successfully signed cap.
-                match hguet_core::review_declared_token_limits(&parsed, caps) {
+                match hguet_core::review_declared_token_limits_detailed(&parsed, caps) {
                     Ok(review) => {
                         verdict
                             .coverage
@@ -1302,7 +1367,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
         if let Some(ref scopes) = intent.token_source_limits {
             // Exact-byte signing + source/signer-role enforcement ran in
             // verify_intent. Recompute once to expose bounded review evidence.
-            match hguet_core::review_declared_source_limits(&parsed, scopes) {
+            match hguet_core::review_declared_source_limits_detailed(&parsed, scopes) {
                 Ok(review) => {
                     verdict
                         .coverage
@@ -1598,6 +1663,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     json!({"inspection":parsed,"rpc_analysis":evidence,
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
+        "intent_scope_review":intent_scope_review.clone(),
                     "signed_source_account_snapshot":signed_source_account_snapshot,
                     "signed_source_authority_evidence":signed_source_authority_evidence,
                     "cpi_source_account_snapshot":cpi_source_account_snapshot,
@@ -1623,6 +1689,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     json!({"inspection":parsed,
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
+        "intent_scope_review":intent_scope_review.clone(),
                     "signing_boundary":signing_boundary,
                     "verdict":verdict}),
                     30,
@@ -1646,6 +1713,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
         json!({"inspection":parsed,
         "signed_token_spend_review":signed_token_spend_review,
         "signed_token_source_review":signed_token_source_review,
+        "intent_scope_review":intent_scope_review.clone(),
         "signing_boundary":signing_boundary,
         "verdict":verdict}),
         if v.command == "inspect" { 0 } else { 30 },

@@ -350,7 +350,9 @@ BLOCK-only is a separate invariant and is <b>not</b> counted as threat detection
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--hguet", default=str(ROOT / "target/debug/hguet"))
-    parser.add_argument("--scenarios", default=str(TESTING / "scenarios"))
+    parser.add_argument("--scenarios", default=None, help="explicit directory (overrides --suite)")
+    parser.add_argument("--suite", choices=("main", "regression", "all"), default="main",
+                        help="main = the 60 original scenarios; regression = paired cases for fixed defects")
     parser.add_argument("--subset", choices=("smoke", "all"), default="all")
     parser.add_argument("--out", default=str(TESTING / "reports/latest"))
     parser.add_argument("--known-defects", default=str(TESTING / "known_defects.json"))
@@ -359,7 +361,10 @@ def main():
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     known = json.loads(Path(args.known_defects).read_text()) if Path(args.known_defects).exists() else {}
-    scenarios = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(Path(args.scenarios).glob("*.json"))]
+    directories = [Path(args.scenarios)] if args.scenarios else {
+        "main": [TESTING / "scenarios"], "regression": [TESTING / "scenarios-regression"],
+        "all": [TESTING / "scenarios", TESTING / "scenarios-regression"]}[args.suite]
+    scenarios = [json.loads(p.read_text(encoding="utf-8")) for d in directories for p in sorted(d.glob("*.json"))]
     if args.subset == "smoke":
         scenarios = [s for s in scenarios if s["smoke"]]
     results, errors = [], []
@@ -379,7 +384,8 @@ def main():
         scored = evaluate(scenario, run, preflight)
         entry = scenario["id"]
         outcome = "PASS" if scored["failure_type"] is None else "FAIL"
-        if entry in known:
+        if entry in known and scored["failure_type"] != "invariant_violation":
+            # A documented defect may be an accuracy gap, but NEVER a violated signing-block invariant.
             outcome = "XFAIL" if outcome == "FAIL" else "XPASS"
         out_json = run["stdout_json"] if isinstance(run["stdout_json"], dict) else {}
         results.append({

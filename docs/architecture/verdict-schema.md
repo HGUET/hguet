@@ -106,6 +106,34 @@ This payload is **illustrative** and NOT a real HGUET check; the displayed build
 
 The placeholder network/genesis and slot values above must be replaced with observed facts at runtime; they are not hardcoded Solana state.
 
+## 2a. DENY versus missing coverage (implemented in the CLI)
+
+`DENY` is reserved for a **proven** violation. When the CLI cannot establish the facts it returns
+`UNKNOWN` with `INTENT_COVERAGE_INCOMPLETE` (never `INTENT_REJECTED`) and, next to `verdict`, a
+`coverage_gaps` array with a machine-readable reason. Reasons in use: `ALT_UNRESOLVED`,
+`MULTISIG_OR_EXTRA_ACCOUNTS`, `ACCOUNT_MANAGEMENT_NOT_COVERED`, `UNSUPPORTED_TOKEN_INSTRUCTION`,
+`ACCOUNT_CONTROL_SIGNER_BINDING_UNPROVEN`, `ACCOUNT_REFERENCE_UNRESOLVED`,
+`INSTRUCTION_BYTES_UNAVAILABLE`. A violation that is visible in statically resolved data still wins
+over a gap (an unresolved lookup table cannot hide an over-cap transfer or a forbidden program).
+
+Account-control instructions are judged against the verified intent (`intent_scope_review`, a
+sibling object so the `verdict` schema is unchanged; each entry has `code`, `kind`
+(`violation`|`coverage_gap`), `gap_reason` and `evidence_refs`):
+
+| Instruction | Condition | Result |
+|-------------|-----------|--------|
+| `SetAuthority` | new authority is neither the current authority nor a transaction signer | DENY `INTENT_SCOPE_AUTHORITY_TRANSFER` (+ `INTENT_REJECTED`) |
+| `SetAuthority` | target is a signer / current authority | UNKNOWN `TOKEN_AUTHORITY_CHANGE_UNPROVEN` |
+| `SetAuthority` | authority removed (None) | UNKNOWN `TOKEN_AUTHORITY_REVOKE_IRREVERSIBLE` |
+| `CloseAccount` | destination does not sign the transaction | DENY `INTENT_SCOPE_CLOSE_DESTINATION` (+ `INTENT_REJECTED`) |
+| `CloseAccount` | destination signs the transaction | UNKNOWN `TOKEN_CLOSE_DESTINATION_UNPROVEN` |
+
+Rationale: a PaymentIntent v1 has no field that can grant a change of account control, so a
+transfer of control (or of the balance, including wrapped SOL) to a non-signing third party is outside
+every intent by construction. Without a verified intent there is no scope: UNKNOWN. Revoke, SyncNative
+and Initialize* are administrative: UNKNOWN under token caps, not DENY. Unchecked Transfer, Approve,
+MintTo, Burn, Freeze/Thaw remain DENY under signed caps because the caps can never bound them.
+
 ## 3. Required fields and type choices
 
 - `schema_version` integer; never silently interpret a newer unknown major schema.
