@@ -260,8 +260,9 @@ def start_stack(split):
     return gateway_user, backend
 
 
-def start_gateway(gateway_user):
-    proc = spawn(gateway_user, "run_signer_admission.py", "--admission", str(ETC / "admission.json"))
+def start_gateway(gateway_user, *extra):
+    extra = extra or ("--once",)
+    proc = spawn(gateway_user, "run_signer_admission.py", "--admission", str(ETC / "admission.json"), *extra)
     wait_for(SOCK, proc)
     return proc
 
@@ -409,6 +410,23 @@ def split_only(backend, marker):
     dripper.communicate()
     check(tag + "slow-drip client cut off by the total deadline", code == 40 and elapsed < 10, (code, elapsed))
     check(tag + "slow-drip left journal empty", journal() == [], journal())
+
+    # Persistent gateway: refused and hostile peers cannot end the service
+    # (no one-shot DoS), and a later authorized request is still served.
+    clear_journal()
+    mkdir_owned(RUN_GW, GW, CLIENTS, 0o2750)
+    gw = spawn(GW, "run_signer_admission.py", "--admission", str(ETC / "admission.json"))
+    wait_for(SOCK, gw)
+    client(DENIED)
+    client(ALLOWED, b"not json")
+    check(tag + "persistent gateway survives refused and hostile peers", gw.poll() is None and journal() == [],
+          (gw.poll(), journal()))
+    r = client(ALLOWED)
+    served = b"signer_refusal" in r.stdout and len(journal()) == 1
+    code, out, err = stop(gw)
+    check(tag + "persistent gateway still serves an authorized request, then stops cleanly on SIGTERM",
+          served and code == 0 and not SOCK.exists(), (served, code, err[:200]))
+    clear_journal()
 
     # Socket substitution: a pre-existing path is refused and never deleted.
     mkdir_owned(RUN_GW, GW, CLIENTS, 0o2750)

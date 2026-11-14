@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-request local AF_UNIX admission gate for the BLOCK-only protected signer.
+"""Local AF_UNIX admission gate (serves until SIGTERM; --once for one request) for the BLOCK-only protected signer.
 
 Linux-only prototype. The gate runs under the dedicated signer-service UID,
 authenticates the connecting process with kernel SO_PEERCRED BEFORE invoking
@@ -180,6 +180,8 @@ def run(argv=None):
         raise protected.sandbox.SandboxError("admission requires Linux and non-root service UID")
     parser = protected.sandbox.Exit40Parser(description="one-shot kernel-credential admission for BLOCK-only signer")
     parser.add_argument("--admission", required=True)
+    parser.add_argument("--once", action="store_true",
+                        help="serve one connection then exit; default serves until SIGTERM")
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     protected._verify_launcher_install()
     admission_source = Path(__file__).absolute()
@@ -202,22 +204,29 @@ def run(argv=None):
         bound = os.lstat(path)
         bound_inode = (bound.st_dev, bound.st_ino)
         os.chmod(path, 0o660)
-        server.listen(1)
+        server.listen(8)
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-        server.settimeout(15)
-        with server.accept()[0] as connection:
-            connection.settimeout(SEND_TIMEOUT_SECONDS)
-            try:
-                output = admit_one(connection, cfg)
-                connection.sendall(output + (b"" if output.endswith(b"\n") else b"\n"))
-                return 20
-            except (protected.sandbox.SandboxError, OSError) as exc:
-                # Never forward child stderr or claim the attempt was approved.
+        status = 0
+        while True:
+            if args.once:
+                server.settimeout(15)
+            with server.accept()[0] as connection:
+                connection.settimeout(SEND_TIMEOUT_SECONDS)
                 try:
-                    connection.sendall(b"HGUET_ADMISSION_BLOCKED\n")
-                except OSError:
-                    pass
-                raise protected.sandbox.SandboxError("admission refused: " + str(exc)) from exc
+                    output = admit_one(connection, cfg)
+                    connection.sendall(output + (b"" if output.endswith(b"\n") else b"\n"))
+                    status = 20
+                except (protected.sandbox.SandboxError, OSError) as exc:
+                    # Never forward child stderr or claim the attempt was approved.
+                    try:
+                        connection.sendall(b"HGUET_ADMISSION_BLOCKED\n")
+                    except OSError:
+                        pass
+                    print("HGUET_ADMISSION_BLOCKED: admission refused: " + str(exc), file=sys.stderr)
+                    status = 40
+            if args.once:
+                # One-shot mode: a refused peer ends the run (used by tests).
+                return status
     finally:
         server.close()
         os.umask(previous)
