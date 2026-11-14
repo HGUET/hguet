@@ -61,7 +61,10 @@ def _secure_ancestors(path, owners):
             continue
         info = os.lstat(directory)
         if not stat.S_ISDIR(info.st_mode) or info.st_uid not in owners or info.st_mode & 0o022:
-            raise sandbox.SandboxError("untrusted or writable ancestor of protected path")
+            raise sandbox.SandboxError(
+                "untrusted or writable ancestor of protected path: "+
+                str(directory)+" (uid="+str(info.st_uid)+
+                ", mode="+oct(stat.S_IMODE(info.st_mode))+")")
 
 
 def _trusted_file(path):
