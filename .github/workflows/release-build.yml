@@ -19,7 +19,14 @@ jobs:
         with:
           toolchain: 1.100.0   # must match rust-toolchain.toml
       - name: Verify two builds from different directories are bit-identical
-        run: python scripts/build_release.py --verify-reproducible
+        shell: bash
+        run: |
+          python scripts/build_release.py --verify-reproducible > repro.out 2>&1 || {
+            echo "::error title=reproducibility ${{ matrix.os }}::$(tail -c 900 repro.out | tr -s '[:space:]' ' ')"
+            cat repro.out
+            exit 1
+          }
+          cat repro.out
       - name: Build artifacts and SHA-256 sums
         run: python scripts/build_release.py
       - name: Show hashes
