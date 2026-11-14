@@ -11,6 +11,7 @@ fn usage() -> &'static str {
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--rpc-url HTTPS_URL] [--encoding binary|base64|base58] [--json]\n\
+  hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet --help\n\
@@ -61,7 +62,9 @@ fn parse_args() -> Result<Args, String> {
             network:"mainnet".into(),encoding:"binary".into(),intent:None,
             trusted_key:None,policy:None,rpc_url:None,mode:"local".into(),offline:true });
     }
-    if cmd!="inspect" && cmd!="check" { return Err("unknown command".into()); }
+    if cmd!="inspect" && cmd!="check" && cmd!="signer-preflight" {
+        return Err("unknown command".into());
+    }
     let file=a.next().ok_or("missing transaction path")?;
     if file.starts_with('-') && file!="-" { return Err("invalid transaction path".into()); }
     if file=="-" { return Err("stdin not yet supported; use a bounded file".into()); }
@@ -86,7 +89,21 @@ fn parse_args() -> Result<Args, String> {
     if v.mode!="local" {return Err("Cloud/payment not implemented; no real funds may be sent".into());}
     if v.command=="inspect" && !v.offline { return Err("inspect must be explicitly --offline".into()); }
     if v.command=="inspect" && v.policy.is_some() { return Err("--policy requires check command".into()); }
-    if v.command=="check" && v.intent.is_none() { return Err("--intent FILE required".into()); }
+    if (v.command=="check" || v.command=="signer-preflight") && v.intent.is_none() {
+        return Err("--intent FILE required".into());
+    }
+    if v.command=="signer-preflight" {
+        if !v.offline {return Err("signer-preflight requires explicit --offline".into());}
+        if v.trusted_key.is_none(){
+            return Err("signer-preflight requires an independently configured --trusted-key".into());
+        }
+        if v.policy.is_some(){
+            return Err("signer-preflight cannot substitute a policy for signer authorization".into());
+        }
+        if v.rpc_url.is_some(){
+            return Err("signer-preflight never sends transaction bytes to RPC".into());
+        }
+    }
     if v.rpc_url.is_some() && (v.command!="check" || v.offline) {
         return Err("--rpc-url requires check command without --offline".into());
     }
@@ -1163,10 +1180,55 @@ fn execute(v:Args)->(serde_json::Value,i32){
         "signing_boundary":signing_boundary,
         "verdict":verdict}),if v.command=="inspect"{0}else{30})
 }
+/// Read-only signer-port experiment. No real wallet is reachable. A genuine
+/// device implementation is intentionally NOT linked into this CLI.
+struct DisabledSignerPort;
+impl hguet_signer::SignerBackend for DisabledSignerPort {
+    fn sign_transaction(&mut self,_original_transaction:&[u8])
+        ->Result<Vec<u8>,String>{
+        Err("HGUET has no signer device integration".into())
+    }
+}
+fn execute_signer_preflight(v:Args)->(serde_json::Value,i32){
+    let raw=match read_transaction(&v.file,&v.encoding){
+        Ok(raw)=>raw,
+        Err(e)=>return (json!({"code":"BAD_INPUT","error":e}),40),
+    };
+    let envelope=match v.intent.as_deref()
+        .ok_or_else(||"signed intent required".to_string())
+        .and_then(|path|limited_file(path,16_384))
+        .and_then(|bytes|serde_json::from_slice::<SignedPaymentIntent>(&bytes)
+            .map_err(|_|"signed intent envelope malformed".to_string())){
+        Ok(env)=>env,
+        Err(e)=>return (json!({"code":"BAD_SIGNED_INTENT","error":e}),40),
+    };
+    let now=match unix_now(){
+        Ok(now)=>now,
+        Err(e)=>return (json!({"code":"CLOCK_UNAVAILABLE","error":e}),40),
+    };
+    let mut disabled=DisabledSignerPort;
+    let request=hguet_signer::SignerRequest {
+        original_transaction:&raw,signed_intent:Some(&envelope),
+        independently_pinned_intent_signer:v.trusted_key.as_deref(),
+        network:&v.network,now_unix:now,
+    };
+    // The success type is Infallible; the port is never invoked, even for
+    // syntactically valid messages and independently signed intents.
+    let refusal=match hguet_signer::guarded_sign(&mut disabled,request) {
+        Err(refusal)=>refusal,
+        Ok(never)=>match never {},
+    };
+    (json!({"signer_refusal":refusal}),20)
+}
 fn main(){
     match parse_args(){
         Ok(v) if v.command=="--help" || v.command=="-h"=>{
             println!("{}",usage());process::exit(0)
+        }
+        Ok(v) if v.command=="signer-preflight"=>{
+            let (output,code)=execute_signer_preflight(v);
+            println!("{}",serde_json::to_string_pretty(&output).expect("JSON serialization"));
+            process::exit(code);
         }
         Ok(v) if v.command=="policy-validate"=>{
             let result=limited_file(&v.file,65_536)
