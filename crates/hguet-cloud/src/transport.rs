@@ -116,7 +116,12 @@ pub fn check_session_summary(summary: &str, host: &str) -> Result<()> {
 }
 
 /// Sends one encoded frame and returns the one response frame's decoded Envelope.
+///
+/// The connection is kept open (stdin is NOT closed after the request: s_client would otherwise shut down before the
+/// answer arrives) until one complete response frame has been read; then the client is stopped. The negotiated
+/// parameters are checked after the fact and a response that cannot be tied to the required profile is discarded.
 pub fn exchange(profile: &TlsProfile, request: &v1::Envelope) -> Result<v1::Envelope> {
+    use std::sync::mpsc;
     let frame = encode_frame(request)?;
     let args = profile.s_client_args()?;
     let mut child = Command::new(&profile.openssl)
@@ -138,16 +143,21 @@ pub fn exchange(profile: &TlsProfile, request: &v1::Envelope) -> Result<v1::Enve
         .stderr
         .take()
         .ok_or(Error("TRANSPORT_OPENSSL_UNAVAILABLE"))?;
-    // Writer and readers run on their own threads so a full pipe can never deadlock the exchange.
+    // Threads, so a full pipe can never deadlock the exchange. The writer holds stdin open until told to stop.
+    let (release, released) = mpsc::channel::<()>();
     let writer = std::thread::spawn(move || {
-        let _ = stdin.write_all(&frame); // dropping stdin signals the end of the request
+        let _ = stdin.write_all(&frame);
+        let _ = stdin.flush();
+        let _ = released.recv();
     });
+    let (chunks, received) = mpsc::channel::<Vec<u8>>();
     let out_reader = std::thread::spawn(move || {
-        let mut buffer = Vec::new();
-        let _ = (&mut stdout)
-            .take(MAX_FRAME_BYTES as u64 + 5)
-            .read_to_end(&mut buffer);
-        buffer
+        let mut buffer = [0_u8; 16 * 1024];
+        while let Ok(n) = stdout.read(&mut buffer) {
+            if n == 0 || chunks.send(buffer[..n].to_vec()).is_err() {
+                break;
+            }
+        }
     });
     let err_reader = std::thread::spawn(move || {
         let mut buffer = Vec::new();
@@ -156,29 +166,50 @@ pub fn exchange(profile: &TlsProfile, request: &v1::Envelope) -> Result<v1::Enve
             .read_to_end(&mut buffer);
         buffer
     });
+
     let deadline = Instant::now() + profile.timeout;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break Some(status),
-            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break None;
+    let mut body: Vec<u8> = Vec::new();
+    let outcome: Result<usize> = loop {
+        let wanted = match body.get(..4).and_then(|h| <[u8; 4]>::try_from(h).ok()) {
+            Some(h) => {
+                let length = u32::from_be_bytes(h) as usize;
+                if length == 0 || length > MAX_FRAME_BYTES {
+                    break Err(Error("FRAME_INVALID_LENGTH"));
+                }
+                Some(4 + length)
+            }
+            None => None,
+        };
+        if wanted.is_some_and(|w| body.len() >= w) {
+            break Ok(wanted.unwrap_or(0));
+        }
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            break Err(Error("TRANSPORT_TIMEOUT"));
+        }
+        match received.recv_timeout(left.min(Duration::from_millis(50))) {
+            Ok(chunk) => body.extend_from_slice(&chunk),
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                // The peer closed before a complete frame: a failed handshake or a truncated answer.
+                let failed = child.wait().map_or(true, |s| !s.success());
+                break Err(Error(if failed && body.is_empty() {
+                    "TRANSPORT_HANDSHAKE_FAILED"
+                } else {
+                    "FRAME_TRUNCATED"
+                }));
             }
         }
     };
+    let _ = release.send(());
+    let _ = child.kill();
+    let _ = child.wait();
     let _ = writer.join();
-    let body = out_reader.join().unwrap_or_default();
+    let _ = out_reader.join();
     let diagnostics = String::from_utf8_lossy(&err_reader.join().unwrap_or_default()).into_owned();
-    let Some(status) = status else {
-        return Err(Error("TRANSPORT_TIMEOUT"));
-    };
-    if !status.success() {
-        return Err(Error("TRANSPORT_HANDSHAKE_FAILED"));
-    }
+    let used = outcome?;
     check_session_summary(&diagnostics, &profile.host)?;
-    decode_frame(&body)
+    decode_frame(&body[..used.min(body.len())])
 }
 
 #[cfg(test)]

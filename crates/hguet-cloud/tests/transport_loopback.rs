@@ -204,7 +204,13 @@ fn the_profile_is_met_and_every_deviation_is_refused() {
     // 5. A conforming connection that returns a malformed frame yields an error, never a message.
     let port = free_port();
     let peer = serve(port, &key, &cert, "SecP384r1MLKEM1024", &[0, 0, 0, 5, 1, 2]);
-    assert!(exchange(&profile("localhost", port, &cert), &hello()).is_err());
+    let mut short = profile("localhost", port, &cert);
+    short.timeout = Duration::from_secs(2); // the peer never completes the frame, so the wait is bounded by the timeout
+    let code = exchange(&short, &hello()).unwrap_err().code();
+    assert!(
+        ["TRANSPORT_TIMEOUT", "FRAME_TRUNCATED"].contains(&code),
+        "{code}"
+    );
     finish(peer);
 
     // 6. Nothing listening: refused quickly, not hung.
