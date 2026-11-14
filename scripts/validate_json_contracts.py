@@ -14,7 +14,7 @@ def check(schema, value):
 
 def main():
     names = ["payment-intent", "signed-payment-intent", "security-verdict",
-             "signing-boundary"]
+             "signing-boundary", "signer-refusal"]
     schemas = {n:read(n+".schema.json") for n in names}
     for s in schemas.values(): Draft202012Validator.check_schema(s)
     intent = {
@@ -123,7 +123,31 @@ def main():
     assert list(Draft202012Validator(schemas["signing-boundary"]).iter_errors(forged))
     forged=dict(boundary,extra="unexpected")
     assert list(Draft202012Validator(schemas["signing-boundary"]).iter_errors(forged))
+    # An independently verified intent is still only an input to a permanent
+    # signer refusal. The public report may not claim hardware key usage.
+    refusal = {
+        "version":1,
+        "signing_gate":"block",
+        "signing_permitted":False,
+        "signer_backend_invoked":False,
+        "signature_created":False,
+        "transaction_broadcast":False,
+        "original_transaction_sha256":"cd"*32,
+        "original_message_sha256":"ab"*32,
+        "independent_intent_signature_verified":True,
+        "reason_code":"SIGNER_SIDE_ENFORCEMENT_NOT_IMPLEMENTED",
+        "signing_boundary":boundary,
+        "limitation":"No wallet signing or broadcast exists."
+    }
+    check(schemas["signer-refusal"],refusal)
+    check(schemas["signing-boundary"],refusal["signing_boundary"])
+    for field in [
+        "signing_permitted","signer_backend_invoked",
+        "signature_created","transaction_broadcast"
+    ]:
+        forged=dict(refusal,**{field:True})
+        assert list(Draft202012Validator(schemas["signer-refusal"]).iter_errors(forged))
     # SecurityVerdict schema permits future ALLOW, but current CLI NEVER emits it.
-    print("PASS: 4 draft schemas; signer boundary cannot claim ALLOW or execution enforcement.")
+    print("PASS: 5 draft schemas; no signer approval, hardware invocation or transaction broadcast.")
 
 if __name__=="__main__": main()
