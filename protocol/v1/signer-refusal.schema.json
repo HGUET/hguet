@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/signer-refusal.schema.json",
+  "title": "HGUET offline signer-preflight refusal — unreleased",
+  "description": "Local non-authorizing CLI result. Cannot represent approval or backend invocation; optional embedded signing_boundary must also validate against signing-boundary.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "signing_gate",
+    "signing_permitted",
+    "signer_backend_invoked",
+    "signature_created",
+    "transaction_broadcast",
+    "original_transaction_sha256",
+    "original_message_sha256",
+    "independent_intent_signature_verified",
+    "reason_code",
+    "signing_boundary",
+    "limitation"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "signing_gate": {
+      "const": "block"
+    },
+    "signing_permitted": {
+      "const": false
+    },
+    "signer_backend_invoked": {
+      "const": false
+    },
+    "signature_created": {
+      "const": false
+    },
+    "transaction_broadcast": {
+      "const": false
+    },
+    "original_transaction_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "original_message_sha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "independent_intent_signature_verified": {
+      "type": "boolean"
+    },
+    "reason_code": {
+      "enum": [
+        "UNSUPPORTED_NETWORK",
+        "MALFORMED_OR_UNSUPPORTED_TRANSACTION",
+        "SIGNED_INTENT_MISSING",
+        "INDEPENDENT_TRUST_KEY_MISSING",
+        "SIGNER_SIDE_ENFORCEMENT_NOT_IMPLEMENTED",
+        "SIGNED_INTENT_VERIFICATION_FAILED",
+        "TRANSACTION_SIGNATURE_INVALID"
+      ]
+    },
+    "signing_boundary": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "limitation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  }
+}
