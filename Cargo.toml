@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/hguet-core", "crates/hguet-policy", "crates/hguet-rpc", "crates/hguet-signer", "crates/hguet-cli"]
+members = ["crates/hguet-core", "crates/hguet-policy", "crates/hguet-rpc", "crates/hguet-signer", "crates/hguet-cli", "crates/hguet-cloud"]
 resolver = "2"
 
 [workspace.package]

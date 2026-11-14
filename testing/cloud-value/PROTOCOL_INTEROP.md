@@ -112,4 +112,8 @@ answer, and `combine()` leaves the local verdict untouched.
   evidence (so it can never raise a decision), and `evidence_digest_verified` is false. A cited source the verifier DOES
   hold, with a misstated digest, still discards the assessment (`evidence_digest_mismatch`). The public protocol has no
   way yet to deliver the evidence manifest, so a client cannot recompute a real server's `evidence_digest`.
+* `crates/hguet-cloud` (Rust, network-free, not wired into the CLI) is the client-side home of the same rules:
+  canonical subject set / `subjects_sha256`, exact payment memo, canonical Solana signature and the redacted
+  ClientEvidence builder. It reproduces the subject (26), memo (4), signature (12) and valid ClientEvidence vectors of
+  `protocol/s7-client-vectors.json` with the server's error codes. The Cloud transport is still NOT implemented.
 
