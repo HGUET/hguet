@@ -120,3 +120,4 @@ answer, and `combine()` leaves the local verdict untouched.
   vectors; its field table (`proto_table.rs`) is generated from `protocol/v1/hguet.proto` by
   `testing/cloud-value/tools/gen_proto_table.py`, and a test fails if the table drifts from the schema.
 * `hguet-cloud::validate_client_evidence` (strict JSON: no duplicate keys/floats/BOM) validates stored or received ClientEvidence and reproduces all 19 client-evidence vectors with the same error codes.
+* `hguet-cloud::wire` generates its Rust messages from this repository's `protocol/v1/hguet.proto` (vendored `protoc`, no schema copy), encodes/decodes frames (4-byte length, 1 MiB cap, policy check before decoding) and builds a metadata-only `PriceQuoteRequest` with the S7.1 subject digest. No transport yet.

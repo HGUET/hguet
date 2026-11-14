@@ -8,6 +8,7 @@
 mod evidence_validate;
 pub mod proto_policy;
 mod strict_json;
+pub mod wire;
 
 pub use evidence_validate::{validate_client_evidence, EvidenceStatus, CLIENT_EVIDENCE_MAX_BYTES};
 #[rustfmt::skip] // generated file: kept byte-identical to gen_proto_table.py output
