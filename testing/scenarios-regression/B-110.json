@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-110",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xMTAiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJlMGIxNzIyMzU3OTAzNmIwMDI3N2QzYmFmYWIxOGQxZDE5ZWFlYmY1YjlkY2MwY2Y4YzE4YjQ5NWUyMzE4ZDZhIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwMCJ9XX0=",
+      "signature_b58": "3V9KmQSdJVgMEXjW6s492jkpSDgnuQZA4ezLWkhF4ZQhEa5dVD7cxtyA1G23AkGZYbSpJ2AyMeazQZZjAx9zfpam",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "e0b17223579036b00277d3bafab18d1d19eaebf5b9dcc0cf8c18b495e2318d6a",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgECBjiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpl3Mx2yn3guq0/wuCUoRuTwvx/LByMXN0OPOG9uBZoZAKNhLwnZT7oYRFuccBngerg4dZLiIfYuexEiv24wZrT8K/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQUFAgQDAAEKDAUAAAAAAAAABg==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The debit reads another source account; the scope violation is proven independently of multisig.",
+  "smoke": false,
+  "title": "Multisig-style debit from a source account outside the signed scope",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

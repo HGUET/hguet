@@ -44,3 +44,45 @@ Signing blocked invariants               60/60
 CLI errors                                0/60
 Mock Cloud reference rules                6/6   (model only; not evidence about a real server)
 ```
+
+---
+
+## Resolution of HG-BENCH-001 and HG-BENCH-002
+
+Baseline `42e631b`: 56 PASS / 4 XFAIL. After the semantic fix: **60 original scenarios 60/60 acceptable
+(56 PASS + 4 former XFAIL now XPASS, registry cleared), 0 FAIL**. The original scenarios and their labels were
+not edited. Resulting figures on the 60: BAD denied 25/25, BAD merely blocked 0/25, UNKNOWN kept UNKNOWN 15/15,
+UNKNOWN overclaimed as DENY 0/15, false blocks on GOOD 0/20, signing-block invariants 60/60.
+
+| Defect | Scenarios | Fix | Result |
+|--------|-----------|-----|--------|
+| HG-BENCH-001 | B-014, B-015 | `intent_scope::review_account_control` judges `SetAuthority`/`CloseAccount` against the verified intent: third-party target that does not sign -> DENY with `INTENT_SCOPE_*` + evidence refs; signer target / revoke -> UNKNOWN with a structured reason | DENY |
+| HG-BENCH-002 | U-004, U-013 | `ReviewFailure`/`IntentFailure` split violation from coverage gap; coverage -> UNKNOWN `INTENT_COVERAGE_INCOMPLETE` + `coverage_gaps`; proven static violations still win over an unresolved ALT or multisig | UNKNOWN |
+
+Regression suite `scenarios-regression/` (23 paired cases) was written to discriminate: against the **old**
+binary (`42e631b`) it yields **6 PASS / 17 FAIL** (including 3 false blocks of legitimate Revoke/SyncNative/close-to-self,
+and 5 UNKNOWN overclaimed as DENY); against the fixed binary **23/23 PASS**. Rust: 5 new unit tests in
+`intent_scope.rs`; 197 workspace tests pass.
+
+### Behaviour changes that loosen DENY (explicit, reviewed)
+
+* Under signed token caps, **administrative** token instructions (Revoke, SyncNative, Initialize*) and
+  **unsupported/opaque** opcodes now give UNKNOWN instead of DENY: nothing proves a violation. Known money- or
+  control-moving operations that no cap can authorise (Transfer, Approve, MintTo, Burn, Freeze/Thaw) still DENY.
+* An unresolved ALT or multisig-style extra accounts alone no longer produce `INTENT_REJECTED`.
+* The legacy `verify_intent`/`review_declared_*` API keeps its fail-closed behaviour for every non-debit
+  instruction; only the new `*_detailed` functions (used by the CLI) distinguish gaps.
+* Signing is unchanged: every path still ends in BLOCK; `signing_blocked` is 83/83.
+
+### Ground-truth review (nothing was edited silently)
+
+No scenario label was shown to be wrong by the fix. One **labelling question** is recorded, not changed:
+B-012 (unchecked token `Transfer` under signed mint caps) is labelled BAD/DENY because the cap model only
+admits checked forms; a stricter reading could call it UNKNOWN (mint unbound). HGUET keeps DENY; the
+label stands until the owner decides the intended contract for unchecked debits.
+
+### Still open (not defects of these two items)
+
+* ALLOW is unreachable offline; `good_left_unknown` stays 20/20 (+3 in regression).
+* Approve/delegate to a third party under a **SOL-only** intent is still UNKNOWN (only SetAuthority and
+  CloseAccount were in scope here); under token caps it is DENY (B-111).

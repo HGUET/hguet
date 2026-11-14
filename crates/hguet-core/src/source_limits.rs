@@ -2,6 +2,7 @@
 //! token account and declared transaction signer authority. This is a strict
 //! *pre-signing byte-level* check, not proof of current token-account ownership.
 //! CPI, multisig and Token-2022 hook side effects remain outside this scope.
+use crate::intent_scope::ReviewFailure;
 use crate::{
     solana_engine::{ParsedTransaction, TransactionSignatureStatus},
     token_limits::checked_direct_debits,
@@ -65,6 +66,23 @@ pub fn review_declared_source_limits(
     parsed: &ParsedTransaction,
     limits: &[TokenSourceLimit],
 ) -> Result<TokenSourceLimitReview, String> {
+    review_source_limits_impl(parsed, limits, false).map_err(String::from)
+}
+
+/// Same review, but distinguishes a proven violation from a coverage gap
+/// (for example multisig-style extra accounts, which cannot be validated).
+pub fn review_declared_source_limits_detailed(
+    parsed: &ParsedTransaction,
+    limits: &[TokenSourceLimit],
+) -> Result<TokenSourceLimitReview, ReviewFailure> {
+    review_source_limits_impl(parsed, limits, true)
+}
+
+fn review_source_limits_impl(
+    parsed: &ParsedTransaction,
+    limits: &[TokenSourceLimit],
+    defer_account_control: bool,
+) -> Result<TokenSourceLimitReview, ReviewFailure> {
     if limits.len() > MAX_SOURCE_LIMITS {
         return Err("signed source token limit list exceeds 32 accounts".into());
     }
@@ -100,18 +118,19 @@ pub fn review_declared_source_limits(
             (cap.authority.clone(), limit),
         );
     }
-    let debits = checked_direct_debits(parsed)?;
+    let debits = checked_direct_debits(parsed, defer_account_control)?;
     let mut totals = BTreeMap::<(String, String), u128>::new();
     let mut programs = BTreeMap::<(String, String), String>::new();
+    // Multisig-style extra accounts cannot be validated offline. That is missing
+    // evidence, not a proven violation: keep checking everything that CAN be
+    // proven (source/mint scope, amounts) and report the gap only if nothing
+    // else is violated.
+    let mut multisig_gap = false;
     for debit in &debits {
-        // Exactly one authority role, no multisig or unknown trailing accounts.
-        if debit.account_count != debit.exact_single_authority_count {
-            return Err(
-                "signed source limits cannot validate multisig or extra token instruction accounts"
-                    .into(),
-            );
-        }
-        if !signers.iter().any(|signer| signer == &debit.authority) {
+        let multisig = debit.account_count != debit.exact_single_authority_count;
+        if multisig {
+            multisig_gap = true;
+        } else if !signers.iter().any(|signer| signer == &debit.authority) {
             return Err("direct token instruction authority is not a required signer".into());
         }
         let key = (debit.mint.clone(), debit.source_token_account.clone());
@@ -123,7 +142,7 @@ pub fn review_declared_source_limits(
         let (authority, limit) = signed.get(&key).ok_or(
             "direct token debit source or mint is missing from signed token_source_limits",
         )?;
-        if authority != &debit.authority {
+        if !multisig && authority != &debit.authority {
             return Err(
                 "direct token instruction authority disagrees with signed source cap".into(),
             );
@@ -138,6 +157,12 @@ pub fn review_declared_source_limits(
             return Err("declared direct token debits exceed signed source max_debit_raw".into());
         }
         totals.insert(key, total);
+    }
+    if multisig_gap {
+        return Err(ReviewFailure::coverage(
+            "MULTISIG_OR_EXTRA_ACCOUNTS",
+            "signed source limits cannot validate multisig or extra token instruction accounts; source scope and amounts were checked and no violation is proven",
+        ));
     }
     let results = totals
         .into_iter()

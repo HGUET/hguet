@@ -182,10 +182,20 @@ def ix_token_approve(program, src, delegate, owner, amount):
                        bytes([4]) + amount.to_bytes(8, "little"))
 
 
-def ix_token_set_authority(program, account_, current, new_authority):
-    # AuthorityType::AccountOwner = 2, COption::Some(new) -> 1 + pubkey
+def ix_token_set_authority(program, account_, current, new_authority, authority_type=2):
+    # AuthorityType: 0 MintTokens, 1 FreezeAccount, 2 AccountOwner, 3 CloseAccount.
+    # COption::Some(new) -> 1 + pubkey; None (revoke) -> 0.
+    option = bytes([0]) if new_authority is None else bytes([1]) + b58decode(new_authority)
     return Instruction(program, [(account_, False, True), (current, True, False)],
-                       bytes([6, 2, 1]) + b58decode(new_authority))
+                       bytes([6, authority_type]) + option)
+
+
+def ix_token_revoke(program, src, owner):
+    return Instruction(program, [(src, False, True), (owner, True, False)], bytes([5]))
+
+
+def ix_token_sync_native(program, account_):
+    return Instruction(program, [(account_, False, True)], bytes([17]))
 
 
 def ix_token_close_account(program, account_, destination, owner):

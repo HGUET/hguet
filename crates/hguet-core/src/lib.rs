@@ -64,18 +64,24 @@ impl SecurityVerdict {
     }
 }
 
+pub mod intent_scope;
 pub mod solana_engine;
 mod source_limits;
 #[cfg(test)]
 mod token_intent_tests;
 mod token_limits;
+pub use intent_scope::{review_account_control, ReviewFailure, ScopeFinding};
 pub use solana_engine::{
     parse_transaction, ParsedTransaction, SystemTransfer, TransactionSignatureStatus, V1Resources,
 };
 pub use source_limits::{
-    review_declared_source_limits, DeclaredSourceDebit, TokenSourceLimitReview,
+    review_declared_source_limits, review_declared_source_limits_detailed, DeclaredSourceDebit,
+    TokenSourceLimitReview,
 };
-pub use token_limits::{review_declared_token_limits, DeclaredMintDebit, TokenSpendLimitReview};
+pub use token_limits::{
+    review_declared_token_limits, review_declared_token_limits_detailed, DeclaredMintDebit,
+    TokenSpendLimitReview,
+};
 
 pub fn sha256_hex(data: &[u8]) -> String {
     Sha256::digest(data)
@@ -141,6 +147,59 @@ fn decode_fixed_b58<const N: usize>(s: &str, what: &str) -> Result<[u8; N], Stri
         .map_err(|_| format!("{what} must decode to {N} bytes"))
 }
 
+/// Why an intent could not be accepted. The two variants must never be merged:
+/// a [`IntentFailure::Violation`] is a PROVEN breach (DENY); a
+/// [`IntentFailure::Coverage`] means the facts could not be established (UNKNOWN).
+#[derive(Debug, Clone)]
+pub enum IntentFailure {
+    Violation {
+        message: String,
+        /// Structured scope findings with evidence references, when available.
+        findings: Vec<ScopeFinding>,
+    },
+    Coverage {
+        reason: &'static str,
+        message: String,
+    },
+}
+
+impl IntentFailure {
+    fn violation(message: impl Into<String>) -> Self {
+        Self::Violation {
+            message: message.into(),
+            findings: vec![],
+        }
+    }
+    pub fn message(&self) -> &str {
+        match self {
+            Self::Violation { message, .. } | Self::Coverage { message, .. } => message,
+        }
+    }
+}
+
+impl From<ReviewFailure> for IntentFailure {
+    fn from(value: ReviewFailure) -> Self {
+        match value.coverage_reason {
+            Some(reason) => Self::Coverage {
+                reason,
+                message: value.message,
+            },
+            None => Self::violation(value.message),
+        }
+    }
+}
+
+/// A fully verified intent plus coverage gaps that are NOT violations.
+#[derive(Debug, Clone)]
+pub struct VerifiedIntent {
+    pub intent: PaymentIntentPayload,
+    pub scope_gaps: Vec<ScopeFinding>,
+}
+
+/// Legacy entry point kept for callers that only need pass/fail. Any coverage
+/// gap on an intent that carries token limits is still a failure here (fail
+/// closed); callers that must distinguish DENY from UNKNOWN use
+/// [`verify_intent_detailed`].
 pub fn verify_intent(
     envelope: &SignedPaymentIntent,
     independently_pinned_key: &str,
@@ -148,65 +207,97 @@ pub fn verify_intent(
     parsed: &ParsedTransaction,
     now: u64,
 ) -> Result<PaymentIntentPayload, String> {
+    let verified = verify_intent_detailed(
+        envelope,
+        independently_pinned_key,
+        actual_network,
+        parsed,
+        now,
+    )
+    .map_err(|failure| failure.message().to_string())?;
+    let limited = verified.intent.token_spend_limits.is_some()
+        || verified.intent.token_source_limits.is_some();
+    if limited && !verified.scope_gaps.is_empty() {
+        return Err(verified.scope_gaps[0].summary.clone());
+    }
+    Ok(verified.intent)
+}
+
+pub fn verify_intent_detailed(
+    envelope: &SignedPaymentIntent,
+    independently_pinned_key: &str,
+    actual_network: &str,
+    parsed: &ParsedTransaction,
+    now: u64,
+) -> Result<VerifiedIntent, IntentFailure> {
+    let v = |m: &str| IntentFailure::violation(m);
     // The key MUST be configured independently, not sourced from the untrusted JSON.
-    let pin = decode_fixed_b58::<32>(independently_pinned_key, "trusted signer key")?;
-    let presented = decode_fixed_b58::<32>(&envelope.signer_pubkey_b58, "presented signer")?;
+    let pin = decode_fixed_b58::<32>(independently_pinned_key, "trusted signer key")
+        .map_err(|e| v(&e))?;
+    let presented = decode_fixed_b58::<32>(&envelope.signer_pubkey_b58, "presented signer")
+        .map_err(|e| v(&e))?;
     if pin != presented {
-        return Err("intent signing key is not independently trusted".into());
+        return Err(v("intent signing key is not independently trusted"));
     }
     let payload = STANDARD
         .decode(envelope.payload_b64.trim())
-        .map_err(|_| "invalid intent Base64")?;
+        .map_err(|_| v("invalid intent Base64"))?;
     if payload.is_empty() || payload.len() > MAX_INTENT {
-        return Err("intent payload size out of range".into());
+        return Err(v("intent payload size out of range"));
     }
-    let sig = decode_fixed_b58::<64>(&envelope.signature_b58, "intent signature")?;
-    let verifying = VerifyingKey::from_bytes(&pin).map_err(|_| "invalid trusted public key")?;
+    let sig =
+        decode_fixed_b58::<64>(&envelope.signature_b58, "intent signature").map_err(|e| v(&e))?;
+    let verifying = VerifyingKey::from_bytes(&pin).map_err(|_| v("invalid trusted public key"))?;
     if verifying.is_weak() {
-        return Err("weak trusted public key".into());
+        return Err(v("weak trusted public key"));
     }
     let mut signed = Vec::with_capacity(INTENT_DOMAIN.len() + payload.len());
     signed.extend_from_slice(INTENT_DOMAIN);
     signed.extend_from_slice(&payload);
     verifying
         .verify_strict(&signed, &Signature::from_bytes(&sig))
-        .map_err(|_| "intent cryptographic signature invalid")?;
+        .map_err(|_| v("intent cryptographic signature invalid"))?;
     let intent: PaymentIntentPayload =
-        serde_json::from_slice(&payload).map_err(|_| "intent JSON payload invalid")?;
+        serde_json::from_slice(&payload).map_err(|_| v("intent JSON payload invalid"))?;
     if intent.schema_version != 1 || intent.kind != "hguet_payment_intent" {
-        return Err("intent schema/kind unsupported".into());
+        return Err(v("intent schema/kind unsupported"));
     }
     if intent.intent_id.is_empty() || intent.intent_id.len() > 128 {
-        return Err("intent_id length invalid".into());
+        return Err(v("intent_id length invalid"));
     }
     if intent.network != actual_network {
-        return Err("intent network mismatch".into());
+        return Err(v("intent network mismatch"));
     }
     if intent.message_sha256 != parsed.message_sha256 {
-        return Err("intent message SHA256 mismatch".into());
+        return Err(v("intent message SHA256 mismatch"));
     }
     if intent.expires_at_unix <= intent.not_before_unix
         || now < intent.not_before_unix
         || now >= intent.expires_at_unix
     {
-        return Err("intent not currently authorized".into());
+        return Err(v("intent not currently authorized"));
     }
     if intent.allowed_program_ids.len() > 64 {
-        return Err("program allowlist too large".into());
+        return Err(v("program allowlist too large"));
     }
     let spending_limit: u64 = intent
         .max_spend_lamports
         .parse()
-        .map_err(|_| "intent spend cap invalid")?;
+        .map_err(|_| v("intent spend cap invalid"))?;
     if spending_limit == 0 || intent.max_spend_lamports.starts_with('0') {
-        return Err("intent spending limit must be positive canonical integer".into());
+        return Err(v(
+            "intent spending limit must be positive canonical integer",
+        ));
     }
-    if parsed.unresolved_lookup_addresses > 0 {
-        return Err("unresolved ALT addresses cannot pass intent program allowlist".into());
-    }
+    // Violations PROVEN from statically resolved data win over a coverage gap: an
+    // unresolved lookup table cannot hide a program or a spend that is already
+    // visible and out of scope.
     for program in &parsed.program_ids {
+        if intent_scope::is_unresolved_program(program) {
+            continue;
+        }
         if !intent.allowed_program_ids.contains(program) {
-            return Err("transaction program not on trusted intent allowlist".into());
+            return Err(v("transaction program not on trusted intent allowlist"));
         }
     }
     // A strictly decoded top-level System Transfer is a known lower bound on
@@ -216,20 +307,39 @@ pub fn verify_intent(
     let declared: u128 = parsed
         .declared_system_transfer_lamports
         .parse()
-        .map_err(|_| "decoded native transfer total invalid")?;
+        .map_err(|_| v("decoded native transfer total invalid"))?;
     if declared > u128::from(spending_limit) {
-        return Err("declared System transfers exceed signed intent max_spend_lamports".into());
+        return Err(v(
+            "declared System transfers exceed signed intent max_spend_lamports",
+        ));
+    }
+    if parsed.unresolved_lookup_addresses > 0 {
+        return Err(IntentFailure::Coverage {
+            reason: "ALT_UNRESOLVED",
+            message: "unresolved ALT addresses: program identities and accounts behind the lookup table cannot be checked against the intent allowlist; no violation is proven".into(),
+        });
+    }
+    // Account-control operations (SetAuthority / CloseAccount) judged in context.
+    let scope = review_account_control(parsed, &intent.intent_id);
+    if let Some(first) = scope.iter().find(|f| f.violation) {
+        return Err(IntentFailure::Violation {
+            message: first.summary.clone(),
+            findings: scope,
+        });
     }
     // Signed mint caps are one-sided direct-wire lower-bound checks only:
     // unknown direct token instructions must NOT be marked cap-covered.
     if let Some(ref limits) = intent.token_spend_limits {
-        token_limits::review_declared_token_limits(parsed, limits)?;
+        token_limits::review_declared_token_limits_detailed(parsed, limits)?;
     }
     if let Some(ref sources) = intent.token_source_limits {
-        source_limits::review_declared_source_limits(parsed, sources)?;
+        source_limits::review_declared_source_limits_detailed(parsed, sources)?;
     }
     // Verified intent is NOT proof of total spending, fees or execution success.
-    Ok(intent)
+    Ok(VerifiedIntent {
+        intent,
+        scope_gaps: scope,
+    })
 }
 
 pub fn unix_now() -> Result<u64, String> {

@@ -13,6 +13,7 @@ import rpc_mock  # noqa: E402
 import run_benchmark as rb  # noqa: E402
 
 SCENARIOS = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((TESTING / "scenarios").glob("*.json"))]
+REGRESSION = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((TESTING / "scenarios-regression").glob("*.json"))]
 
 
 class Crypto(unittest.TestCase):
@@ -56,8 +57,22 @@ class Scenarios(unittest.TestCase):
 
     def test_known_defects_reference_real_scenarios(self):
         known = json.loads((TESTING / "known_defects.json").read_text())
-        ids = {s["id"] for s in SCENARIOS}
+        ids = {s["id"] for s in SCENARIOS + REGRESSION}
         self.assertTrue(set(known) <= ids)
+
+    def test_regression_suite_has_positive_and_negative_pairs(self):
+        classes = [s["class"] for s in REGRESSION]
+        self.assertGreaterEqual(classes.count("BAD"), 10)
+        self.assertGreaterEqual(classes.count("UNKNOWN"), 8)
+        self.assertGreaterEqual(classes.count("GOOD"), 3)
+        self.assertFalse({s["id"] for s in REGRESSION} & {s["id"] for s in SCENARIOS})
+        for s in REGRESSION:
+            with self.subTest(s["id"]):
+                self.assertTrue(s["expect"]["findings_required"] or s["expect"]["findings_forbidden"])
+        # every UNKNOWN/GOOD regression case must forbid the DENY-class finding it must not raise
+        for s in REGRESSION:
+            if s["class"] in ("UNKNOWN", "GOOD") and s["id"] != "U-103":
+                self.assertTrue(s["expect"]["findings_forbidden"], s["id"])
 
 
 class Metrics(unittest.TestCase):
@@ -168,6 +183,44 @@ class RunnerIsNotVacuous(unittest.TestCase):
             self.assertEqual(report["totals"]["PASS"], 0)
             self.assertGreater(report["metrics"]["summary"]["bad_allowed_UNSAFE"]["num"], 0)
             self.assertEqual(report["metrics"]["summary"]["signing_blocked_all_scenarios"]["num"], 0)
+
+
+    def test_xfail_xpass_and_invariant_handling(self):
+        import stat
+        import subprocess
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = Path(tmp) / "hguet"
+            stub.write_text("#!%s\nimport json,sys\n"
+                            "if '--version' in sys.argv: print('stub'); sys.exit(0)\n"
+                            "if 'signer-preflight' in sys.argv:\n"
+                            "    print(json.dumps({'signer_refusal':{'signing_gate':'block','signing_permitted':False,'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False}})); sys.exit(20)\n"
+                            "print(json.dumps({'verdict':{'decision':'UNKNOWN','findings':[]}}))\n"
+                            "sys.exit(30)\n" % sys.executable)
+            stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
+
+            def run(known):
+                kd = Path(tmp) / "known.json"
+                kd.write_text(json.dumps(known))
+                done = subprocess.run([sys.executable, str(TESTING / "runner/run_benchmark.py"), "--hguet", str(stub),
+                                       "--subset", "smoke", "--out", str(Path(tmp) / "o"), "--known-defects", str(kd)],
+                                      capture_output=True, text=True)
+                return done.returncode, json.loads((Path(tmp) / "o/report.json").read_text())
+
+            # An always-UNKNOWN tool: BAD scenarios fail (missed threat). Listing ALL failing ids makes them XFAIL.
+            code, report = run({})
+            failing = [r["id"] for r in report["results"] if r["outcome"] == "FAIL"]
+            self.assertTrue(failing)
+            self.assertEqual(code, 1)
+            code, report = run({sid: {"defect": "X"} for sid in failing})
+            self.assertEqual(report["totals"]["FAIL"], 0)
+            self.assertEqual(report["totals"]["XFAIL"], len(failing))
+            # (exit status also reflects the Cloud reference rules, which a fake tool can violate)
+            # A listed scenario that now PASSES is XPASS and fails the run (stale registry entry).
+            passing = next(r["id"] for r in report["results"] if r["outcome"] == "PASS")
+            code, report = run({passing: {"defect": "STALE"}})
+            self.assertEqual(report["totals"]["XPASS"], 1)
+            self.assertEqual(code, 1)
 
 
 if __name__ == "__main__":

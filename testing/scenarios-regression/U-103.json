@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "INTENT_SCOPE_CLOSE_DESTINATION"
+    ],
+    "findings_required": [
+      [
+        "INTENT_UNVERIFIED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-103",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "d2e10c70068520e6662588dbb3d202c1fc49f17a9e3055d085111e3f78e68e4a",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdhQbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIBACMGAgFr0qDD3se8PmnttU76JxkFiBGT7tQAqlFlteq50JKZZA==",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "Without an independently verified intent there is no scope to compare against: UNKNOWN, not DENY.",
+  "smoke": false,
+  "title": "Third-party SetAuthority with no verified intent",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "UNKNOWN"
+  }
+}

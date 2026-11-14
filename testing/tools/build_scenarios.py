@@ -17,6 +17,7 @@ sys.path.insert(0, str(HERE.parent / "lib"))
 import crypto_tx as ct  # noqa: E402
 
 OUT = HERE.parent / "scenarios"
+OUT_REGRESSION = HERE.parent / "scenarios-regression"
 FORMAT = "hguet-bench-scenario/1"
 ISSUER = "issuer:trusted"
 TRUSTED = ct.signer_pubkey(ISSUER)
@@ -43,6 +44,8 @@ FORBIDDEN_FOR_GOOD = [
 ]
 PROVEN_INTENT = [{"path": "verdict.coverage", "contains": "independently_pinned_intent_signature"}]
 SCENARIOS = []
+REGRESSION = []
+SINK = [SCENARIOS]
 
 
 def tx_b64(instructions, signers=(), mode="unsigned", v0=None, blockhash="bh1"):
@@ -78,7 +81,7 @@ def add(sid, cls, title, category, rationale, raw, message, *, network="devnet",
     }
     if extra_expect:
         scenario["expect"].update(extra_expect)
-    SCENARIOS.append(scenario)
+    SINK[0].append(scenario)
 
 
 def intent_for(message, tamper=False, **kw):
@@ -411,34 +414,162 @@ def unknown():
         req=[], cap="5000", signers=(), evidence="insufficient")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="fail if committed scenarios differ")
-    args = parser.parse_args()
-    good(); bad(); unknown()
-    assert len(SCENARIOS) == 60 and [s["class"] for s in SCENARIOS].count("GOOD") == 20 \
-        and [s["class"] for s in SCENARIOS].count("BAD") == 25 \
-        and [s["class"] for s in SCENARIOS].count("UNKNOWN") == 15, "scenario mix must be 20/25/15"
-    ids = [s["id"] for s in SCENARIOS]
-    assert len(set(ids)) == 60
-    OUT.mkdir(exist_ok=True)
-    drift = []
-    for scenario in SCENARIOS:
+# ============================================ REGRESSION PAIRS (separate suite)
+# Paired positive/negative cases for the semantics fixed after the first benchmark run:
+#   HG-BENCH-001  SetAuthority / CloseAccount judged in context of the verified intent
+#   HG-BENCH-002  proven violation (DENY) vs missing coverage (UNKNOWN)
+# The 60 original scenarios are untouched; these only ADD coverage.
+COSIGNER_LABEL = "signer:cosigner"
+COSIGNER = ct.signer_pubkey(COSIGNER_LABEL)
+REG_COVER = [ct.Instruction(MEMO, [(COSIGNER, True, False)], b"cosign")]
+F_SCOPE_AUTH = ["INTENT_SCOPE_AUTHORITY_TRANSFER"]
+F_SCOPE_CLOSE = ["INTENT_SCOPE_CLOSE_DESTINATION"]
+NO_SCOPE_DENY = ["INTENT_REJECTED", "INTENT_SCOPE_AUTHORITY_TRANSFER", "INTENT_SCOPE_CLOSE_DESTINATION"]
+
+
+def regression():
+    SINK[0] = REGRESSION
+    tc = [(MINT_A, "1000")]
+    srcs = [(MINT_A, SRC_A, PAYER, "1000")]
+    ok_xfer = ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 100)
+
+    def reg(sid, cls, title, why, instrs, *, req=None, forbid=None, caps=None, sources=None, progs=(SYS, T),
+            intent=True, trusted=TRUSTED, v0=None, evidence="offline_sufficient", category="regression",
+            proven=None, acceptable=None, signers=()):
+        raw, msg = tx_b64(instrs, signers, "unsigned", v0)
+        add(sid, cls, title, category, why, raw, msg,
+            intent=intent_for(msg, allowed_programs=list(progs), max_spend="5000", token_caps=caps,
+                              source_caps=sources, intent_id="bench-" + sid) if intent else None,
+            trusted=trusted, required=[req] if req else [], forbidden=forbid if forbid is not None else [],
+            evidence=evidence, proven=proven, acceptable=acceptable)
+
+    # --- HG-BENCH-001: SetAuthority (positive = must DENY, negative = must NOT DENY)
+    reg("B-101", "BAD", "SetAuthority hands account ownership to a third party (SOL-only intent)",
+        "Control of the account goes to Eve, who is neither the current authority nor a signer.",
+        [ct.ix_token_set_authority(T, SRC_A, PAYER, EVE)], req=F_SCOPE_AUTH)
+    reg("B-102", "BAD", "SetAuthority to a third party hidden beside a permitted capped transfer",
+        "One in-cap transfer makes the transaction look routine; the extra SetAuthority steals the account.",
+        [ok_xfer, ct.ix_token_set_authority(T, SRC_A, PAYER, EVE)], req=F_SCOPE_AUTH, caps=tc)
+    reg("B-103", "BAD", "SetAuthority of the CloseAccount authority to a third party",
+        "Authority type 3 lets the new key close (sweep) the account later; still outside any payment scope.",
+        [ct.ix_token_set_authority(T, SRC_A, PAYER, EVE, authority_type=3)], req=F_SCOPE_AUTH)
+    reg("B-104", "BAD", "SetAuthority on a Token-2022 account to a third party",
+        "Same ownership theft through the Token-2022 program.",
+        [ct.ix_token_set_authority(T22, SRC_A, PAYER, EVE)], req=F_SCOPE_AUTH, progs=(SYS, T22))
+    reg("U-101", "UNKNOWN", "SetAuthority to a co-signer of the same transaction",
+        "The target key also signs this transaction; whether it belongs to the same principal cannot be established offline: not forbidden, not proven safe.",
+        REG_COVER + [ct.ix_token_set_authority(T, SRC_A, PAYER, COSIGNER)], req=["TOKEN_AUTHORITY_CHANGE_UNPROVEN"],
+        forbid=NO_SCOPE_DENY, progs=(SYS, T, MEMO), signers=())
+    reg("U-102", "UNKNOWN", "SetAuthority that removes an authority (set to None)",
+        "Irreversible but not a transfer of control to anyone; not covered by any signed limit.",
+        [ct.ix_token_set_authority(T, SRC_A, PAYER, None, authority_type=0)], req=["TOKEN_AUTHORITY_REVOKE_IRREVERSIBLE"],
+        forbid=NO_SCOPE_DENY)
+    reg("U-103", "UNKNOWN", "Third-party SetAuthority with no verified intent",
+        "Without an independently verified intent there is no scope to compare against: UNKNOWN, not DENY.",
+        [ct.ix_token_set_authority(T, SRC_A, PAYER, EVE)], req=["INTENT_UNVERIFIED"], intent=False, trusted=None,
+        forbid=NO_SCOPE_DENY)
+    # --- HG-BENCH-001: CloseAccount
+    reg("B-105", "BAD", "CloseAccount sweeps to a third party (SOL-only intent)",
+        "Balance and rent (and wrapped SOL) go to Eve, who does not sign and is not named by any intent.",
+        [ct.ix_token_close_account(T, SRC_A, EVE, PAYER)], req=F_SCOPE_CLOSE)
+    reg("B-106", "BAD", "CloseAccount to a third party beside an in-scope source debit",
+        "Source-scoped intent covers the debit only; the close escapes it.",
+        [ok_xfer, ct.ix_token_close_account(T, SRC_A, EVE, PAYER)], req=F_SCOPE_CLOSE, sources=srcs)
+    reg("U-104", "UNKNOWN", "CloseAccount returning to the fee payer",
+        "Closing your own token account back to a signer is ordinary account management: not forbidden, not proven.",
+        [ct.ix_token_close_account(T, SRC_A, PAYER, PAYER)], req=["TOKEN_CLOSE_DESTINATION_UNPROVEN"], forbid=NO_SCOPE_DENY)
+    reg("G-101", "GOOD", "In-cap payment plus closing the emptied account to the payer",
+        "A routine wallet clean-up: capped transfer and CloseAccount whose destination is the paying signer. Must not be blocked.",
+        [ok_xfer, ct.ix_token_close_account(T, SRC_A, PAYER, PAYER)], caps=tc, forbid=FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY,
+        proven=PROVEN_INTENT)
+    reg("G-102", "GOOD", "In-cap payment plus Revoke of an old delegate",
+        "Revoke only removes someone's spending authority: administrative and safe in direction; must not be blocked.",
+        [ok_xfer, ct.ix_token_revoke(T, SRC_A, PAYER)], caps=tc, forbid=FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY, proven=PROVEN_INTENT)
+    reg("G-103", "GOOD", "In-cap payment plus SyncNative",
+        "SyncNative refreshes a wrapped-SOL balance; administrative, no authority change; must not be blocked.",
+        [ok_xfer, ct.ix_token_sync_native(T, DST_A)], caps=tc, forbid=FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY, proven=PROVEN_INTENT)
+    # --- HG-BENCH-002: DENY (proven) vs UNKNOWN (coverage)
+    alt_xfer = ct.Instruction(SYS, [(PAYER, True, True), ("alt:0", False, True)],
+                              (2).to_bytes(4, "little") + (1000).to_bytes(8, "little"))
+    reg("U-105", "UNKNOWN", "Lookup-table account with a valid intent (static parts in scope)",
+        "Everything visible is within the intent; the payee lives in an unresolved lookup table.",
+        [alt_xfer], req=["INTENT_COVERAGE_INCOMPLETE"], forbid=["INTENT_REJECTED"], progs=(SYS,), v0=[("tbl1", [0], [])],
+        evidence="insufficient")
+    reg("U-106", "UNKNOWN", "Program behind an unresolved lookup table with a valid intent",
+        "The called program is only an ALT index; it can neither be allowed nor refused.",
+        [ct.Instruction("alt:0", [(PAYER, True, True)], b"\x01")], req=["INTENT_COVERAGE_INCOMPLETE"],
+        forbid=["INTENT_REJECTED"], progs=(SYS,), v0=[("tbl2", [], [0])], evidence="insufficient")
+    reg("B-107", "BAD", "Unresolved lookup table cannot hide a statically visible forbidden program",
+        "A custom program appears as a static key and is not allowlisted: the violation is proven regardless of the ALT.",
+        [alt_xfer, ct.ix_custom(ct.CUSTOM_PROGRAM, [(PAYER, True, True)])], req=F_INTENT, progs=(SYS,),
+        v0=[("tbl1", [0], [])])
+    reg("B-108", "BAD", "Unresolved lookup table cannot hide a statically visible over-cap transfer",
+        "A static 6000-lamport transfer exceeds the 5000 cap; an unresolved ALT elsewhere does not excuse it.",
+        [alt_xfer, ct.ix_system_transfer(PAYER, ALICE, 6000)], req=F_INTENT, progs=(SYS,), v0=[("tbl1", [0], [])])
+    msig = ct.Instruction(T, [(SRC_A, False, True), (MINT_A, False, False), (DST_A, False, True), (PAYER, True, False),
+                              (COSIGNER, True, False)], bytes([12]) + (5).to_bytes(8, "little") + bytes([6]))
+    msig_over = ct.Instruction(T, [(SRC_A, False, True), (MINT_A, False, False), (DST_A, False, True), (PAYER, True, False),
+                                   (COSIGNER, True, False)], bytes([12]) + (5000).to_bytes(8, "little") + bytes([6]))
+    msig_other = ct.Instruction(T, [(SRC_OTHER, False, True), (MINT_A, False, False), (DST_A, False, True), (PAYER, True, False),
+                                    (COSIGNER, True, False)], bytes([12]) + (5).to_bytes(8, "little") + bytes([6]))
+    reg("U-107", "UNKNOWN", "Multisig-style debit inside the signed source scope",
+        "Source, mint and amount are in scope; only the extra authority accounts cannot be validated.",
+        [msig], req=["INTENT_COVERAGE_INCOMPLETE"], forbid=["INTENT_REJECTED"], sources=srcs, evidence="insufficient")
+    reg("B-109", "BAD", "Multisig-style debit above the signed source cap",
+        "Amount 5000 against a source cap of 1000: proven overage even though the authority set is unverifiable.",
+        [msig_over], req=F_INTENT, sources=srcs)
+    reg("B-110", "BAD", "Multisig-style debit from a source account outside the signed scope",
+        "The debit reads another source account; the scope violation is proven independently of multisig.",
+        [msig_other], req=F_INTENT, sources=srcs)
+    reg("U-108", "UNKNOWN", "Opaque Token-2022 instruction under signed token caps",
+        "Opcode 255 is unsupported: its effect is unknown, nothing proves a violation.",
+        [ct.Instruction(T22, [(SRC_A, False, True), (PAYER, True, False)], bytes([255, 1, 2, 3])), ], req=["INTENT_COVERAGE_INCOMPLETE"],
+        forbid=["INTENT_REJECTED"], caps=tc, progs=(SYS, T22), evidence="requires_rpc")
+    reg("B-111", "BAD", "Token Approve under signed token caps (known out-of-scope operation)",
+        "Approve grants a third party spending authority: a known operation the caps can never authorise.",
+        [ok_xfer, ct.ix_token_approve(T, SRC_A, EVE, PAYER, 1000)], req=F_TOKEN_INTENT, caps=tc)
+    reg("U-109", "UNKNOWN", "Unrecognised token opcode under signed token caps",
+        "A malformed or unknown opcode cannot be classified; unsupported structure is UNKNOWN.",
+        [ct.Instruction(T, [(SRC_A, False, True), (PAYER, True, False)], bytes([99]))], req=["INTENT_COVERAGE_INCOMPLETE"],
+        forbid=["INTENT_REJECTED"], caps=tc, evidence="insufficient")
+    SINK[0] = SCENARIOS
+
+
+def write_suite(scenarios, directory, check, drift):
+    directory.mkdir(exist_ok=True)
+    for scenario in scenarios:
         text = json.dumps(scenario, indent=2, sort_keys=True) + "\n"
-        path = OUT / (scenario["id"] + ".json")
-        if args.check:
+        path = directory / (scenario["id"] + ".json")
+        if check:
             if not path.exists() or path.read_text(encoding="utf-8") != text:
                 drift.append(scenario["id"])
         else:
             path.write_text(text, encoding="utf-8", newline="\n")
+    if check:
+        ids = {x["id"] for x in scenarios}
+        drift.extend(sorted(p.stem for p in directory.glob("*.json") if p.stem not in ids))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true", help="fail if committed scenarios differ")
+    args = parser.parse_args()
+    good(); bad(); unknown(); regression()
+    classes = [s["class"] for s in SCENARIOS]
+    assert len(SCENARIOS) == 60 and (classes.count("GOOD"), classes.count("BAD"), classes.count("UNKNOWN")) == (20, 25, 15), \
+        "main suite must stay 20/25/15"
+    ids = [s["id"] for s in SCENARIOS + REGRESSION]
+    assert len(set(ids)) == len(ids)
+    drift = []
+    write_suite(SCENARIOS, OUT, args.check, drift)
+    write_suite(REGRESSION, OUT_REGRESSION, args.check, drift)
     if args.check:
-        extra = sorted(p.stem for p in OUT.glob("*.json") if p.stem not in ids)
-        if drift or extra:
-            print("FAIL: scenario files differ from the generator: %s %s" % (drift, extra))
+        if drift:
+            print("FAIL: scenario files differ from the generator: %s" % drift)
             return 1
-        print("PASS: 60 committed scenarios match the generator")
+        print("PASS: %d main + %d regression scenarios match the generator" % (len(SCENARIOS), len(REGRESSION)))
     else:
-        print("wrote %d scenarios to %s" % (len(SCENARIOS), OUT))
+        print("wrote %d main + %d regression scenarios" % (len(SCENARIOS), len(REGRESSION)))
     return 0
 
 

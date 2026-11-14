@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-108",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xMDgiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI4NmJkOTI2Y2FkYzI1OTIyMTYzZjI2YTA2YzcyYTA5OWNiNTQ3MDE3MTYwMDRjNDY1NzE0OTI5OTVhNmJmMWZjIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "5eCWCBktJbdypro6oYq6k6dEb5ts6Wz63qHNsJP5gPHPingwx1HY5k935rhLDN8xnxDYkniPAjNicSJh1r6KWtNH",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "86bd926cadc25922163f26a06c72a099cb54701716004c46571492995a6bf1fc",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAziDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpljkyq+EmIKSIv7+uooZqy+DHquUwSE5PN4lMCvqI0LJ4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAgICAAMMAgAAAOgDAAAAAAAAAgIAAQwCAAAAcBcAAAAAAAABSRbGTbHEjjQSQh9+vZhzhf1rjiENiC545ycX+2LrWggBAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "A static 6000-lamport transfer exceeds the 5000 cap; an unresolved ALT elsewhere does not excuse it.",
+  "smoke": false,
+  "title": "Unresolved lookup table cannot hide a statically visible over-cap transfer",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}
