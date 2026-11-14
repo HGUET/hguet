@@ -660,7 +660,7 @@ mod tests {
     fn separately_pinned_report_keys_verify_their_own_domains() {
         use std::fs::{self, OpenOptions};
         use std::io::Write;
-        use std::process::{Command, Stdio};
+        use std::process::Command;
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
 
