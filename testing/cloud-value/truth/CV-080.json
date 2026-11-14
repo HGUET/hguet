@@ -1,0 +1,35 @@
+{
+  "acceptable_final": [
+    "UNKNOWN",
+    "DENY",
+    "WARN"
+  ],
+  "adverse_enforcement": "warn",
+  "canary": "CVCANARY-30c92f17f666f12c",
+  "category": "freeze_authority_risk",
+  "category_id": "C08",
+  "decisive_evidence": [
+    "EV-0088"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [
+    "unsupported_safe_claim"
+  ],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-080",
+  "kind": "tamper",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject really is bad, but the Cloud answer is unsupported_safe_claim; a verifier must discard it and the final answer stays at the local UNKNOWN (no credit for a tampered finding).",
+  "requires_cloud_evidence": true,
+  "tamper": "unsupported_safe_claim",
+  "threat_present": true
+}

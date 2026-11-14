@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_CONFISCATORY_TRANSFER_FEE",
+    "polarity": "adverse"
+  },
+  "confidence": 0.4,
+  "evidence_id": "EV-0062",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "no observed occurrence",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "hypothesis:confiscatory_transfer_fee",
+    "reproducible": false,
+    "source": "threat-model note",
+    "tier": "hypothetical"
+  },
+  "subject": {
+    "id": "G82VbovGfXe8ckzU4mQdC3gw8zs45MJYYg5MhN4pT9eB",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

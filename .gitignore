@@ -25,3 +25,4 @@ rustc-ice-*.txt
 __pycache__/
 dist/
 testing/reports/
+testing/cloud-value/reports/

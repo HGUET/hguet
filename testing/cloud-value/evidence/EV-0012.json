@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "RECIPIENT_KNOWN_DRAINER",
+    "polarity": "adverse"
+  },
+  "confidence": 0.95,
+  "evidence_id": "EV-0012",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:drainer_recipient",
+    "reproducible": false,
+    "source": "documented public attack class: drainer recipient",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "AHAdCryJSBEFhWhX3BBpvDTLKyYcwFoTq4R5rPxQvGj",
+    "type": "account"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

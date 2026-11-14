@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "UNKNOWN"
+  ],
+  "adverse_enforcement": null,
+  "canary": "CVCANARY-20b88e0b99bea2c2",
+  "category": "address_poisoning",
+  "category_id": "C03",
+  "decisive_evidence": [
+    "EV-0030"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-027",
+  "kind": "benign_corroboration",
+  "label": "GOOD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "Independent benign record; Cloud may add coverage but can never create ALLOW or prove safety.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": false
+}

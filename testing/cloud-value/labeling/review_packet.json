@@ -1,0 +1,246 @@
+{
+  "cases": [
+    {
+      "category": "malicious_program",
+      "id": "CV-001",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "malicious_program",
+      "id": "CV-002",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "malicious_program",
+      "id": "CV-004",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "drainer_recipient",
+      "id": "CV-011",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "drainer_recipient",
+      "id": "CV-012",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "drainer_recipient",
+      "id": "CV-014",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "address_poisoning",
+      "id": "CV-021",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "address_poisoning",
+      "id": "CV-022",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "address_poisoning",
+      "id": "CV-024",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "fake_mint",
+      "id": "CV-031",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "fake_mint",
+      "id": "CV-032",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "fake_mint",
+      "id": "CV-034",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "transfer_hook_honeypot",
+      "id": "CV-041",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "transfer_hook_honeypot",
+      "id": "CV-042",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "transfer_hook_honeypot",
+      "id": "CV-044",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "confiscatory_transfer_fee",
+      "id": "CV-051",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "confiscatory_transfer_fee",
+      "id": "CV-052",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "confiscatory_transfer_fee",
+      "id": "CV-054",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "permanent_delegate_mint",
+      "id": "CV-061",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "permanent_delegate_mint",
+      "id": "CV-062",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "permanent_delegate_mint",
+      "id": "CV-064",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "freeze_authority_risk",
+      "id": "CV-071",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "freeze_authority_risk",
+      "id": "CV-072",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "freeze_authority_risk",
+      "id": "CV-074",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "alt_resolves_to_drainer",
+      "id": "CV-081",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "alt_resolves_to_drainer",
+      "id": "CV-082",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "alt_resolves_to_drainer",
+      "id": "CV-084",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "cpi_hidden_drain",
+      "id": "CV-091",
+      "kind": "tp_historical",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "cpi_hidden_drain",
+      "id": "CV-092",
+      "kind": "tp_lab",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    },
+    {
+      "category": "cpi_hidden_drain",
+      "id": "CV-094",
+      "kind": "fp_stale_retracted",
+      "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
+      "rationale_withheld_from_reviewer": true,
+      "reviewer_verdict": null
+    }
+  ],
+  "format": "hguet-cv-review-packet/1",
+  "instructions": "blind relabelling of the critical cases"
+}

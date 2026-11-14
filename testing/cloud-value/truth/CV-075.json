@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "UNKNOWN"
+  ],
+  "adverse_enforcement": null,
+  "canary": "CVCANARY-897194fdf86eaf5c",
+  "category": "freeze_authority_risk",
+  "category_id": "C08",
+  "decisive_evidence": [],
+  "decisive_tier": null,
+  "expected_verifier_discards": [
+    "wrong_network"
+  ],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-075",
+  "kind": "fp_wrong_network",
+  "label": "UNKNOWN",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "Adverse evidence concerns the same-looking subject on mainnet; nothing applies to devnet: UNKNOWN, not DENY.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": false
+}

@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "ALT_ENTRY_RESOLVES_TO_DRAINER",
+    "polarity": "adverse"
+  },
+  "confidence": 0.95,
+  "evidence_id": "EV-0099",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:alt_resolves_to_drainer",
+    "reproducible": false,
+    "source": "documented public attack class: alt resolves to drainer",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "2LpMLMeKu9YCK8K7BfSHKZvQymYnjYgTzJmSUtXMiVsL",
+    "type": "alt_table"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

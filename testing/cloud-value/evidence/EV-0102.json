@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "PROGRAM_CPI_DRAINS_FUNDS",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0102",
+  "format": "hguet-cv-evidence/1",
+  "network": "testnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:cpi_hidden_drain",
+    "reproducible": false,
+    "source": "documented public attack class: cpi hidden drain",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "8dXXcf8jqFnfpUc4h8DnGA6MNX3hD6WJFdKanCPmswkz",
+    "type": "program"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "RECIPIENT_ADDRESS_POISONING",
+    "polarity": "adverse"
+  },
+  "confidence": 0.4,
+  "evidence_id": "EV-0029",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "no observed occurrence",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "hypothesis:address_poisoning",
+    "reproducible": false,
+    "source": "threat-model note",
+    "tier": "hypothetical"
+  },
+  "subject": {
+    "id": "5kQWwBTvVHA8LRPEBnVcaNCmaYrqCFhSwYxAFzvwLUjY",
+    "type": "account"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

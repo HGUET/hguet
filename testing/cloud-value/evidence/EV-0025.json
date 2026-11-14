@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "RECIPIENT_ADDRESS_POISONING",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0025",
+  "format": "hguet-cv-evidence/1",
+  "network": "testnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:address_poisoning",
+    "reproducible": false,
+    "source": "documented public attack class: address poisoning",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "GTLgg6HHbbNWamVzTvuNpziT3QRRbzaMby4YknZt7UmB",
+    "type": "account"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

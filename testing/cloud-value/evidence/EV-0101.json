@@ -1,0 +1,28 @@
+{
+  "claim": {
+    "code": "PROGRAM_CPI_DRAINS_FUNDS",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0101",
+  "extra": {
+    "lab_input_sha256": "c4c972805421eb184ace165034d6ee7bdd5d7ed9eb91c7c21bbccdaa1188c379"
+  },
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:cpi_hidden_drain",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (cpi_hidden_drain)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "A2MwVq1DNcPhgateCfTcyWUFFphr1iWZopaNqKoNV3hU",
+    "type": "program"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

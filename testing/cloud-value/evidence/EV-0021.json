@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "DRAINER_RECIPIENT_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.85,
+  "evidence_id": "EV-0021",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-15T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:drainer_recipient",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (drainer_recipient)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "8Gd9XFFTJqKDANTxwHBfQ8ayxFMgkZEjq46NZ6LkA27F",
+    "type": "account"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

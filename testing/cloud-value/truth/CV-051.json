@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "DENY"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-ba821e75bfec657b",
+  "category": "confiscatory_transfer_fee",
+  "category_id": "C06",
+  "decisive_evidence": [
+    "EV-0056"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-051",
+  "kind": "tp_historical",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject is a member of a documented confiscatory_transfer_fee pattern; only external knowledge shows it.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": true
+}

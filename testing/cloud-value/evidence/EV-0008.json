@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MALICIOUS_PROGRAM_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0008",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "long-standing public record without incident",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:malicious_program",
+    "reproducible": false,
+    "source": "documented public attack class: malicious program",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "L8LND3w34PbNCRSUUzs1R8SfaRFNhX5aFD6x8axbkLK",
+    "type": "program"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

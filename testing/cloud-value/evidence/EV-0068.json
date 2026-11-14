@@ -1,0 +1,28 @@
+{
+  "claim": {
+    "code": "MINT_PERMANENT_DELEGATE_ABUSE",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0068",
+  "extra": {
+    "lab_input_sha256": "9ce4bec768293265aebe1205a6527deb4f90525762b43d31669b55643a6c9cb5"
+  },
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:permanent_delegate_mint",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (permanent_delegate_mint)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "GqY2QvTfS6XmHqL9F1MBe8a3a1TFGdybP8wDp7mesQB5",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

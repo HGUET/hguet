@@ -1,0 +1,32 @@
+{
+  "acceptable_final": [
+    "WARN",
+    "DENY"
+  ],
+  "adverse_enforcement": "warn",
+  "canary": "CVCANARY-39bcbe8c15432d10",
+  "category": "freeze_authority_risk",
+  "category_id": "C08",
+  "decisive_evidence": [
+    "EV-0080"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-073",
+  "kind": "local_covers",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "DENY",
+  "rationale": "Already visibly over the signed spend cap, so local analysis denies on its own; the external evidence is corroborating and must not be counted as an additional detection.",
+  "requires_cloud_evidence": false,
+  "tamper": null,
+  "threat_present": true
+}

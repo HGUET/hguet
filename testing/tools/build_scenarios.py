@@ -532,6 +532,20 @@ def regression():
         "A malformed or unknown opcode cannot be classified; unsupported structure is UNKNOWN.",
         [ct.Instruction(T, [(SRC_A, False, True), (PAYER, True, False)], bytes([99]))], req=["INTENT_COVERAGE_INCOMPLETE"],
         forbid=["INTENT_REJECTED"], caps=tc, evidence="insufficient")
+    # --- B-012 contract boundary (see testing/analysis/B-012.md): unchecked Transfer is a FORM violation of
+    # a capped intent (caps authorise only mint-named checked debits), and only when caps exist.
+    unchecked = ct.ix_token_transfer_unchecked(T, SRC_A, DST_A, PAYER, 10)
+    reg("B-112", "BAD", "Unchecked Transfer under signed mint caps (contract-form violation)",
+        "The capped intent authorises only debits that name their mint (TransferChecked/BurnChecked). Opcode 3 names no "
+        "mint, so it is outside what the issuer signed; the violation is of the signed form, not a proven over-cap spend.",
+        [unchecked], req=F_TOKEN_INTENT, caps=tc)
+    reg("G-104", "GOOD", "The same payment expressed as TransferChecked within the cap",
+        "Pair of B-112: identical economic intent in the authorised form must not be blocked.",
+        [ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 10)], caps=tc,
+        forbid=FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY, proven=PROVEN_INTENT)
+    reg("U-110", "UNKNOWN", "Unchecked Transfer under a SOL-only intent (no token caps)",
+        "Without token caps there is no signed token scope to violate: the transfer is unauthorised-but-unbounded, not a form violation.",
+        [unchecked], req=["SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED"], forbid=["INTENT_REJECTED"], evidence="insufficient")
     SINK[0] = SCENARIOS
 
 

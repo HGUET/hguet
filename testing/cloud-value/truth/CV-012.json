@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "DENY"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-c94fee40dd6cc15f",
+  "category": "drainer_recipient",
+  "category_id": "C02",
+  "decisive_evidence": [
+    "EV-0013"
+  ],
+  "decisive_tier": "lab_simulation",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-012",
+  "kind": "tp_lab",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "A recorded deterministic simulation shows the harmful behaviour (drainer_recipient).",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": true
+}

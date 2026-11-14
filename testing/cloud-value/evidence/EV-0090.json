@@ -1,0 +1,28 @@
+{
+  "claim": {
+    "code": "ALT_ENTRY_RESOLVES_TO_DRAINER",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0090",
+  "extra": {
+    "lab_input_sha256": "6953d2d3072a8d2e5187b39928029d17703093b47dd3c4117d572598779645cc"
+  },
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:alt_resolves_to_drainer",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (alt_resolves_to_drainer)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "6SFEhwiUibaTQUqf68c9LkRhmhN8xLYbHzjykXUrGmfX",
+    "type": "alt_table"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

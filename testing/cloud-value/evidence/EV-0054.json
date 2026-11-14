@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "TRANSFER_HOOK_HONEYPOT_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.85,
+  "evidence_id": "EV-0054",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-15T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:transfer_hook_honeypot",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (transfer_hook_honeypot)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "DtuY4vTqpFUo4wvxUT6nLeVcZtKZA3gCDSxu2wiaF3ZF",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

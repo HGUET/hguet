@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "FREEZE_AUTHORITY_RISK_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0085",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "long-standing public record without incident",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:freeze_authority_risk",
+    "reproducible": false,
+    "source": "documented public attack class: freeze authority risk",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "9BtVSzvxEnuxK9Qz9TVLppeSr5iXD7WQ3HViWF94TUrw",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

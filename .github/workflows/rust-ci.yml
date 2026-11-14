@@ -177,6 +177,7 @@ jobs:
       - name: Security benchmark smoke set (real CLI, 13 deterministic scenarios)
         run: |
           python testing/tools/build_scenarios.py --check
+          python testing/cloud-value/tools/build_cloud_value.py --check
           python -m unittest discover -s testing/tests
           python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke --out testing/reports/ci-smoke
           # paired regression cases for the fixed semantics (DENY = proven violation, UNKNOWN = missing coverage)

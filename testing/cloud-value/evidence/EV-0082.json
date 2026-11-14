@@ -1,0 +1,26 @@
+{
+  "claim": {
+    "code": "MINT_FREEZE_AUTHORITY_RISK",
+    "polarity": "retraction"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0082",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-08-15T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "review concluded the earlier flag was wrong",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "retraction-of:EV-0081",
+    "reproducible": false,
+    "source": "documented public attack class: freeze authority risk",
+    "tier": "historical_class"
+  },
+  "retracts": "EV-0081",
+  "subject": {
+    "id": "Ad2ptFMN2EYgjz8rk8eZAaSB4Bqy8KP6YPZ1tE1vSdpT",
+    "type": "mint"
+  },
+  "valid_until": "2027-08-15T00:00:00Z"
+}

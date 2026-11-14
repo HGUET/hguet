@@ -24,9 +24,12 @@ jobs:
       - name: Framework self-tests and scenario drift check
         run: |
           python testing/tools/build_scenarios.py --check
+          python testing/cloud-value/tools/build_cloud_value.py --check
           python -m unittest discover -s testing/tests
       - name: Run the 60 original scenarios and the regression pairs against the real CLI
         run: python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all --out testing/reports/full
+      - name: Cloud Value Benchmark v1 (100 scenarios; reference mock is a MODEL, real_server stays unavailable)
+        run: python testing/cloud-value/runner/run_cloud_value.py --hguet target/debug/hguet --out testing/cloud-value/reports/ci
       - name: Cloud comparison (MODEL only; sources are never merged)
         run: python testing/cloud/compare.py --report testing/reports/full/report.json
       - name: Publish summary
@@ -53,4 +56,6 @@ jobs:
             testing/reports/full/report.json
             testing/reports/full/report.html
             testing/reports/full/cloud_comparison.json
+            testing/cloud-value/reports/ci/report.json
+            testing/cloud-value/reports/ci/report.html
           if-no-files-found: error
