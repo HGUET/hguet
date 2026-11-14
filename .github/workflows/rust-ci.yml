@@ -149,6 +149,17 @@ jobs:
         run: |
           cargo build -p hguet-signer --bin hguet-signer-isolate
           python scripts/check_isolated_signer.py target/debug/hguet-signer-isolate
+      - name: Verify Linux Bubblewrap signer sandbox and mandatory fail-closed behavior
+        run: |
+          python scripts/check_signer_sandbox.py
+          # Namespace capability varies by runner/AppArmor policy. Never
+          # downgrade: the runtime test requires a sandboxed BLOCK or proves
+          # launcher exit 40 with no result or unsandboxed fallback.
+          if ! command -v bwrap >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq bubblewrap
+          fi
+          python scripts/check_signer_sandbox_runtime.py
       - name: Assert signer-preflight is offline, cryptographic and permanently blocked
         run: |
           # Public synthetic unsigned transaction and public test-only intent key.
