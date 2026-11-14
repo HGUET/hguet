@@ -1115,6 +1115,10 @@ fn execute(v:Args)->(serde_json::Value,i32){
                         }
                     }
                 }
+                let signing_boundary=hguet_rpc::assess_signing_boundary(
+                    &parsed,verified_intent.as_ref(),
+                    offline_direct_analysis.as_ref(),aggregate_token_spending.as_ref());
+                verdict.coverage.push("block_only_signing_boundary".into());
                 if evidence.status=="rpc_failed" {
                     verdict.finding("RPC_SIMULATION_FAILED","high",
                         "The selected Solana RPC reported a failed simulation; execution is not validated");
@@ -1130,23 +1134,33 @@ fn execute(v:Args)->(serde_json::Value,i32){
                     "cpi_source_account_snapshot":cpi_source_account_snapshot,
                     "cpi_source_coverage":cpi_source_coverage,
                     "aggregate_token_spending":aggregate_token_spending,
+                    "signing_boundary":signing_boundary,
                     "verdict":verdict}),30)
             }
             Err(err)=>{
                 verdict.simulation_status="rpc_unavailable".into();
                 verdict.finding(err.code(),"high",
                     "Solana RPC evidence unavailable or inconsistent; no successful execution should be inferred");
+                let signing_boundary=hguet_rpc::assess_signing_boundary(
+                    &parsed,verified_intent.as_ref(),
+                    offline_direct_analysis.as_ref(),None);
+                verdict.coverage.push("block_only_signing_boundary".into());
                 return (json!({"inspection":parsed,
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
+                    "signing_boundary":signing_boundary,
                     "verdict":verdict}),30)
             }
         }
     }
+    let signing_boundary=hguet_rpc::assess_signing_boundary(
+        &parsed,verified_intent.as_ref(),offline_direct_analysis.as_ref(),None);
+    verdict.coverage.push("block_only_signing_boundary".into());
     verdict.finding("NO_SIMULATION","high","Wire inspection does not prove transfers, CPI effects, execution or wallet authorization");
     (json!({"inspection":parsed,
         "signed_token_spend_review":signed_token_spend_review,
-                    "signed_token_source_review":signed_token_source_review,
+        "signed_token_source_review":signed_token_source_review,
+        "signing_boundary":signing_boundary,
         "verdict":verdict}),if v.command=="inspect"{0}else{30})
 }
 fn main(){
