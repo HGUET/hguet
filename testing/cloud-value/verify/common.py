@@ -54,6 +54,96 @@ def canonical_memo(quote_id):
     return "HGUET:" + quote_id if ok else None
 
 
+class ProfileError(ValueError):
+    """A violation of an S7.1 profile; `code` is the stable error code shared with the server's golden vectors."""
+
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+_CLIENT_EVIDENCE_KEYS = {"schema_version", "kind", "local_decision", "finding_codes", "coverage"}
+CLIENT_EVIDENCE_DECISIONS = ("ALLOW", "WARN", "DENY", "UNKNOWN")
+CLIENT_EVIDENCE_MAX_BYTES = 4096
+
+
+def _strict_json(data):
+    import json
+
+    def pairs(items):
+        keys = [k for k, _ in items]
+        if len(set(keys)) != len(keys):
+            raise ProfileError("JSON_DUPLICATE_KEY")
+        return dict(items)
+
+    def reject_float(_):
+        raise ProfileError("JSON_FLOAT_NOT_ALLOWED")
+
+    def reject_constant(_):
+        raise ProfileError("JSON_MALFORMED")
+
+    if data.startswith(b"\xef\xbb\xbf"):
+        raise ProfileError("JSON_BOM")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ProfileError("JSON_INVALID_UTF8") from None
+    try:
+        return json.loads(text, object_pairs_hook=pairs, parse_float=reject_float, parse_constant=reject_constant)
+    except ProfileError:
+        raise
+    except (ValueError, RecursionError):
+        raise ProfileError("JSON_MALFORMED") from None
+
+
+def _name_list(value, limit, first, rest):
+    if not isinstance(value, list) or len(value) > limit:
+        return None
+    ok = all(isinstance(v, str) and 1 <= len(v) <= (128 if first.isupper() else 96) and v.isascii() and v[0] in first
+             and all(c in rest for c in v) for v in value)
+    return value if ok else None
+
+
+def validate_client_evidence(data, local_decision):
+    """S7.1 ClientEvidence redaction profile. Returns "ABSENT" (empty) or "OK"; raises ProfileError otherwise."""
+    import string
+    if not data:
+        return "ABSENT"
+    if len(data) > CLIENT_EVIDENCE_MAX_BYTES:
+        raise ProfileError("CLIENT_EVIDENCE_TOO_LARGE")
+    value = _strict_json(data)
+    if not isinstance(value, dict) or set(value) != _CLIENT_EVIDENCE_KEYS:
+        raise ProfileError("CLIENT_EVIDENCE_KEYS")
+    schema = value["schema_version"]
+    if isinstance(schema, bool) or schema != 1 or value["kind"] != "hguet_client_evidence":
+        raise ProfileError("CLIENT_EVIDENCE_KIND")
+    if value["local_decision"] not in CLIENT_EVIDENCE_DECISIONS:
+        raise ProfileError("CLIENT_EVIDENCE_DECISION")
+    upper, lower, digits = string.ascii_uppercase, string.ascii_lowercase, string.digits
+    codes = _name_list(value["finding_codes"], 64, upper, upper + digits + "_")
+    if codes is None:
+        raise ProfileError("CLIENT_EVIDENCE_CODES")
+    coverage = _name_list(value["coverage"], 32, lower, lower + digits + "_")
+    if coverage is None:
+        raise ProfileError("CLIENT_EVIDENCE_COVERAGE")
+    if any(a >= b for a, b in zip(codes, codes[1:])) or any(a >= b for a, b in zip(coverage, coverage[1:])):
+        raise ProfileError("CLIENT_EVIDENCE_NOT_SORTED_UNIQUE")
+    if build_client_evidence(value["local_decision"], codes, coverage) != data:
+        raise ProfileError("CLIENT_EVIDENCE_NOT_CANONICAL")
+    if value["local_decision"] != local_decision:
+        raise ProfileError("CLIENT_EVIDENCE_DECISION_MISMATCH")
+    return "OK"
+
+
+def build_client_evidence(local_decision, finding_codes=(), coverage=()):
+    """Canonical redacted local evidence: ONLY decision, finding codes and coverage names. Never accounts, programs,
+    amounts, instruction data, URLs, paths, intents or signatures."""
+    import json
+    body = {"schema_version": 1, "kind": "hguet_client_evidence", "local_decision": local_decision,
+            "finding_codes": sorted(finding_codes), "coverage": sorted(coverage)}
+    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+
+
 def parse_time(text):
     return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 

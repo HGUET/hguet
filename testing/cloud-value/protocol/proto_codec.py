@@ -3,8 +3,11 @@
 The public .proto is parsed at import time; messages, enums, field numbers and `oneof` groups come
 from that file only. If the file changes, this codec changes with it. Scope: exactly what the proto
 uses (proto3; string, bytes, bool, uint32, enums, nested messages, repeated, oneof). Decoding is
-strict: unknown fields, wrong wire types, truncation and oversize frames are errors (the protocol
-defines ERROR_UNKNOWN_CRITICAL_FIELD; silently skipping fields is not acceptable for a verifier).
+strict, following the S7.1 critical/unknown-field policy (HGUET/server docs/architecture/canonical-contract-s7.md):
+an unknown field number >= 1000 is a non-critical extension and is skipped; any other unknown field is critical;
+field number 0, group wire types, truncation, overlong varints, duplicate singular fields, `oneof` conflicts, wire
+type mismatches, invalid UTF-8, bool not in {0,1}, uint32 overflow and undefined enum values are errors. Every error
+carries a stable `code` shared with the server's golden vectors.
 
 Framing (proto comment and cloud-protocol.md): 4-byte unsigned big-endian length + exactly one
 `Envelope`, maximum 1 MiB.
@@ -19,8 +22,14 @@ SCALARS = {"string", "bytes", "bool", "uint32", "uint64"}
 VARINT, LEN = 0, 2
 
 
+EXTENSION_FLOOR = 1000
+MAX_DEPTH = 6
+
+
 class ProtoError(ValueError):
-    pass
+    def __init__(self, message, code="PROTO_ERROR"):
+        super().__init__(message)
+        self.code = code
 
 
 def _strip_comments(text):
@@ -70,14 +79,19 @@ def _varint(value):
 
 
 def _read_varint(data, pos):
+    start = pos
     shift = result = 0
     while True:
-        if pos >= len(data) or shift > 63:
-            raise ProtoError("truncated or oversized varint")
+        if pos >= len(data):
+            raise ProtoError("truncated varint", "PROTO_TRUNCATED")
+        if shift > 63:
+            raise ProtoError("oversized varint", "PROTO_OVERLONG_VARINT")
         byte = data[pos]
         pos += 1
-        result |= (byte & 0x7F) << shift
+        result = (result | ((byte & 0x7F) << shift)) & 0xFFFFFFFFFFFFFFFF
         if not byte & 0x80:
+            if pos - start > 1 and byte == 0:
+                raise ProtoError("non-minimal varint", "PROTO_OVERLONG_VARINT")
             return result, pos
         shift += 7
 
@@ -147,32 +161,71 @@ def _is_default(typ, value):
     return int(value) == 0
 
 
+def _check_scalar(typ, raw):
+    if typ == "bool" and raw > 1:
+        raise ProtoError("bool is not 0 or 1", "PROTO_INVALID_BOOL")
+    if typ == "uint32" and raw >= 1 << 32:
+        raise ProtoError("uint32 overflow", "PROTO_INTEGER_OVERFLOW")
+    if typ in SCHEMA["enums"] and raw not in SCHEMA["enums"][typ].values():
+        raise ProtoError("unknown enum value %d for %s" % (raw, typ), "PROTO_UNKNOWN_ENUM_VALUE")
+
+
 def decode(message, data, *, _depth=0):
-    if _depth > 8:
-        raise ProtoError("nesting too deep")
+    if _depth == 0 and len(data) > MAX_FRAME:
+        raise ProtoError("envelope exceeds 1 MiB", "PROTO_FRAME_TOO_LARGE")
+    if _depth > MAX_DEPTH:
+        raise ProtoError("nesting too deep", "PROTO_DEPTH")
     spec, pos, out = SCHEMA["messages"][message], 0, {}
-    oneof_seen = {}
+    oneof_seen, singular_seen = {}, set()
     while pos < len(data):
         tag, pos = _read_varint(data, pos)
         number, wire = tag >> 3, tag & 7
+        if number == 0:
+            raise ProtoError("field number 0", "PROTO_FIELD_NUMBER_ZERO")
+        if wire in (3, 4):
+            raise ProtoError("group wire type", "PROTO_GROUP_WIRE_TYPE")
+        if wire not in (0, 1, 2, 5):
+            raise ProtoError("unsupported wire type %d" % wire, "PROTO_WIRE_TYPE_MISMATCH")
         field = spec["fields"].get(number)
+        raw, chunk = 0, b""
+        if wire == VARINT:
+            raw, pos = _read_varint(data, pos)
+        elif wire in (1, 5):
+            width = 8 if wire == 1 else 4
+            if pos + width > len(data):
+                raise ProtoError("truncated fixed-width field", "PROTO_TRUNCATED")
+            pos += width
+        else:
+            length, pos = _read_varint(data, pos)
+            if length > len(data) - pos:
+                raise ProtoError("truncated length-delimited field", "PROTO_TRUNCATED")
+            chunk = data[pos:pos + length]
+            pos += length
         if field is None:
-            raise ProtoError("unknown field %d in %s (critical: refusing to skip)" % (number, message))
+            if number >= EXTENSION_FLOOR:
+                continue  # non-critical extension: skipped, never interpreted
+            raise ProtoError("unknown critical field %d in %s" % (number, message), "PROTO_UNKNOWN_CRITICAL_FIELD")
         typ, name = field["type"], field["name"]
+        if not field["repeated"]:
+            if number in singular_seen:
+                raise ProtoError("duplicate singular field %s.%s" % (message, name), "PROTO_DUPLICATE_FIELD")
+            singular_seen.add(number)
+        if field["oneof"]:
+            if oneof_seen.get(field["oneof"]) not in (None, number):
+                raise ProtoError("two members of oneof %s present" % field["oneof"], "PROTO_ONEOF_CONFLICT")
+            oneof_seen[field["oneof"]] = number
         values = []
         if wire == VARINT:
             if not _is_numeric(typ):
-                raise ProtoError("wire type mismatch for %s.%s" % (message, name))
-            raw, pos = _read_varint(data, pos)
+                raise ProtoError("wire type mismatch for %s.%s" % (message, name), "PROTO_WIRE_TYPE_MISMATCH")
+            _check_scalar(typ, raw)
             values.append(raw)
         elif wire == LEN:
-            length, pos = _read_varint(data, pos)
-            chunk = data[pos:pos + length]
-            if len(chunk) != length:
-                raise ProtoError("truncated length-delimited field")
-            pos += length
             if typ == "string":
-                values.append(chunk.decode("utf-8"))
+                try:
+                    values.append(chunk.decode("utf-8"))
+                except UnicodeDecodeError:
+                    raise ProtoError("invalid UTF-8 in %s.%s" % (message, name), "PROTO_INVALID_UTF8") from None
             elif typ == "bytes":
                 values.append(bytes(chunk))
             elif typ in SCHEMA["messages"]:
@@ -180,29 +233,21 @@ def decode(message, data, *, _depth=0):
             elif _is_numeric(typ) and field["repeated"]:
                 inner = 0
                 while inner < len(chunk):
-                    raw, inner = _read_varint(chunk, inner)
-                    values.append(raw)
+                    item, inner = _read_varint(chunk, inner)
+                    _check_scalar(typ, item)
+                    values.append(item)
             else:
-                raise ProtoError("wire type mismatch for %s.%s" % (message, name))
+                raise ProtoError("wire type mismatch for %s.%s" % (message, name), "PROTO_WIRE_TYPE_MISMATCH")
         else:
-            raise ProtoError("unsupported wire type %d" % wire)
+            raise ProtoError("wire type mismatch for %s.%s" % (message, name), "PROTO_WIRE_TYPE_MISMATCH")
         converted = []
-        for raw in values:
+        for item in values:
             if typ == "bool":
-                converted.append(bool(raw))
+                converted.append(bool(item))
             elif typ in SCHEMA["enums"]:
-                names = {v: k for k, v in SCHEMA["enums"][typ].items()}
-                if raw not in names:
-                    raise ProtoError("unknown enum value %d for %s" % (raw, typ))
-                converted.append(names[raw])
-            elif typ == "uint32" and isinstance(raw, int) and raw >= 1 << 32:
-                raise ProtoError("uint32 overflow")
+                converted.append({v: k for k, v in SCHEMA["enums"][typ].items()}[item])
             else:
-                converted.append(raw)
-        if field["oneof"]:
-            if oneof_seen.get(field["oneof"]) not in (None, name):
-                raise ProtoError("two members of oneof %s present" % field["oneof"])
-            oneof_seen[field["oneof"]] = name
+                converted.append(item)
         if field["repeated"]:
             out.setdefault(name, []).extend(converted)
         else:
