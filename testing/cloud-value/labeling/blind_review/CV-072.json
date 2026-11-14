@@ -1,0 +1,57 @@
+{
+  "available_independent_evidence": [
+    {
+      "claim": {
+        "code": "MINT_FREEZE_AUTHORITY_RISK",
+        "polarity": "adverse"
+      },
+      "confidence": 0.9,
+      "evidence_id": "EV-0079",
+      "extra": {
+        "lab_input_sha256": "fcde809f726158eba20758012fad87ff9ca3e18a17a832ab2ed17601cd1073d1"
+      },
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-10-10T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "model inputs recorded in the fixture",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "class:freeze_authority_risk",
+        "reproducible": true,
+        "source": "deterministic benchmark model run (freeze_authority_risk)",
+        "tier": "lab_simulation"
+      },
+      "subject": {
+        "id": "FtL5iWg2LgYaKtmJLrnFva83RSjBupqJZzG5cRstxWg5",
+        "type": "mint"
+      },
+      "valid_until": "2027-04-01T00:00:00Z"
+    }
+  ],
+  "format": "hguet-cv-blind-review-case/1",
+  "id": "CV-072",
+  "network": "devnet",
+  "note_on_evidence": "Evidence instances are synthetic fixtures of documented attack classes; judge whether, given ONLY the evidence fields (network, validity window, retraction, tier, confidence), the transaction should be treated as BAD, GOOD or UNKNOWN.",
+  "questions": {
+    "confidence_0_to_1": null,
+    "decisive_evidence_ids": [],
+    "reasoning": "",
+    "verdict": "BAD | GOOD | UNKNOWN"
+  },
+  "reference_time": "2026-11-01T00:00:00Z",
+  "subjects_to_assess": [
+    {
+      "id": "FtL5iWg2LgYaKtmJLrnFva83RSjBupqJZzG5cRstxWg5",
+      "type": "mint"
+    }
+  ],
+  "transaction": {
+    "instructions": [
+      "SPL Token TransferChecked of 500 raw units of mint FtL5iWg2LgYaKtmJLrnFva83RSjBupqJZzG5cRstxWg5 (destination token account Fbfsyfx3sippGuoPUZBsAniwmmmgrh9jTKXf53jzTu5D)"
+    ],
+    "intent_covers": "the instructions above are within the signed spend/program limits",
+    "signed_intent_present": true
+  },
+  "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports"
+}

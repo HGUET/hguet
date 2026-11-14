@@ -1,0 +1,57 @@
+{
+  "available_independent_evidence": [
+    {
+      "claim": {
+        "code": "MINT_PERMANENT_DELEGATE_ABUSE",
+        "polarity": "adverse"
+      },
+      "confidence": 0.9,
+      "evidence_id": "EV-0068",
+      "extra": {
+        "lab_input_sha256": "9ce4bec768293265aebe1205a6527deb4f90525762b43d31669b55643a6c9cb5"
+      },
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-10-10T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "model inputs recorded in the fixture",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "class:permanent_delegate_mint",
+        "reproducible": true,
+        "source": "deterministic benchmark model run (permanent_delegate_mint)",
+        "tier": "lab_simulation"
+      },
+      "subject": {
+        "id": "GqY2QvTfS6XmHqL9F1MBe8a3a1TFGdybP8wDp7mesQB5",
+        "type": "mint"
+      },
+      "valid_until": "2027-04-01T00:00:00Z"
+    }
+  ],
+  "format": "hguet-cv-blind-review-case/1",
+  "id": "CV-062",
+  "network": "devnet",
+  "note_on_evidence": "Evidence instances are synthetic fixtures of documented attack classes; judge whether, given ONLY the evidence fields (network, validity window, retraction, tier, confidence), the transaction should be treated as BAD, GOOD or UNKNOWN.",
+  "questions": {
+    "confidence_0_to_1": null,
+    "decisive_evidence_ids": [],
+    "reasoning": "",
+    "verdict": "BAD | GOOD | UNKNOWN"
+  },
+  "reference_time": "2026-11-01T00:00:00Z",
+  "subjects_to_assess": [
+    {
+      "id": "GqY2QvTfS6XmHqL9F1MBe8a3a1TFGdybP8wDp7mesQB5",
+      "type": "mint"
+    }
+  ],
+  "transaction": {
+    "instructions": [
+      "Token-2022 TransferChecked of 500 raw units of mint GqY2QvTfS6XmHqL9F1MBe8a3a1TFGdybP8wDp7mesQB5 (destination token account GnBU2updyBpJ27Co4p1kzFL4KYpZqgDXC7QbKVGaGbfR)"
+    ],
+    "intent_covers": "the instructions above are within the signed spend/program limits",
+    "signed_intent_present": true
+  },
+  "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports"
+}

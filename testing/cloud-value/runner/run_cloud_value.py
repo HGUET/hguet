@@ -2,14 +2,14 @@
 """Cloud Value Benchmark v1 runner.
 
   python testing/cloud-value/runner/run_cloud_value.py --hguet target/debug/hguet [--out DIR]
-         [--enable-real-server --real-server-url https://... ]
+         [--enable-real-server --real-server-host HOST --real-server-ca CA.pem [--payments-file F]]
 
 Measures what a Cloud adds (or wrongly adds) on top of the REAL local CLI, over 100 scenarios whose
 decisive facts are not in the transaction. Sources are reported in separate sections and never merged:
   local              real `hguet check --offline`                      MEASURED
   rpc                real `hguet check --rpc-url <unreachable mock>`   MEASURED (transport failure only)
   reference_mock     reference server profiles x verifier modes        MODEL
-  real_server        the real HGUET Server                             UNAVAILABLE unless explicitly enabled
+  real_server        the real HGUET Server (TLS+Protobuf, hguet.proto)  UNAVAILABLE until fully verifiable
 Ground truth is loaded only by the scorer; components receive `inputs/` documents and the request.
 """
 import argparse
@@ -25,11 +25,12 @@ CV = Path(__file__).resolve().parents[1]
 TESTING = CV.parent
 for sub in ("runner", "mocks"):
     sys.path.insert(0, str(TESTING / sub))
-for sub in ("server", "verify", "labeling"):
+for sub in ("server", "verify", "labeling", "protocol"):
     sys.path.insert(0, str(CV / sub))
 import assessment_rules as rules  # noqa: E402
 import independent_labeler  # noqa: E402
-import real_server  # noqa: E402
+import jcs  # noqa: E402
+import protocol_client  # noqa: E402
 import reference_server as rs  # noqa: E402
 import rpc_mock  # noqa: E402
 import run_benchmark as rb  # noqa: E402
@@ -55,14 +56,14 @@ def leak_guard(inputs, truths, evidence):
             raise SystemExit("LEAK: forbidden ground-truth key %s present in component-visible data" % needle)
 
 
-def apply_tamper(envelope, kind, request):
-    """Harness-side tampering of an otherwise correct answer (tests the VERIFIER, not the server)."""
-    if envelope is None or kind is None:
-        return envelope
-    body = json.loads(json.dumps(envelope["assessment"]))
+def apply_tamper(signed, kind, request):
+    """Harness-side tampering of an otherwise correct SignedPayload (tests the VERIFIER, not the server)."""
+    if signed is None or kind is None:
+        return signed
     if kind == "bad_signature":
-        sig = ct_flip(envelope["signature"]["sig_b58"])
-        return {"assessment": body, "signature": dict(envelope["signature"], sig_b58=sig)}
+        flipped = bytes([signed["signature"][0] ^ 1]) + signed["signature"][1:]
+        return dict(signed, signature=flipped)
+    body = jcs.parse_strict(signed["canonical_payload"])
     if kind == "wrong_binding":
         body["message_sha256"] = "0" * 64
     elif kind == "unsupported_safe_claim":
@@ -74,15 +75,7 @@ def apply_tamper(envelope, kind, request):
     elif kind == "wrong_network_assessment":
         body["network"] = "mainnet"
         body["genesis_hash"] = rs.GENESIS["mainnet"]
-    return rs.sign_envelope(body)  # a VALID signature over a wrong or dishonest body
-
-
-def ct_flip(sig_b58):
-    sys.path.insert(0, str(TESTING / "lib"))
-    import crypto_tx as ct
-    raw = bytearray(ct.b58decode(sig_b58))
-    raw[0] ^= 1
-    return ct.b58encode(bytes(raw))
+    return rs.signer().sign(body)  # a VALID signature over a wrong or dishonest body
 
 
 # ------------------------------------------------------------------ local runs
@@ -105,18 +98,29 @@ def run_cloud_config(source, mode, inputs, truths, local, registry):
     rows = []
     for sid, inp in inputs.items():
         request = inp["cloud_request"]
-        envelope = source.assess(request, inp["clock"])
         tamper = inp["cloud_harness"]["tamper"]
-        if getattr(source, "kind", "") == "real_server" and tamper:
+        is_real = getattr(source, "kind", "") == "real_server"
+        if is_real and tamper:
             rows.append({"id": sid, "not_applicable": "tamper scenarios test the verifier, not the server"})
             continue
-        if envelope is not None:
-            envelope = apply_tamper(envelope, tamper, request)
-        verification = rules.verify(envelope, request, registry, now_iso=inp["clock"], mode=mode) if envelope else None
-        strict_view = rules.verify(envelope, request, registry, now_iso=inp["clock"], mode="strict") if envelope else None
+        if is_real and any(x["type"] == "alt_table" for x in request["subjects"]):
+            rows.append({"id": sid, "not_applicable": "subject type alt_table has no category in the public hguet.proto"})
+            continue
+        answer = source.assess(request, inp["clock"])
+        envelope, verification, strict_view = None, None, None
+        if isinstance(answer, dict) and "verification" in answer:
+            envelope, verification, strict_view = True, answer["verification"], answer["verification"]  # verified by the adapter
+        elif answer is not None:
+            envelope = apply_tamper(answer, tamper, request)
+            verification = rules.verify(envelope, request, registry, now_iso=inp["clock"], mode=mode)
+            strict_view = rules.verify(envelope, request, registry, now_iso=inp["clock"], mode="strict")
         claimed_accusations = []
-        if envelope:
-            claimed_accusations = [f for f in envelope["assessment"]["findings"] if f["enforcement"] in ("hard_deny", "warn")]
+        if envelope and isinstance(envelope, dict):
+            body = jcs.parse_strict(envelope["canonical_payload"])
+            claimed_accusations = [f for f in body["findings"] if f["enforcement"] in ("hard_deny", "warn")]
+        elif envelope is True:
+            claimed_accusations = [f for f in (verification["findings_accepted"] + verification["findings_rejected"])
+                                   if f.get("claimed_enforcement") in ("hard_deny", "warn")]
         final = rules.combine(local[sid]["decision"], verification)
         rows.append({
             "id": sid, "answered": envelope is not None, "final": final, "verification": verification,
@@ -251,6 +255,14 @@ def render_html(report):
             blocks.append("<div class='banner'><b>%s</b><br>%s</div>" % (esc(caption), esc(report["real_server"]["reason"])))
         else:
             blocks.append(metric_table(cols, caption))
+    proof = report.get("independent_proof", {})
+    blocks.append("<div class='banner'><b>Independent proof: %s</b><br>%s</div>" % (
+        esc(proof.get("status", "unavailable").upper()), esc(proof.get("reason", ""))))
+    blocks.append("<p class='mut'>Reference-mock signature algorithm: <b>%s</b> with a TEST-ONLY key. Real-server protocol: %s. "
+                  "ML-DSA-87 backend: %s. PQ TLS group enforceable in this runtime: %s.</p>" % (
+                      esc(str(report.get("reference_mock", {}).get("signature_algorithm", "?"))),
+                      esc(report["real_server"].get("protocol", "")), esc(json.dumps(report["real_server"].get("ml_dsa_87_backend"))),
+                      esc(str(report["real_server"].get("pq_group_enforceable_in_this_runtime")))))
     cats = "".join("<tr><td>%s</td><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
         esc(name), c["scenarios"], esc(json.dumps(c["local"], sort_keys=True)),
         esc(json.dumps(c["additional_tp"], sort_keys=True)), esc(json.dumps(c["additional_fp"], sort_keys=True)))
@@ -291,9 +303,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--hguet", default=str(TESTING.parent / "target/debug/hguet"))
     parser.add_argument("--out", default=str(CV / "reports/latest"))
-    parser.add_argument("--enable-real-server", action="store_true")
-    parser.add_argument("--real-server-url", default=None)
-    parser.add_argument("--allow-insecure-loopback", action="store_true", help="test switch: permit http://127.0.0.1")
+    parser.add_argument("--enable-real-server", action="store_true",
+                        help="opt in to contacting the real HGUET Server over its TLS+Protobuf protocol")
+    parser.add_argument("--real-server-host", default=None)
+    parser.add_argument("--real-server-port", type=int, default=443)
+    parser.add_argument("--real-server-ca", default=None, help="pinned CA bundle for the server certificate")
+    parser.add_argument("--payments-file", default=None,
+                        help="JSON {message_sha256: {payment_signature, claim_secret_hex}} for EXTERNALLY made devnet payments")
     args = parser.parse_args()
     hguet = str(Path(args.hguet).resolve())
     out = Path(args.out).resolve()
@@ -318,15 +334,29 @@ def main():
             server = rs.ReferenceCloudServer(CV / "evidence", profile)
             configs[name] = run_cloud_config(server, mode, inputs, truths, local, registry)
             metrics[name] = score(configs[name], truths, local)
-    real = real_server.RealServerAdapter(args.real_server_url, args.enable_real_server, args.allow_insecure_loopback)
+    payments = json.loads(Path(args.payments_file).read_text()) if args.payments_file else {}
+    real = protocol_client.RealServerAdapter(args.real_server_host, args.real_server_port, enabled=args.enable_real_server,
+                                             ca_file=args.real_server_ca, payments=payments)
+    real.registry = registry
     reason = real.unavailable_reason()
-    real_section = {"status": "unavailable" if reason else "enabled", "reason": reason or "enabled by operator"}
+    real_section = {"status": "unavailable" if reason else "enabled", "reason": reason or "enabled by operator",
+                    "protocol": "TLS 1.3 + 4-byte frame + Protobuf Envelope (protocol/v1/hguet.proto)",
+                    "payment_policy": "payments are made externally by the operator; the benchmark never pays",
+                    "pq_group_enforceable_in_this_runtime": protocol_client.pq_group_enforceable(),
+                    "ml_dsa_87_backend": {"available": rules.mldsa.BACKEND.available(), "reason": rules.mldsa.BACKEND.reason}}
     if not reason:
         rows = run_cloud_config(real, "strict", inputs, truths, local, registry)
         configs["real_server/strict-client"] = rows
         real_section["metrics"] = score(rows, truths, local)
         real_section["privacy"] = {"requests_sent": real.requests_sent, "bytes_sent": real.bytes_sent,
                                    "fields_sent": sorted(real.fields_sent)}
+        real_section["events"] = real.events
+    proof_dir = TESTING / "cloud" / "proofs"
+    proofs = sorted(p.stem for p in proof_dir.glob("*.json")) if proof_dir.exists() else []
+    proof_section = {"status": "unavailable" if not proofs else "partial", "scenarios_with_proofs": len(proofs),
+                     "reason": "no independent proofs authored" if not proofs else
+                     "proofs exist for some scenarios; metrics not yet computed from them"}
+    mock_alg = rs.signer().algorithm
     report = {
         "meta": {"format": "hguet-cloud-value-report/1", "scenarios": len(inputs), "hguet_binary": hguet,
                  "commit": subprocess.run(["git", "rev-parse", "HEAD"], cwd=TESTING.parent, capture_output=True, text=True).stdout.strip() or "unknown",
@@ -338,8 +368,10 @@ def main():
                   "decisions": local_decisions},
         "rpc": {"source": "measured_limited", "metrics": local_only_score({s: v["decision"] for s, v in rpc_dec.items()}, truths, local),
                 "decisions_changed_vs_local": sorted(s for s in local if local[s]["decision"] != rpc_dec[s]["decision"])},
-        "reference_mock": {"source": "MODEL", "metrics": metrics},
+        "reference_mock": {"source": "MODEL", "metrics": metrics, "signature_algorithm": mock_alg,
+                           "signing_key": "TEST-ONLY deterministic key; not a production HGUET key"},
         "real_server": real_section,
+        "independent_proof": proof_section,
         "categories": category_table(inputs, truths, local, configs),
         "labeling_quality": independent_labeler.run(),
         "signing_blocked_all_local": all(v["signing_blocked"] for v in local.values()),
@@ -358,8 +390,7 @@ def main():
         ],
     }
     (out / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (out / "report.html").write_text(render_html({**report,
-        "reference_mock": {"metrics": metrics}, "local": report["local"], "rpc": report["rpc"]}), encoding="utf-8")
+    (out / "report.html").write_text(render_html(report), encoding="utf-8")
     print("Cloud Value Benchmark v1 - %d scenarios (sources never merged)" % len(inputs))
     lm = report["local"]["metrics"]
     print("  [MEASURED local] additional TP %d/%d (no cloud), local BAD denied %d" % (
@@ -372,7 +403,9 @@ def main():
             m["correct_evidence_attribution"]["num"], m["correct_evidence_attribution"]["den"],
             m["unsupported_safety_claims_believed"]["num"], m["tampered_assessments_wrongly_trusted"]["num"],
             m["tampered_assessments_wrongly_trusted"]["den"], m["allow_created"]["num"]))
+    print("  [reference_mock signature] %s (test-only key)" % mock_alg)
     print("  [real_server] %s: %s" % (real_section["status"].upper(), real_section["reason"]))
+    print("  [independent_proof] %s: %s" % (proof_section["status"].upper(), proof_section["reason"]))
     print("  labelling: rule re-derivation %d/%d agree; human review: %s" % (
         report["labeling_quality"]["agreement"]["agree"], report["labeling_quality"]["agreement"]["total"],
         report["labeling_quality"]["human_review_status"][:40]))

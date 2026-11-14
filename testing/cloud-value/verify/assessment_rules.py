@@ -1,22 +1,26 @@
-"""Client-side acceptance rules for a signed CloudAssessment (the verifier under test's counterpart).
+"""Client-side acceptance rules for a signed CloudAssessment (`SignedPayload` of hguet.proto).
 
-These rules decide what a CLI may believe, independent of ground truth. Ground truth is used only
-afterwards, by the scorer, to judge whether the accepted/rejected outcome was right.
+The object verified here is exactly the public protocol's `SignedPayload`:
+  {canonical_payload: bytes (JCS JSON), signature: bytes, key_id: str, signing_algorithm: str}
+signed over  DOMAIN("HGUET-CLOUD-ASSESSMENT/v1\\0") || canonical_payload  (cloud-protocol.md). No
+parallel wire format exists. A boolean claiming validity is never evidence; an assessment that is
+not verified here is `accepted=False` and `combine()` ignores it completely.
 
-Pipeline (first failure discards the WHOLE assessment, with a machine-readable reason):
-  R1 envelope shape            R2 signature algorithm supported   R3 key pinned
-  R4 signature valid           R5 schema-conformant               R6 binding: message, transaction,
-  network, genesis, subjects   R7 freshness window
-Then, per finding (strict mode only; `trusting` mode skips this to expose the harm of blind trust):
-  R8  every evidence_ref must be listed in `sources` and its recomputed digest must match the fixture
-  R9  the cited record must be eligible: same network, inside its validity window, not retracted,
-      subject present in the request, polarity adverse, same claim code
-  R11 a hard_deny is capped at warn while strong, eligible benign evidence for the same subject stands
-  R10 enforcement is capped by provenance: hard_deny needs historical_class or lab_simulation
-      (reproducible for lab) with confidence >= 0.8; warn needs >= 0.6; hypothetical can only inform
-Safety claims (`coverage.passed` entries starting with `safety:`) are accepted as information only
-when a benign eligible record supports them; they NEVER yield ALLOW. Unsupported ones are counted.
+Pipeline (the first failure discards the WHOLE assessment, with a machine-readable reason):
+  S1 SignedPayload shape        S2 algorithm allowed for this source   S3 algorithm verifiable here
+  S4 issuer key pinned, valid at `now`, right algorithm/purpose/environment, not a test key when
+     `require_non_test_keys`    S5 signature valid over domain||payload   S6 payload is canonical JCS
+  P1 schema (protocol/v1/cloud-assessment.schema.json)   P2 binding: message, transaction, subjects,
+  intent, quote_id   P3 network + genesis + environment (mainnet=production, devnet/testnet=sandbox)
+  P4 freshness window   P5 sources: evidence digest recomputed from the independent registry
+Then per finding (strict mode; `trusting` skips this to expose the harm of blind trust):
+  F1 evidence_refs listed in `sources` with matching digest     F2 record eligible (subject in request,
+  same network, inside window, not retracted, polarity+code agree)     F3 enforcement capped by provenance
+  (hard_deny needs historical or reproducible lab evidence with confidence >= 0.8; hypothetical = inform)
+  F4 hard_deny capped at warn while strong eligible benign evidence for the same subject stands
+Safety claims (`coverage.passed` entries starting with `safety:`) are information only and never ALLOW.
 """
+import base64
 import hashlib
 import json
 import sys
@@ -24,41 +28,46 @@ from pathlib import Path
 
 CV = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CV.parent / "lib"))
-sys.path.insert(0, str(CV / "server"))
+sys.path.insert(0, str(CV / "verify"))
+sys.path.insert(0, str(CV / "protocol"))
 import crypto_tx as ct  # noqa: E402
-import reference_server as rs  # noqa: E402
+import jcs  # noqa: E402
+import mldsa  # noqa: E402
+from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, parse_time, subjects_digest  # noqa: E402
+from trust import TrustStore  # noqa: E402
 
 REPO = CV.parents[1]
 SCHEMA_PATH = REPO / "protocol/v1/cloud-assessment.schema.json"
 ENFORCEMENT_RANK = {"inform": 0, "warn": 1, "hard_deny": 2}
+ALG_MLDSA, ALG_TEST_ED = "ML-DSA-87", "TEST-ONLY-ED25519"
 
 
-def _ed25519_verifier(public_b58, message, signature_b58):
-    try:
-        return ct.ed25519_verify(ct.b58decode(public_b58), message, ct.b58decode(signature_b58))
-    except (ValueError, IndexError):
-        return False
+def _ed_verify(public, message, signature):
+    return ct.ed25519_verify(public, message, signature)
 
 
-# alg -> verifier(public_key, message, signature) ; None means "recognised but not implemented here"
-SIGNATURE_ALGORITHMS = {"reference-ed25519-v1": _ed25519_verifier, "ml-dsa-87": None}
-PINNED_KEYS = {rs.KEY_ID: (rs.ALG, rs.signer_public_b58())}
+def _mldsa_verify(public, message, signature):
+    return mldsa.BACKEND.verify(public, message, signature)
 
 
-def _schema_errors(assessment):
+def signature_verifiers():
+    """algorithm -> verifier, or None when no vetted backend exists (then the signature is UNVERIFIABLE)."""
+    return {ALG_MLDSA: _mldsa_verify if mldsa.BACKEND.available() else None, ALG_TEST_ED: _ed_verify}
+
+
+def _schema_errors(payload):
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     try:
         import jsonschema
-    except ImportError:  # pragma: no cover - fall back to the structural subset
-        missing = [k for k in schema["required"] if k not in assessment]
-        extra = [k for k in assessment if k not in schema["properties"]]
+    except ImportError:  # pragma: no cover - structural fallback
+        missing = [k for k in schema["required"] if k not in payload]
+        extra = [k for k in payload if k not in schema["properties"]]
         return ["missing:" + ",".join(missing)] if missing else (["extra:" + ",".join(extra)] if extra else [])
-    validator = jsonschema.Draft202012Validator(schema)
-    return [e.message for e in validator.iter_errors(assessment)][:3]
+    return [e.message for e in jsonschema.Draft202012Validator(schema).iter_errors(payload)][:3]
 
 
 def _digest(record):
-    return hashlib.sha256(ct.canonical_json(record)).hexdigest()
+    return hashlib.sha256(jcs.canonicalize(record)).hexdigest()
 
 
 class Registry:
@@ -70,18 +79,17 @@ class Registry:
 
     def retracted(self, record):
         return any(o.get("retracts") == record["evidence_id"] and
-                   rs.parse_time(o["observed_at"]) > rs.parse_time(record["observed_at"]) for o in self.records)
+                   parse_time(o["observed_at"]) > parse_time(record["observed_at"]) for o in self.records)
 
     def eligibility(self, record, request, now):
-        """Return None if usable as evidence for this request, else the reason string."""
         subjects = {(s["type"], s["id"]) for s in request["subjects"]}
         if (record["subject"]["type"], record["subject"]["id"]) not in subjects:
             return "subject_not_in_request"
         if record["network"] != request["network"]:
             return "wrong_network"
-        if rs.parse_time(record["observed_at"]) > now:
+        if parse_time(record["observed_at"]) > now:
             return "not_yet_observed"
-        if now > rs.parse_time(record["valid_until"]):
+        if now > parse_time(record["valid_until"]):
             return "expired"
         if self.retracted(record):
             return "superseded"
@@ -96,52 +104,81 @@ def max_enforcement(record):
         return "hard_deny"
     if tier in ("historical_class", "lab_simulation") and conf >= 0.6:
         return "warn"
-    return "inform"  # hypothetical or weak
+    return "inform"
 
 
-def verify(envelope, request, registry, *, now_iso, mode="strict", pinned=PINNED_KEYS):
-    now = rs.parse_time(now_iso)
+def verify_signed_payload(signed, purpose, trust, now, *, allowed_algorithms, require_non_test_keys):
+    """Return (payload_dict, key_entry, None) or (None, None, reason)."""
+    if not isinstance(signed, dict) or set(signed) != {"canonical_payload", "signature", "key_id", "signing_algorithm"}:
+        return None, None, "envelope_shape"
+    payload_bytes, signature = signed["canonical_payload"], signed["signature"]
+    if not isinstance(payload_bytes, (bytes, bytearray)) or not isinstance(signature, (bytes, bytearray)):
+        return None, None, "envelope_shape"
+    algorithm = signed["signing_algorithm"]
+    if algorithm not in allowed_algorithms:
+        return None, None, "algorithm_not_allowed"
+    verifier = signature_verifiers().get(algorithm)
+    if verifier is None:
+        return None, None, "unsupported_signature_alg"  # recognised (e.g. ML-DSA-87) but cannot be verified here
+    key, reason = trust.lookup(signed["key_id"], algorithm, purpose, now)
+    if reason:
+        return None, None, reason
+    if require_non_test_keys and key.get("test_only"):
+        return None, None, "test_key_not_allowed"
+    if not verifier(TrustStore.public_bytes(key), DOMAINS[purpose] + bytes(payload_bytes), bytes(signature)):
+        return None, None, "bad_signature"
+    if not jcs.is_canonical(bytes(payload_bytes)):
+        return None, None, "non_canonical_payload"
+    return jcs.parse_strict(bytes(payload_bytes)), key, None
+
+
+def verify(signed, request, registry, *, now_iso, mode="strict", trust=None, allowed_algorithms=None,
+           require_non_test_keys=False, expected_quote_id=None, genesis_map=None):
+    now = parse_time(now_iso)
+    genesis_map = genesis_map or GENESIS
+    trust = trust or TrustStore.test_issuers()
+    allowed = allowed_algorithms or frozenset({ALG_MLDSA, ALG_TEST_ED})
     result = {"accepted": False, "discard_reason": None, "findings_accepted": [], "findings_rejected": [],
               "unsupported_safety_claims": [], "supported_safety_claims": [], "trusted_unverified_safety_claims": [],
-              "evidence_used": [], "verified_evidence": [], "source_status": {}, "mode": mode}
+              "evidence_used": [], "verified_evidence": [], "source_status": {}, "mode": mode, "signature": None}
 
     def discard(reason):
+        result["accepted"] = False
         result["discard_reason"] = reason
         return result
 
-    if not isinstance(envelope, dict) or set(envelope) != {"assessment", "signature"}:
-        return discard("envelope_shape")
-    assessment, signature = envelope["assessment"], envelope["signature"]
-    if not isinstance(assessment, dict) or not isinstance(signature, dict):
-        return discard("envelope_shape")
-    alg = signature.get("alg")
-    if alg not in SIGNATURE_ALGORITHMS:
-        return discard("unknown_signature_alg")
-    if SIGNATURE_ALGORITHMS[alg] is None:
-        return discard("unsupported_signature_alg")  # recognised (ml-dsa-87) but no verifier available
-    key = pinned.get(signature.get("key_id"))
-    if not key or key[0] != alg:
-        return discard("unpinned_key")
-    if not SIGNATURE_ALGORITHMS[alg](key[1], rs.DOMAIN + ct.canonical_json(assessment), signature.get("sig_b58", "")):
-        return discard("bad_signature")
+    assessment, key, reason = verify_signed_payload(signed, "cloud_assessment", trust, now,
+                                                    allowed_algorithms=allowed, require_non_test_keys=require_non_test_keys)
+    if reason:
+        return discard(reason)
+    result["signature"] = {"algorithm": signed["signing_algorithm"], "key_id": signed["key_id"],
+                           "test_only_key": bool(key.get("test_only"))}
     if _schema_errors(assessment):
         return discard("schema_invalid")
     if (assessment["message_sha256"] != request["message_sha256"]
             or assessment["transaction_sha256"] not in (None, request["transaction_sha256"])
-            or assessment["subjects_sha256"] != hashlib.sha256(ct.canonical_json(request["subjects"])).hexdigest()):
+            or assessment["intent_sha256"] not in (None, request["intent_sha256"])
+            or assessment["subjects_sha256"] != subjects_digest(request["subjects"])
+            or (expected_quote_id is not None and assessment["quote_id"] != expected_quote_id)):
         return discard("binding_mismatch")
-    if assessment["network"] != request["network"] or assessment["genesis_hash"] != rs.GENESIS.get(request["network"]):
+    if assessment["network"] != request["network"] or assessment["genesis_hash"] != genesis_map.get(request["network"]):
         return discard("network_mismatch")
-    if not (rs.parse_time(assessment["issued_at"]) <= now < rs.parse_time(assessment["expires_at"])):
+    if assessment["environment"] != ENVIRONMENT_FOR_NETWORK[request["network"]] or \
+            assessment["environment"] not in key["environments"]:
+        return discard("environment_mismatch")
+    if assessment["data_scope"] != request["data_scope"]:
+        return discard("data_scope_mismatch")
+    if not (parse_time(assessment["issued_at"]) <= now < parse_time(assessment["expires_at"])):
         return discard("expired_or_not_yet_valid")
     result["accepted"] = True
     sources = {s["source_id"]: s for s in assessment["sources"]}
-    support = []
     for source_id, source in sources.items():
         record = registry.by_id.get(source_id)
         ok = record is not None and _digest(record) == source["evidence_sha256"]
         result["source_status"][source_id] = "digest_ok" if ok else "digest_mismatch_or_unknown"
-    # Independently verified evidence = cited, digest-matching, eligible records of a non-hypothetical tier.
+    cited_digests = sorted(s["evidence_sha256"] for s in sources.values())
+    if assessment["evidence_digest"] != hashlib.sha256(jcs.canonicalize(cited_digests)).hexdigest():
+        return discard("evidence_digest_mismatch")
     result["verified_evidence"] = sorted(
         sid for sid, status in result["source_status"].items()
         if status == "digest_ok" and registry.eligibility(registry.by_id[sid], request, now) is None
@@ -183,8 +220,6 @@ def verify(envelope, request, registry, *, now_iso, mode="strict", pinned=PINNED
             result["findings_rejected"].append(entry)
             continue
         if effective == "hard_deny" and finding["code"] != "EVIDENCE_CONFLICT":
-            # R11: a verifier must not escalate to DENY while strong, eligible benign evidence for
-            # the same subject stands unresolved; the accusation is capped at warn.
             primary = registry.by_id[refs[0]]
             for other in registry.records:
                 if (other["subject"] == primary["subject"] and other["claim"]["polarity"] == "benign"
@@ -200,13 +235,11 @@ def verify(envelope, request, registry, *, now_iso, mode="strict", pinned=PINNED
         entry["effective_enforcement"] = effective
         result["findings_accepted"].append(entry)
         result["evidence_used"].extend(valid_refs)
-        support.extend(valid_refs)
     for claim in [c for c in assessment["coverage"]["passed"] if c.startswith("safety:")]:
-        benign = [source_id for source_id in sources
-                  if source_id in registry.by_id and registry.by_id[source_id]["claim"]["polarity"] == "benign"
-                  and registry.eligibility(registry.by_id[source_id], request, now) is None]
+        benign = [sid for sid in sources if sid in registry.by_id and registry.by_id[sid]["claim"]["polarity"] == "benign"
+                  and registry.eligibility(registry.by_id[sid], request, now) is None]
         if mode == "trusting":
-            result["trusted_unverified_safety_claims"].append({"claim": claim})  # believed without checking
+            result["trusted_unverified_safety_claims"].append({"claim": claim})
         elif benign:
             result["supported_safety_claims"].append({"claim": claim, "evidence": benign})
         else:
@@ -216,8 +249,8 @@ def verify(envelope, request, registry, *, now_iso, mode="strict", pinned=PINNED
 
 
 def combine(local_decision, verification):
-    """Final decision from the local decision and VERIFIED Cloud findings. Never ALLOW from Cloud;
-    a local DENY is never lowered; only an accepted hard_deny/warn can raise severity."""
+    """Final decision from the local decision and VERIFIED Cloud findings only. An assessment that is
+    missing or not `accepted` has NO effect. Never ALLOW from Cloud; a local DENY is never lowered."""
     order = {"ALLOW": 0, "UNKNOWN": 1, "WARN": 2, "DENY": 3}
     final = local_decision
     if verification and verification["accepted"]:
@@ -226,3 +259,7 @@ def combine(local_decision, verification):
             if raised and order[raised] > order.get(final, 1):
                 final = raised
     return final
+
+
+def b64(data):
+    return base64.b64encode(data).decode()
