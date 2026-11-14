@@ -1180,15 +1180,7 @@ fn execute(v:Args)->(serde_json::Value,i32){
         "signing_boundary":signing_boundary,
         "verdict":verdict}),if v.command=="inspect"{0}else{30})
 }
-/// Read-only signer-port experiment. No real wallet is reachable. A genuine
-/// device implementation is intentionally NOT linked into this CLI.
-struct DisabledSignerPort;
-impl hguet_signer::SignerBackend for DisabledSignerPort {
-    fn sign_transaction(&mut self,_original_transaction:&[u8])
-        ->Result<Vec<u8>,String>{
-        Err("HGUET has no signer device integration".into())
-    }
-}
+// No signer backend exists in the public API or this CLI.
 fn execute_signer_preflight(v:Args)->(serde_json::Value,i32){
     let raw=match read_transaction(&v.file,&v.encoding){
         Ok(raw)=>raw,
@@ -1206,7 +1198,6 @@ fn execute_signer_preflight(v:Args)->(serde_json::Value,i32){
         Ok(now)=>now,
         Err(e)=>return (json!({"code":"CLOCK_UNAVAILABLE","error":e}),40),
     };
-    let mut disabled=DisabledSignerPort;
     let request=hguet_signer::SignerRequest {
         original_transaction:&raw,signed_intent:Some(&envelope),
         independently_pinned_intent_signer:v.trusted_key.as_deref(),
@@ -1214,7 +1205,7 @@ fn execute_signer_preflight(v:Args)->(serde_json::Value,i32){
     };
     // The success type is Infallible; the port is never invoked, even for
     // syntactically valid messages and independently signed intents.
-    let refusal=match hguet_signer::guarded_sign(&mut disabled,request) {
+    let refusal=match hguet_signer::guarded_sign(request) {
         Err(refusal)=>refusal,
         Ok(never)=>match never {},
     };
