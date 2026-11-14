@@ -10,13 +10,9 @@ use hguet_rpc::{assess_signing_boundary,inspect_direct_tokens,SigningBoundary};
 use serde::Serialize;
 use std::convert::Infallible;
 
-/// A future device port. The current guarded_sign entrypoint NEVER calls it.
-/// Implementers must not expose this raw operation as an alternate HGUET
-/// authorization path.
-pub trait SignerBackend {
-    fn sign_transaction(&mut self, original_transaction:&[u8])
-        ->Result<Vec<u8>,String>;
-}
+// No SignerBackend trait is exposed: a public sign_transaction method would
+// be a misleading and unnecessary escape hatch in a BLOCK-only crate.
+// A real wallet/device integration requires an explicitly reviewed redesign.
 
 /// Only original transaction bytes, an untrusted signed intent envelope, an
 /// independently pinned trust key, cluster and trusted local time. No JSON
@@ -97,14 +93,14 @@ pub fn inspect_signer_request(input:SignerRequest<'_>)->SignerRefusal{
     refused(reason,Some(&parsed),intent.is_some(),Some(boundary))
 }
 
-/// Sign requests have an uninhabited success type. The backend is deliberately
-/// unreachable; this entrypoint cannot create a signature or grant permission.
-pub fn guarded_sign<B:SignerBackend>(
-    backend:&mut B,input:SignerRequest<'_>
+/// Requests have an uninhabited success type and NO backend argument.
+/// The only operation is refusal, even when the intent passes cryptography.
+pub fn guarded_sign(
+    input:SignerRequest<'_>
 )->Result<Infallible,SignerRefusal>{
-    let _=backend;
     Err(inspect_signer_request(input))
 }
 
+pub mod isolation;
 #[cfg(test)]
 mod tests;
