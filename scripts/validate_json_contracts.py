@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate public draft PaymentIntent/SecurityVerdict schemas; no live funds."""
+"""Validate draft signed-intent, verdict and BLOCK-only CLI schemas; no funds."""
 import json
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
@@ -13,7 +13,8 @@ def check(schema, value):
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(value)
 
 def main():
-    names = ["payment-intent", "signed-payment-intent", "security-verdict"]
+    names = ["payment-intent", "signed-payment-intent", "security-verdict",
+             "signing-boundary"]
     schemas = {n:read(n+".schema.json") for n in names}
     for s in schemas.values(): Draft202012Validator.check_schema(s)
     intent = {
@@ -77,7 +78,52 @@ def main():
     check(schemas["security-verdict"],verdict)
     invalid = dict(verdict, decision="ALLOW", simulation_status="not_performed", extra="unexpected")
     assert list(Draft202012Validator(schemas["security-verdict"]).iter_errors(invalid))
-    # Schema permits future ALLOW, but current CLI NEVER emits it.
-    print("PASS: 3 unpublished schemas and negative structural checks; cryptographic verification tested in Rust.")
+    # The signer boundary is CLI-only and irrevocably BLOCK in this version,
+    # even if a separately signed intent or successful simulation exists.
+    boundary = {
+        "version":1,"message_sha256":"ab"*32,
+        "transaction_signature_status":"verified",
+        "independent_intent_verified_by_caller":True,
+        "native_sol_direct_transfer_declared_raw":"500",
+        "direct_token_program_present":True,
+        "direct_mint_declaration_bound_checked":True,
+        "direct_source_declaration_bound_checked":True,
+        "original_wire_program_allowlist_checked":True,
+        "rpc_advisory_aggregate_available":True,
+        "rpc_advisory_cap_anomalies":False,
+        "original_wire_lookup_identity_unresolved":False,
+        "unsupported_program_execution_surface":False,
+        "direct_token_semantics_incomplete":False,
+        "signer_side_enforcement_integrated":False,
+        "execution_bank_authenticated":False,
+        "total_native_sol_spending_proven":False,
+        "total_gross_token_spending_proven":False,
+        "automated_signing_permitted":False,
+        "signing_gate":"block",
+        "block_reasons":[
+            "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED",
+            "EXECUTION_BANK_NOT_AUTHENTICATED",
+            "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN",
+            "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN",
+        ],
+        "limitation":"No signer or authenticated execution bank is integrated."
+    }
+    check(schemas["signing-boundary"],boundary)
+    for field,unsound in [
+        ("signing_gate","allow"),
+        ("automated_signing_permitted",True),
+        ("signer_side_enforcement_integrated",True),
+        ("execution_bank_authenticated",True),
+        ("total_native_sol_spending_proven",True),
+        ("total_gross_token_spending_proven",True),
+    ]:
+        forged=dict(boundary,**{field:unsound})
+        assert list(Draft202012Validator(schemas["signing-boundary"]).iter_errors(forged)),field
+    forged=dict(boundary,block_reasons=["RPC_EFFECT_COVERAGE_UNAVAILABLE"])
+    assert list(Draft202012Validator(schemas["signing-boundary"]).iter_errors(forged))
+    forged=dict(boundary,extra="unexpected")
+    assert list(Draft202012Validator(schemas["signing-boundary"]).iter_errors(forged))
+    # SecurityVerdict schema permits future ALLOW, but current CLI NEVER emits it.
+    print("PASS: 4 draft schemas; signer boundary cannot claim ALLOW or execution enforcement.")
 
 if __name__=="__main__": main()
