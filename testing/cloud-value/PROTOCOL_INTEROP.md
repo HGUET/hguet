@@ -116,4 +116,7 @@ answer, and `combine()` leaves the local verdict untouched.
   canonical subject set / `subjects_sha256`, exact payment memo, canonical Solana signature and the redacted
   ClientEvidence builder. It reproduces the subject (26), memo (4), signature (12) and valid ClientEvidence vectors of
   `protocol/s7-client-vectors.json` with the server's error codes. The Cloud transport is still NOT implemented.
+* `hguet-cloud::proto_policy` applies the same critical/unknown-field policy in Rust and reproduces all 22 proto-policy
+  vectors; its field table (`proto_table.rs`) is generated from `protocol/v1/hguet.proto` by
+  `testing/cloud-value/tools/gen_proto_table.py`, and a test fails if the table drifts from the schema.
 

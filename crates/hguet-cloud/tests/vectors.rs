@@ -2,7 +2,8 @@
 //! implementation: the same outcome and the same error code for every case this crate implements.
 
 use hguet_cloud::{
-    build_client_evidence, memo_reference, solana_signature, subjects_sha256_hex, Subject,
+    build_client_evidence, memo_reference, proto_policy, solana_signature, subjects_sha256_hex,
+    Subject,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -146,4 +147,26 @@ fn the_evidence_builder_reproduces_every_valid_client_evidence_vector() {
         n += 1;
     }
     assert!(n >= 2, "too few valid evidence vectors: {n}");
+}
+
+#[test]
+fn the_envelope_policy_matches_every_proto_policy_vector() {
+    let mut n = 0;
+    for case in vectors().iter().filter(|c| c["algo"] == "proto_policy") {
+        let bytes = unhex(case["input"]["envelope_hex"].as_str().unwrap());
+        let actual = proto_policy::check_envelope(&bytes);
+        let expect = &case["expect"];
+        if expect["ok"].as_bool().unwrap() {
+            assert!(actual.is_ok(), "{}: {actual:?}", case["id"]);
+        } else {
+            assert_eq!(
+                actual.unwrap_err().code(),
+                expect["error"].as_str().unwrap(),
+                "{}",
+                case["id"]
+            );
+        }
+        n += 1;
+    }
+    assert!(n >= 20, "too few proto_policy vectors: {n}");
 }
