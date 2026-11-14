@@ -10,6 +10,7 @@ pub mod jcs;
 pub mod proto_policy;
 pub mod quote;
 mod strict_json;
+pub mod trust;
 pub mod wire;
 
 pub use evidence_validate::{validate_client_evidence, EvidenceStatus, CLIENT_EVIDENCE_MAX_BYTES};
