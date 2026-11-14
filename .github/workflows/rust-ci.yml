@@ -145,6 +145,10 @@ jobs:
           python scripts/check_cli_smoke.py /tmp/hguet-inspect.json /tmp/hguet-v1.json \
             /tmp/hguet-direct-token.json /tmp/hguet-mint-cap-equal.json /tmp/hguet-mint-cap-over.json \
             /tmp/hguet-source-cap-equal.json /tmp/hguet-source-cap-over.json
+      - name: Assert isolated signer process cannot accept agent trust, clock, RPC or signing commands
+        run: |
+          cargo build -p hguet-signer --bin hguet-signer-isolate
+          python scripts/check_isolated_signer.py target/debug/hguet-signer-isolate
       - name: Assert signer-preflight is offline, cryptographic and permanently blocked
         run: |
           # Public synthetic unsigned transaction and public test-only intent key.
