@@ -103,3 +103,58 @@ signed artifact provenance, controlled service provisioning and isolation,
 tested host resource limits, complete execution-time spending enforcement,
 and independent security review. Until all relevant controls are implemented
 and verified, no funds or keys should be entrusted to this component.
+
+## Local client admission gate (Linux prototype)
+
+`scripts/run_signer_admission.py` is an **additional one-request Unix
+domain socket entrypoint** for a dedicated non-root signer service. Its
+administrator-owned JSON policy has exactly these fields:
+
+~~~json
+{
+  "schema_version": 1,
+  "kind": "hguet_signer_admission",
+  "socket_path": "/run/hguet-signer/admission.sock",
+  "allowed_client_uid": 12345,
+  "protected_policy": "/etc/hguet/signer-policy.json"
+}
+~~~
+
+The numeric UID is illustrative, **not** a safe universal value. Provision
+the intended client and signer service as **different Unix users**. The
+admission JSON, both existing protected launcher scripts, the admission
+script and signer ELF must be installed under root-owned, non-writable
+ancestor directories. Provision the Unix socket directory separately as
+owned by the signer service, non-group-writable and not accessible to
+world users; group access to the socket must be limited administratively.
+The gate creates a mode-0660 socket, handles one connection, and exits.
+The connecting client must send at most 64 KiB then shut down its
+write-half, allowing the gate to detect the end of the request.
+
+**Order of checks:** strict root-owned admission policy → protected
+signer policy verification → kernel `SO_PEERCRED` on the accepted socket →
+compare peer UID against the administrator-pinned allowed UID → bounded
+request read → protected child invocation → one-use journal reservation →
+Bubblewrap sandbox → unconditional BLOCK refusal. An unauthorized UID
+cannot cause the gate to launch the journal-reserving child.
+
+This is an **experimental OS identity boundary**, not an authenticated
+PaymentIntent issuer or end-user identity. It prevents a *different UID*
+from consuming identifiers via this gate but cannot stop a compromised
+allowed client, root/host compromise or a service-user compromise. It
+does not prevent availability denial by connections or requests from
+permitted peers, and it does not enforce a long-lived daemon lifecycle.
+Agent and signer service accounts must never be the same; OS permissions
+must prevent agents from writing to the replay directory or directly
+running the protected launcher **as the signer service account**.
+The underlying protected launcher remains available to an already
+compromised service UID; this gate alone does not remove that risk.
+
+**Tests:** `scripts/check_signer_admission.py` checks real Linux peer
+credentials on a socketpair, unauthorized UID rejection before payload
+read, strict admission policy, input bounds and rejection of forged
+successful child responses. CI integration is an offline unit test;
+**a live provisioned-socket test on the target host is not yet complete**.
+Only an explicitly tested OS deployment with controlled service identity
+and Unix socket permissions can validate this boundary. No signing,
+wallet, key custody, spending authorization or broadcast is enabled.
