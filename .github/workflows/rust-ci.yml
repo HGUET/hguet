@@ -160,6 +160,9 @@ jobs:
             sudo apt-get install -y -qq bubblewrap
           fi
           python scripts/check_signer_sandbox_runtime.py
+      - name: Verify Unix peer admission rejects unauthorized local callers before replay reservation
+        run: |
+          python scripts/check_signer_admission.py
       - name: Assert protected launcher is fail-closed and prevents persistent intent replay
         run: |
           # Host-independent adversarial tests exercise an actual fsync'ed
