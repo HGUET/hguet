@@ -107,7 +107,7 @@ pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
             return Err(RpcError::InvalidResponse);
         }
         let encoded=data[0].as_str().ok_or(RpcError::InvalidResponse)?;
-        if encoded.len()>(MAX_ACCOUNT_BYTES+2)/3*4+4 {
+        if encoded.len()>MAX_ACCOUNT_BYTES.div_ceil(3)*4+4 {
             return Err(RpcError::TooLarge);
         }
         let bytes=STANDARD.decode(encoded).map_err(|_|RpcError::InvalidResponse)?;

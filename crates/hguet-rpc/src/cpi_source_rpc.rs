@@ -15,7 +15,7 @@ use serde::Serialize;
 use serde_json::{json,Value};
 use std::collections::{BTreeMap,BTreeSet};
 const MAX_CPI_SOURCE_QUERIES:usize=32;
-const MAX_ENCODED:usize=(MAX_ACCOUNT_BYTES+2)/3*4+4;
+const MAX_ENCODED:usize=MAX_ACCOUNT_BYTES.div_ceil(3)*4+4;
 
 #[derive(Debug,Clone,Serialize)]
 pub struct CpiSourceClaim {

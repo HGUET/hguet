@@ -17,7 +17,7 @@ use serde_json::{json,Value};
 use std::collections::BTreeMap;
 
 const MAX_SOURCE_QUERIES:usize=32;
-const MAX_B64_BYTES:usize=(MAX_ACCOUNT_BYTES+2)/3*4+4;
+const MAX_B64_BYTES:usize=MAX_ACCOUNT_BYTES.div_ceil(3)*4+4;
 
 #[derive(Debug,Clone,Serialize)]
 pub struct SignedSourceAccountObservation {

@@ -35,7 +35,7 @@ fn parse_account(account: &Value, slot: u64) -> Result<Vec<[u8;32]>, RpcError> {
     if base64.len() > 12000 { return Err(RpcError::TooLarge); }
     let bytes = STANDARD.decode(base64).map_err(|_| RpcError::InvalidResponse)?;
     if bytes.len() < LOOKUP_META_SIZE ||
-       (bytes.len()-LOOKUP_META_SIZE)%32 != 0 ||
+       !(bytes.len()-LOOKUP_META_SIZE).is_multiple_of(32) ||
        bytes.len() > LOOKUP_META_SIZE+MAX_ALT_ENTRIES*32 {
         return Err(RpcError::InvalidResponse);
     }
