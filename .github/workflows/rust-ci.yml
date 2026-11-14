@@ -12,7 +12,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        include:
+          # Bubblewrap >= 0.8.0 is REQUIRED (--disable-userns). Ubuntu 22.04 ships 0.6.1, which
+          # cannot enforce the sandbox, so live isolation is verified on 24.04 and 22.04 is
+          # checked to FAIL CLOSED instead (no weakened sandbox, no silent pass).
+          - os: ubuntu-22.04
+            live_sandbox: false
+          - os: ubuntu-24.04
+            live_sandbox: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
@@ -21,6 +28,16 @@ jobs:
         with:
           toolchain: 1.100.0   # must match rust-toolchain.toml
           components: clippy, rustfmt
+      - name: Allow unprivileged user namespaces (runner prerequisite for Bubblewrap on Ubuntu 24.04+)
+        if: ${{ matrix.live_sandbox }}
+        run: |
+          # Bubblewrap needs an unprivileged user namespace. Ubuntu 24.04 restricts them via
+          # AppArmor by default; the kernel of the hosted image can leave bwrap without
+          # CAP_NET_ADMIN ("loopback: Failed RTM_NEWADDR"). This only enables the platform
+          # feature on the ephemeral runner; the sandbox flags themselves are unchanged.
+          if [ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo 0)" = 1 ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
       - name: Report runner kernel and sandbox policy (visible as annotations)
         run: |
           echo "::notice title=runner ${{ matrix.os }}::kernel=$(uname -r) bwrap=$(bwrap --version 2>&1 | head -1) apparmor_restrict_userns=$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo n/a) python=$(python3 -V)"
@@ -162,12 +179,16 @@ jobs:
           python testing/tools/build_scenarios.py --check
           python -m unittest discover -s testing/tests
           python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke --out testing/reports/ci-smoke
+          # paired regression cases for the fixed semantics (DENY = proven violation, UNKNOWN = missing coverage)
+          python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite regression --out testing/reports/ci-regression
       - name: Upload benchmark smoke report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-smoke-${{ matrix.os }}
-          path: testing/reports/ci-smoke/report.*
+          path: |
+            testing/reports/ci-smoke/report.*
+            testing/reports/ci-regression/report.*
           if-no-files-found: warn
       - name: Assert isolated signer process cannot accept agent trust, clock, RPC or signing commands
         run: |
@@ -175,7 +196,7 @@ jobs:
           python scripts/check_isolated_signer.py target/debug/hguet-signer-isolate
       - name: Verify Linux Bubblewrap signer sandbox and mandatory fail-closed behavior
         env:
-          HGUET_REQUIRE_LIVE: "1"   # a skipped live isolation test must fail the build
+          HGUET_REQUIRE_LIVE: ${{ matrix.live_sandbox && '1' || '0' }}   # a skipped live test fails wherever live isolation is supported
         run: |
           python scripts/check_signer_sandbox.py
           # Namespace capability varies by runner/AppArmor policy. Never
@@ -193,6 +214,9 @@ jobs:
             exit 1
           }
           cat /tmp/sandbox-runtime.out
+      - name: Unsupported Bubblewrap (< 0.8.0) must fail closed, never run a weaker sandbox
+        if: ${{ !matrix.live_sandbox }}
+        run: python scripts/check_signer_sandbox_unsupported.py
       - name: Verify Unix peer admission rejects unauthorized local callers before replay reservation
         run: |
           python scripts/check_signer_admission.py
@@ -204,11 +228,11 @@ jobs:
         run: python scripts/check_require_live.py
       - name: Live multi-UID admission test (single and split identity topologies)
         env:
-          HGUET_REQUIRE_LIVE: "1"   # SKIP is not an acceptable result here
+          HGUET_REQUIRE_LIVE: ${{ matrix.live_sandbox && '1' || '0' }}   # SKIP is not acceptable where live isolation is supported
         run: |
           # Creates and removes throw-away accounts. Prints SKIP, never a
           # fake PASS, if the runner cannot provide the needed namespaces.
-          sudo env HGUET_REQUIRE_LIVE=1 python3 scripts/check_signer_admission_users.py target/debug/hguet-signer-isolate
+          sudo env HGUET_REQUIRE_LIVE=${{ matrix.live_sandbox && 1 || 0 }} python3 scripts/check_signer_admission_users.py target/debug/hguet-signer-isolate
       - name: Assert protected launcher is fail-closed and prevents persistent intent replay
         run: |
           # Host-independent adversarial tests exercise an actual fsync'ed
@@ -217,7 +241,7 @@ jobs:
           python scripts/check_protected_signer.py
       - name: Exercise administrator-installed protected launcher under separate service UID
         env:
-          HGUET_REQUIRE_LIVE: "1"
+          HGUET_REQUIRE_LIVE: ${{ matrix.live_sandbox && '1' || '0' }}
         run: |
           set -euo pipefail
           # Synthetic only. Root-owned source, policy and ELF, journal owned by

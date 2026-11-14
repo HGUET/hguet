@@ -45,6 +45,17 @@ except module.SandboxError:
 else:
     raise AssertionError("unsupported kernel ABI cannot silently degrade")
 
+# Minimum Bubblewrap: --disable-userns needs >= 0.8.0. Older builds (Ubuntu 22.04: 0.6.1)
+# must be REFUSED, never run with a weakened sandbox.
+for text,expected in [("bubblewrap 0.6.1",False),("bubblewrap 0.7.0",False),("bubblewrap 0.8.0",True),
+                      ("bubblewrap 0.9.0 ",True),("bubblewrap 0.11.1",True),("bubblewrap 1.0",True),
+                      ("bubblewrap 0.8",True),("bubblewrap",False),("",False),("not bubblewrap 9.9.9",False),
+                      ("bubblewrap 0.8.0; rm -rf /",False)]:
+    assert module.bwrap_version_supported(text) is expected,(text,expected)
+assert module.MIN_BWRAP==(0,8,0)
+for flag in ("--disable-userns","--assert-userns-disabled","--unshare-user"):
+    assert flag in module.make_bwrap_command(17,19,"devnet","2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ"),flag
+
 cmd=module.make_bwrap_command(17,19,"devnet",
     "2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ")
 for mandatory in (
@@ -158,6 +169,7 @@ with tempfile.TemporaryDirectory(prefix="hguet-sandbox-test-") as tmp:
         assert kwargs["input"]==b'{"untrusted":"agent"}'
         return SimpleNamespace(stdout=wire,returncode=20)
     with mock.patch.object(module,"verify_root_owned_bwrap"), \
+         mock.patch.object(module,"verify_bwrap_version"), \
          mock.patch.object(module.subprocess,"run",side_effect=fake_spawn), \
          mock.patch.object(module.sys,"stdin",FakeStdin()), \
          mock.patch.object(module.sys,"stdout",FakeStdout()):
@@ -167,6 +179,19 @@ with tempfile.TemporaryDirectory(prefix="hguet-sandbox-test-") as tmp:
             "2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ",
         ])
     assert status==20 and json.loads(fake_out.getvalue())==refusal
+
+    def only_version_probe(argv, **kwargs):
+        assert argv[1:]==["--version"],"bwrap must not be launched on an unsupported version"
+        return SimpleNamespace(stdout="bubblewrap 0.6.1\n",returncode=0)
+    with mock.patch.object(module,"verify_root_owned_bwrap"), \
+         mock.patch.object(module.subprocess,"run",side_effect=only_version_probe):
+        try:
+            module.run(["--binary",str(executable),"--binary-sha256",pin,"--network","devnet",
+                        "--trusted-key","2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ"])
+        except module.SandboxError as exc:
+            assert "unsupported Bubblewrap" in str(exc) and "no weaker sandbox" in str(exc)
+        else:
+            raise AssertionError("bubblewrap 0.6.1 accepted")
 
     with mock.patch.object(module,"verify_root_owned_bwrap",
                            side_effect=module.SandboxError("bubblewrap unavailable")), \

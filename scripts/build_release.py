@@ -58,6 +58,11 @@ def build(source, target_dir):
         "--remap-path-prefix=%s=/cargo" % cargo_home,
         "--remap-path-prefix=%s=/rustup" % rustup_home,
     ]
+    if os.name == "nt":
+        # MSVC link.exe stamps the PE header with the build time unless /Brepro is given, so two
+        # otherwise identical builds differ (observed: hguet.exe differed between directories on
+        # windows-latest). /Brepro derives the timestamp from the content instead.
+        flags.append("-Clink-arg=/Brepro")
     env = dict(os.environ, CARGO_INCREMENTAL="0", SOURCE_DATE_EPOCH=epoch,
                CARGO_TARGET_DIR=str(target_dir),
                CARGO_ENCODED_RUSTFLAGS="\x1f".join(flags))

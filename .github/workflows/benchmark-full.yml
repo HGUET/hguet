@@ -1,4 +1,4 @@
-name: Security benchmark (full, 60 scenarios)
+name: Security benchmark (full: 60 + regression pairs)
 on:
   workflow_dispatch:
   schedule:
@@ -25,8 +25,10 @@ jobs:
         run: |
           python testing/tools/build_scenarios.py --check
           python -m unittest discover -s testing/tests
-      - name: Run all 60 scenarios against the real CLI
-        run: python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset all --out testing/reports/full
+      - name: Run the 60 original scenarios and the regression pairs against the real CLI
+        run: python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all --out testing/reports/full
+      - name: Cloud comparison (MODEL only; sources are never merged)
+        run: python testing/cloud/compare.py --report testing/reports/full/report.json
       - name: Publish summary
         if: always()
         run: |
@@ -50,4 +52,5 @@ jobs:
           path: |
             testing/reports/full/report.json
             testing/reports/full/report.html
+            testing/reports/full/cloud_comparison.json
           if-no-files-found: error
