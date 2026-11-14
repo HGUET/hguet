@@ -90,7 +90,14 @@ def _verify_launcher_install():
     if here.is_symlink() or other.is_symlink():
         raise sandbox.SandboxError("protected launcher cannot be a symlink")
     for item in (str(here), str(other)):
-        _trusted_file(item)
+        _secure_ancestors(os.path.dirname(item), {0})
+        fd = os.open(item, os.O_RDONLY | NOFOLLOW)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise sandbox.SandboxError("protected launcher source must be root-owned and immutable to agents")
+        finally:
+            os.close(fd)
 
 
 def load_operator_policy(path):
@@ -136,6 +143,10 @@ def _parse_replay_identity(request, policy):
             raise ValueError("invalid envelope input")
         if len(agent["original_transaction_b64"]) > (16384+2)//3*4+4:
             raise ValueError("raw transaction too large")
+        original_data = base64.b64decode(agent["original_transaction_b64"], validate=True)
+        if not original_data or len(original_data) > 16384 or \
+           base64.b64encode(original_data).decode() != agent["original_transaction_b64"]:
+            raise ValueError("noncanonical original transaction")
         if len(envelope["payload_b64"]) > (16384+2)//3*4+4:
             raise ValueError("signed payload too large")
         signed_data = base64.b64decode(envelope["payload_b64"], validate=True)
@@ -143,7 +154,13 @@ def _parse_replay_identity(request, policy):
            envelope["payload_b64"]:
             raise ValueError("noncanonical signed payload")
         intent = _json_strict(signed_data)
+        required = {
+            "schema_version", "kind", "intent_id", "network", "message_sha256",
+            "not_before_unix", "expires_at_unix", "allowed_program_ids",
+            "max_spend_lamports",
+        }
         if type(intent) is not dict or not INTENT_FIELDS.issuperset(intent) or \
+           not required.issubset(intent) or \
            intent.get("schema_version") != 1 or intent.get("kind") != "hguet_payment_intent":
             raise ValueError("invalid intent structure")
         intent_id = intent.get("intent_id")
