@@ -55,3 +55,51 @@ Before any sandbox is spawned, the launcher atomically creates a marker named <d
 scripts/check_protected_signer.py uses a real on-disk atomic replay journal, eight concurrent attempts, altered requests, malformed signed payloads, forged operator overrides and sandbox-launch failures. Its temporary CI directory cannot represent administrator provisioning: ownership/ancestor checks are mocked only for the unit environment. A passing test is **not proof of an installed protected production service**.
 
 Linux sandbox tests remain in scripts/check_signer_sandbox.py and scripts/check_signer_sandbox_runtime.py. See also trusted-signer-isolation.md and linux-signer-sandbox.md.
+
+## Deployment acceptance checklist (unreleased prototype)
+
+For an operator-controlled Linux test deployment, do **not** use a writable
+source checkout as the protected entrypoint. Install the two Python launchers,
+pinned signer ELF and policy in root-owned, non-group/world-writable paths.
+Run the launcher as a **dedicated non-root service identity**, separate from
+the untrusted agent. The service must own only its private mode-0700 replay
+directory; the agent must not be able to edit or reset it.
+
+A deployment is **not accepted** solely because a CI test passes. Before
+considering any installed prototype ready for further evaluation:
+
+1. Verify the ELF digest and operator public key out of band, with no agent
+   influence over either value or the policy file.
+2. Verify all protected file ancestors and the installed scripts/ELF are
+   root-owned and cannot be modified by the service or agent.
+3. Verify the journal resides on a durable **local filesystem** with reliable
+   file and directory fsync and exclusive-create semantics; do not use an
+   unverified network share or ephemeral container layer.
+4. Run the installed-path test under separate identities. A successful
+   sandboxed BLOCK refusal is exit 20; exit 40 is a safe failure, **not**
+   proof that a real sandbox ran.
+5. On a representative Linux host with user namespaces permitted, confirm
+   Bubblewrap and seccomp run live. Capture the actual host/kernel policy
+   and test outcome. A skipped CI sandbox run does not satisfy this gate.
+6. Prove that an already consumed intent ID stays blocked across process
+   restarts. Test storage-full, permission-denied and fsync-failure handling
+   without permitting any signer launch.
+7. Ensure the untrusted agent cannot invoke a hypothetical future key/device
+   signer directly. This no-key prototype alone cannot establish that boundary.
+
+### Storage fault-injection contract
+
+The offline regression test `scripts/check_protected_signer.py` injects
+both marker-file and parent-directory `fsync` errors. It requires exit-denial
+semantics with **no sandbox child spawn**, retention of any created marker and
+subsequent `REPLAY_BLOCKED` for that identifier. Tests do not establish that
+a particular storage device honors flushes across power loss. If journal
+durability cannot be established operationally, deny use; never silently
+switch to a memory-only replay cache.
+
+**Outstanding production blockers:** authenticated and authorized client
+admission *before* reservation, tamper/rollback-resistant journal anchoring,
+signed artifact provenance, controlled service provisioning and isolation,
+tested host resource limits, complete execution-time spending enforcement,
+and independent security review. Until all relevant controls are implemented
+and verified, no funds or keys should be entrusted to this component.
