@@ -76,10 +76,9 @@ fn parse_account(account: &Value, slot: u64) -> Result<Vec<[u8; 32]>, RpcError> 
     if last_extended_slot > slot || last_extended_start > count {
         return Err(RpcError::InvalidResponse);
     }
-    let addresses = bytes[LOOKUP_META_SIZE..]
-        .chunks_exact(32)
-        .map(|v| v.try_into().expect("exact 32-byte account"))
-        .collect::<Vec<[u8; 32]>>();
+    // Length is a verified multiple of 32 above, so the remainder is empty.
+    let (chunks, _) = bytes[LOOKUP_META_SIZE..].as_chunks::<32>();
+    let addresses = chunks.to_vec();
     Ok(addresses)
 }
 
