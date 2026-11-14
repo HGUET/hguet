@@ -107,4 +107,9 @@ answer, and `combine()` leaves the local verdict untouched.
   names only; canonical JSON) and checked by `validate_client_evidence`; the adapter no longer sends `{}`.
 * `protocol/s7-client-vectors.json` is an unchanged copy of the proto-policy, client-evidence, signature and memo
   vectors from HGUET/server (S7.1 PROPOSAL); the client reproduces all 57 with the same outcomes and error codes.
+* Verifier and a real server's evidence: a cited source with no independent record in the verifier's registry is
+  `unverifiable_unknown_source` - the assessment may still be accepted, but it supports no finding and no verified
+  evidence (so it can never raise a decision), and `evidence_digest_verified` is false. A cited source the verifier DOES
+  hold, with a misstated digest, still discards the assessment (`evidence_digest_mismatch`). The public protocol has no
+  way yet to deliver the evidence manifest, so a client cannot recompute a real server's `evidence_digest`.
 
