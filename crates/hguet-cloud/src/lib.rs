@@ -9,6 +9,7 @@ mod evidence_validate;
 pub mod jcs;
 pub mod proto_policy;
 pub mod quote;
+pub mod report;
 mod strict_json;
 pub mod trust;
 pub mod wire;
@@ -270,6 +271,12 @@ pub fn build_client_evidence(
         return Err(Error("CLIENT_EVIDENCE_TOO_LARGE"));
     }
     Ok(body.into_bytes())
+}
+
+/// Test helper: a canonical-shaped synthetic Solana signature (64 bytes of `n`).
+#[cfg(test)]
+pub(crate) fn b58_test_signature(n: u8) -> String {
+    bs58::encode([n; 64]).into_string()
 }
 
 #[cfg(test)]
