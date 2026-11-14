@@ -222,4 +222,38 @@ with tempfile.TemporaryDirectory(prefix="hguet-protected-test-") as temp:
                "replay marker retained")
     assert (fail_dir/(correct_identity+".used")).exists()
 
+
+    # Storage durability failures are terminal. A partially created marker is
+    # deliberately never deleted, even when fsync reports an I/O error.
+    for fsync_failure in ("marker", "directory"):
+        broken_dir = root/("io-failure-" + fsync_failure)
+        broken_dir.mkdir(mode=0o700)
+        broken_policy = dict(policy, replay_directory=str(broken_dir))
+        calls = [0]
+        real_fsync = os.fsync
+
+        def failing_fsync(fd):
+            calls[0] += 1
+            if (fsync_failure == "marker" and calls[0] == 1) or (
+                fsync_failure == "directory" and calls[0] == 2
+            ):
+                raise OSError("simulated durable storage failure")
+            return real_fsync(fd)
+
+        with mock.patch.object(protected, "_verify_launcher_install"), \
+             mock.patch.object(protected.sandbox, "verify_root_owned_bwrap"), \
+             mock.patch.object(protected, "load_operator_policy", return_value=broken_policy), \
+             mock.patch.object(protected, "_secure_ancestors"), \
+             mock.patch.object(protected.os, "fsync", side_effect=failing_fsync), \
+             mock.patch.object(protected.subprocess, "run",
+                               side_effect=AssertionError("signer launched after fsync failure")), \
+             mock.patch.object(protected.sys, "stdin", FakeStdin(json_bytes(REQUEST))):
+            denied(lambda: protected.run(["--policy", "/etc/hguet/signer-policy.json"]),
+                   "REPLAY_STORAGE_UNAVAILABLE")
+        assert calls[0] == (1 if fsync_failure == "marker" else 2)
+        assert (broken_dir/(correct_identity+".used")).exists()
+        with mock.patch.object(protected, "_secure_ancestors"):
+            denied(lambda: protected.reserve_once(str(broken_dir), correct_identity),
+                   "REPLAY_BLOCKED")
+
 print("PASS: operator policy rejects overrides, durable single-use intent replay is atomic, failures never release journal slot")
