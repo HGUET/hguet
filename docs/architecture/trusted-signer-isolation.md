@@ -1,6 +1,6 @@
 # Trusted Signer Isolation — threat model and blocked prototype
 
-**Status: implemented input separation and no-sign process, NOT trusted OS/device isolation.** HGUET has no released signer, key material, hardware wallet integration, Solana broadcast capability, spending-permission token or enforced onchain gross-spend limit. Every current path is **BLOCK**.
+**Status: implemented input separation, no-sign process and an optional mandatory Linux Bubblewrap launch path; still NOT an authenticated or device-protecting production signer.** HGUET has no released signer, key material, hardware wallet integration, Solana broadcast capability, spending-permission token or enforced onchain gross-spend limit. Every current path is **BLOCK**.
 
 ## Trust domains
 
@@ -31,11 +31,13 @@ UNTRUSTED AGENT                         OPERATOR-LAUNCHED LOCAL PROCESS
                                                  X NO RPC / WALLET / BROADCAST
 ~~~
 
-The executable is launched with:
+**Unconfined development invocation only (no signing capability):**
 
 ~~~sh
 cargo run -p hguet-signer --bin hguet-signer-isolate -- --network devnet --trusted-key OPERATOR_PINNED_PUBLIC_KEY
 ~~~
+
+For a Linux OS-confined invocation, use the new fail-closed [Bubblewrap/seccomp launcher](linux-signer-sandbox.md). It requires an operator-pinned executable SHA-256, mounts the exact opened inode read-only and never falls back to direct execution. The direct Rust binary remains available and BLOCK-only, and a future real device signer must not be accessible through that unconfined path.
 
 The JSON request comes on **stdin**. The process accepts no file paths, URLs, RPC, wallet or signing options. A request contains only **schema_version**, **kind=hguet_signer_preflight**, **original_transaction_b64**, and **signed_intent** (payload_b64, signer_pubkey_b58, signature_b58). The new public schema, protocol/v1/signer-agent-request.schema.json, specifies this shape. Rust additionally limits total input to 65,536 bytes, decoded transaction to 16,384 bytes, and checks canonical Base64. Unknown, injected, malformed and oversized requests produce block-only refusal.
 
@@ -51,7 +53,7 @@ The public SignerBackend.sign_transaction trait from the original prototype was 
 
 ## Unsolved security requirements — release blockers
 
-1. **OS isolation:** No sandbox policy, separate restricted OS identity, integrity-protected binary, network namespace, syscall filter, mandatory access control, secure launch configuration or process attestation. This is a **separate process, not a secure enclave**.
+1. **OS isolation:** A **Linux-only, optional operator-invoked Bubblewrap/seccomp** launcher now exists and enforces namespaces, network isolation, restricted filesystem mounts, capability drop, verified executable inode binding and syscall denylist **if the host kernel supports them**. It returns exit 40 without fallback otherwise. This is not universal enforcement: direct execution of the BLOCK-only Rust binary is still possible, and no protected OS identity, secure launcher, minimal runtime bundle, cgroup limits, mandatory access control or process attestation is present. **Not a secure enclave or production signer.**
 2. **Exclusive key access:** No hardware wallet or HSM is present. HGUET cannot prevent another application from invoking another wallet. Future device ports must not be accessible to an untrusted agent.
 3. **Trusted configuration:** The process operator supplies a public-key pin as a launch argument; the agent JSON cannot override it, but a hostile parent controlling launch **can**. A production signer needs independently provisioned, integrity-protected policy and network identity.
 4. **Trusted time and replay:** The OS clock is not trusted hardware time, and there is no persistent one-use nonce/intent replay ledger. A correctly signed intent could be reused while valid; solve before enabling any signing.
@@ -63,4 +65,4 @@ The public SignerBackend.sign_transaction trait from the original prototype was 
 
 ## Synthetic verification
 
-Rust module tests cover OperatorTrust configuration and hostile input shapes. CI runs scripts/check_isolated_signer.py against the separate built hguet-signer-isolate executable. All fixtures are public synthetic devnet test data. No payment, remote call or private key is used.
+Rust module tests cover OperatorTrust configuration and hostile input shapes. CI runs scripts/check_isolated_signer.py against the raw BLOCK-only process, scripts/check_signer_sandbox.py for invariant and executable inode tests, and scripts/check_signer_sandbox_runtime.py for the actual Linux Bubblewrap path. The CI runner may disallow required user namespaces: in that case the runtime test **explicitly skips live isolation** and proves only fail-closed exit 40. All fixtures are public synthetic devnet data. No payment, remote call or private key is used.
