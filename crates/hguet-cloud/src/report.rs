@@ -656,7 +656,6 @@ mod tests {
         assert_eq!(code(&bonus, &e), "ASSESSMENT_KEYS");
     }
 
-
     #[test]
     fn separately_pinned_report_keys_verify_their_own_domains() {
         use std::fs::{self, OpenOptions};
@@ -677,7 +676,8 @@ mod tests {
         fn key() -> Option<EphemeralKey> {
             let generated = Command::new("openssl")
                 .args(["genpkey", "-algorithm", "ML-DSA-87"])
-                .output().ok()?;
+                .output()
+                .ok()?;
             if !generated.status.success() {
                 if std::env::var_os("HGUET_REQUIRE_PQ_SIGNING").is_some() {
                     panic!("ML-DSA-87 separate issuer-key test cannot skip");
@@ -685,9 +685,8 @@ mod tests {
                 return None;
             }
             let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-            let path = std::env::temp_dir().join(format!(
-                "hguet-report-keys-{}-{id}.pem", std::process::id()
-            ));
+            let path = std::env::temp_dir()
+                .join(format!("hguet-report-keys-{}-{id}.pem", std::process::id()));
             let mut options = OpenOptions::new();
             options.create_new(true).write(true);
             #[cfg(unix)]
@@ -698,8 +697,11 @@ mod tests {
             let mut output = options.open(&path).unwrap();
             output.write_all(&generated.stdout).unwrap();
             let derived = Command::new("openssl")
-                .args(["pkey", "-in"]).arg(&path)
-                .arg("-pubout").output().unwrap();
+                .args(["pkey", "-in"])
+                .arg(&path)
+                .arg("-pubout")
+                .output()
+                .unwrap();
             assert!(derived.status.success());
             Some(EphemeralKey {
                 private: path,
@@ -713,7 +715,8 @@ mod tests {
                 .arg(&key.private)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
-                .spawn().unwrap();
+                .spawn()
+                .unwrap();
             child.stdin.take().unwrap().write_all(&input).unwrap();
             let result = child.wait_with_output().unwrap();
             assert!(result.status.success());
@@ -729,7 +732,11 @@ mod tests {
         let assessment_payload = bytes(&assessment_json());
         let receipt_payload = bytes(&receipt_json(&assessment_payload));
         let signed_assessment = SignedPayload {
-            signature: sign(&assessment_key, Domain::CloudAssessment, &assessment_payload),
+            signature: sign(
+                &assessment_key,
+                Domain::CloudAssessment,
+                &assessment_payload,
+            ),
             canonical_payload: assessment_payload.clone(),
             key_id: assessment_pin.key_id().into(),
             signing_algorithm: "ML-DSA-87".into(),
@@ -750,20 +757,41 @@ mod tests {
         };
         let caps = vec!["network_health".to_owned()];
         let assessment_expectations = assessment_expectations(&caps);
-        assert!(verify_paid_check_with_keys(
-            &signed_receipt, Some(&signed_assessment),
-            &receipt_pin, &assessment_pin,
-            &receipt_expectations, &assessment_expectations
-        ).is_ok(), "domain-specific pinned keys must independently verify");
-        assert!(verify_paid_check_with_keys(
-            &signed_receipt, Some(&signed_assessment),
-            &assessment_pin, &receipt_pin,
-            &receipt_expectations, &assessment_expectations
-        ).is_err(), "swapped issuer keys must never verify");
-        assert!(verify_paid_check(
-            &signed_receipt, Some(&signed_assessment), &receipt_pin,
-            &receipt_expectations, &assessment_expectations
-        ).is_err(), "legacy single-key helper cannot silently accept different keys");
+        assert!(
+            verify_paid_check_with_keys(
+                &signed_receipt,
+                Some(&signed_assessment),
+                &receipt_pin,
+                &assessment_pin,
+                &receipt_expectations,
+                &assessment_expectations
+            )
+            .is_ok(),
+            "domain-specific pinned keys must independently verify"
+        );
+        assert!(
+            verify_paid_check_with_keys(
+                &signed_receipt,
+                Some(&signed_assessment),
+                &assessment_pin,
+                &receipt_pin,
+                &receipt_expectations,
+                &assessment_expectations
+            )
+            .is_err(),
+            "swapped issuer keys must never verify"
+        );
+        assert!(
+            verify_paid_check(
+                &signed_receipt,
+                Some(&signed_assessment),
+                &receipt_pin,
+                &receipt_expectations,
+                &assessment_expectations
+            )
+            .is_err(),
+            "legacy single-key helper cannot silently accept different keys"
+        );
     }
 
     #[test]
