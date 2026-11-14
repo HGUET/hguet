@@ -115,6 +115,42 @@ def category_tx(cat, tag):
             None, [("mint", mint)], ("mint", mint))
 
 
+def describe(instrs):
+    """Human-readable, label-free description of the instructions (for blind reviewers)."""
+    out = []
+    for ins in instrs:
+        data = ins.data
+        accounts = [a[0] for a in ins.accounts]
+        if ins.program == SYS and len(data) == 12 and data[:4] == (2).to_bytes(4, "little"):
+            out.append("System transfer of %d lamports from the fee payer to %s" % (
+                int.from_bytes(data[4:], "little"), accounts[1] if accounts[1] != "alt:0" else "an address in lookup table alt:0"))
+        elif ins.program in (T, T22) and data[:1] == bytes([12]):
+            out.append("%s TransferChecked of %d raw units of mint %s (destination token account %s)" % (
+                "Token-2022" if ins.program == T22 else "SPL Token", int.from_bytes(data[1:9], "little"), accounts[1], accounts[2]))
+        else:
+            out.append("Call to program %s with %d accounts, %d data bytes" % (ins.program, len(accounts), len(data)))
+    return out
+
+
+def review_case(sid, inputs, instrs, evidence_records):
+    subjects = {(x["type"], x["id"]) for x in inputs["cloud_request"]["subjects"]}
+    related = [dict(r) for r in evidence_records if (r["subject"]["type"], r["subject"]["id"]) in subjects]
+    return {
+        "format": "hguet-cv-blind-review-case/1", "id": sid,
+        "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports",
+        "network": inputs["network"], "reference_time": inputs["clock"],
+        "transaction": {"instructions": describe(instrs), "signed_intent_present": True,
+                        "intent_covers": "the instructions above are within the signed spend/program limits"},
+        "subjects_to_assess": inputs["cloud_request"]["subjects"],
+        "available_independent_evidence": related,
+        "note_on_evidence": ("Evidence instances are synthetic fixtures of documented attack classes; judge whether, "
+                             "given ONLY the evidence fields (network, validity window, retraction, tier, confidence), "
+                             "the transaction should be treated as BAD, GOOD or UNKNOWN."),
+        "questions": {"verdict": "BAD | GOOD | UNKNOWN", "confidence_0_to_1": None,
+                      "decisive_evidence_ids": [], "reasoning": ""},
+    }
+
+
 def build_scenario(cat_index, kind_index, evidence):
     cat = CATEGORIES[cat_index]
     cid, cname, stype, code, enforcement = cat
@@ -132,7 +168,7 @@ def build_scenario(cat_index, kind_index, evidence):
     intent = ct.sign_intent(payload, ISSUER)
     subject_ids = [{"type": t, "id": i} for t, i in subjects]
     request = {
-        "format": "hguet-cloud-request/1", "network": network, "data_scope": "metadata_only", "profile": "strict",
+        "format": "cv-request-view/1", "network": network, "data_scope": "metadata_only", "profile": "strict",
         "message_sha256": sha(message), "transaction_sha256": sha(raw),
         "intent_sha256": sha(json.dumps(intent, sort_keys=True).encode()), "subjects": subject_ids,
     }
@@ -236,6 +272,7 @@ def build_scenario(cat_index, kind_index, evidence):
                      "independent_review": {"status": "pending_human_review" if critical else "rule_cross_check_only",
                                             "reviewers": []}},
     }
+    truth["_review_case"] = review_case(sid, inputs, instrs, evidence.records) if critical else None
     return inputs, truth
 
 
@@ -266,7 +303,11 @@ def main():
     assert len(scenarios) == 100 and len({i["id"] for i, _ in scenarios}) == 100
     drift = []
     expected = set()
+    cases = []
     for inputs, truth in scenarios:
+        case = truth.pop("_review_case")
+        if case:
+            cases.append(case)
         for folder, value in (("inputs", inputs), ("truth", truth)):
             path = ROOT / folder / (inputs["id"] + ".json")
             expected.add(path)
@@ -275,16 +316,18 @@ def main():
         path = ROOT / "evidence" / (record["evidence_id"] + ".json")
         expected.add(path)
         write_json(path, record, args.check, drift)
-    critical = [{"id": t["id"], "category": t["category"], "kind": t["kind"], "rationale_withheld_from_reviewer": True,
-                 "question": "Given only inputs/<id>.json and the evidence files for the subject, is the transaction "
-                             "BAD, GOOD or UNKNOWN? Record verdict and reasoning without opening truth/.",
-                 "reviewer_verdict": None} for _, t in scenarios if t["labeling"]["critical"]]
-    packet = ROOT / "labeling" / "review_packet.json"
-    expected.add(packet)
-    write_json(packet, {"format": "hguet-cv-review-packet/1", "instructions": "blind relabelling of the critical cases",
-                        "cases": critical}, args.check, drift)
+    # blind-review packet: one self-contained, label-free file per critical case
+    for case in cases:
+        path = ROOT / "labeling" / "blind_review" / (case["id"] + ".json")
+        expected.add(path)
+        write_json(path, case, args.check, drift)
+    index = ROOT / "labeling" / "review_packet.json"
+    expected.add(index)
+    write_json(index, {"format": "hguet-cv-review-packet/1", "cases": sorted(c["id"] for c in cases),
+                       "instructions": "labeling/blind_review/README.md",
+                       "status": "PENDING: no reviewer has responded yet"}, args.check, drift)
     if args.check:
-        for folder in ("inputs", "truth", "evidence"):
+        for folder in ("inputs", "truth", "evidence", "labeling/blind_review"):
             for path in (ROOT / folder).glob("*.json"):
                 if path not in expected:
                     drift.append("extra:" + str(path.relative_to(ROOT)))
@@ -293,7 +336,7 @@ def main():
             return 1
         print("PASS: 100 scenarios, %d evidence records, review packet match the generator" % len(records))
     else:
-        print("wrote 100 scenarios, %d evidence records, %d critical review cases" % (len(records), len(critical)))
+        print("wrote 100 scenarios, %d evidence records, %d blind-review cases" % (len(records), len(cases)))
     return 0
 
 

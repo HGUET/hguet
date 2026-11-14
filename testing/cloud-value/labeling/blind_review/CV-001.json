@@ -1,0 +1,55 @@
+{
+  "available_independent_evidence": [
+    {
+      "claim": {
+        "code": "PROGRAM_KNOWN_DRAINER",
+        "polarity": "adverse"
+      },
+      "confidence": 0.95,
+      "evidence_id": "EV-0001",
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-10-10T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "class:malicious_program",
+        "reproducible": false,
+        "source": "documented public attack class: malicious program",
+        "tier": "historical_class"
+      },
+      "subject": {
+        "id": "FvPWqSMVYcGChU3g7yVXB1fwY3bXCDnHK9Kw8MmQhCTA",
+        "type": "program"
+      },
+      "valid_until": "2027-04-01T00:00:00Z"
+    }
+  ],
+  "format": "hguet-cv-blind-review-case/1",
+  "id": "CV-001",
+  "network": "devnet",
+  "note_on_evidence": "Evidence instances are synthetic fixtures of documented attack classes; judge whether, given ONLY the evidence fields (network, validity window, retraction, tier, confidence), the transaction should be treated as BAD, GOOD or UNKNOWN.",
+  "questions": {
+    "confidence_0_to_1": null,
+    "decisive_evidence_ids": [],
+    "reasoning": "",
+    "verdict": "BAD | GOOD | UNKNOWN"
+  },
+  "reference_time": "2026-11-01T00:00:00Z",
+  "subjects_to_assess": [
+    {
+      "id": "FvPWqSMVYcGChU3g7yVXB1fwY3bXCDnHK9Kw8MmQhCTA",
+      "type": "program"
+    }
+  ],
+  "transaction": {
+    "instructions": [
+      "System transfer of 1000 lamports from the fee payer to AaUhWpHpPF1qDGPCAK9VgDf2gigSUA7Nbdmin61URcGV",
+      "Call to program FvPWqSMVYcGChU3g7yVXB1fwY3bXCDnHK9Kw8MmQhCTA with 1 accounts, 1 data bytes"
+    ],
+    "intent_covers": "the instructions above are within the signed spend/program limits",
+    "signed_intent_present": true
+  },
+  "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports"
+}

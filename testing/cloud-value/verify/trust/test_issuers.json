@@ -1,0 +1,40 @@
+{
+  "format": "hguet-trust-store/1",
+  "keys": [
+    {
+      "algorithm": "ML-DSA-87",
+      "derivation": "openssl genpkey ML-DSA-87 hexseed=SHA256('hguet-bench-mldsa87-test-only:cloud-issuer-1')",
+      "environments": [
+        "sandbox"
+      ],
+      "key_id": "bench-issuer-mldsa87-1",
+      "not_after": "2027-12-31T00:00:00Z",
+      "not_before": "2026-01-01T00:00:00Z",
+      "public_key_b64": "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",
+      "purposes": [
+        "cloud_assessment",
+        "price_quote",
+        "payment_receipt"
+      ],
+      "test_only": true
+    },
+    {
+      "algorithm": "TEST-ONLY-ED25519",
+      "derivation": "fallback when OpenSSL>=3.5 is unavailable; never accepted for the real server",
+      "environments": [
+        "sandbox"
+      ],
+      "key_id": "bench-issuer-ed25519-1",
+      "not_after": "2027-12-31T00:00:00Z",
+      "not_before": "2026-01-01T00:00:00Z",
+      "public_key_b64": "q8ojFa0R6jQeW2Idv80dkGf09u/XDYIAZlHCM640HHY=",
+      "purposes": [
+        "cloud_assessment",
+        "price_quote",
+        "payment_receipt"
+      ],
+      "test_only": true
+    }
+  ],
+  "note": "TEST-ONLY issuer keys for the benchmark reference mock and test server. NOT HGUET production keys; a real HGUET Server key must be provisioned through authenticated release/pin rotation (cloud-protocol.md section 2)."
+}

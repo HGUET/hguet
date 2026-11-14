@@ -11,7 +11,7 @@ Snapshot of facts at generation time. `report.json -> labeling_quality` recomput
 | evidence instances verified on-chain | **0** (`instance_verified=false` everywhere; classes are documented, instances synthetic) |
 | ground-truth files | 100, kept apart from `inputs/`; canary + key leak guard in runner and tests |
 | critical cases (additional-TP + false-accusation traps) | 30 |
-| critical cases reviewed by an independent human | **0** (packet ready: `review_packet.json`) |
+| critical cases reviewed by an independent human | **0** (30 self-contained label-free case files in `blind_review/`, scoring via `score_review.py`) |
 
 ## Checks performed
 
@@ -19,8 +19,9 @@ Snapshot of facts at generation time. `report.json -> labeling_quality` recomput
    **100/100** labels agree with `truth/`. It also detects disagreement: removing the decisive evidence of a
    BAD scenario flips the derived label to UNKNOWN (unit-tested).
 2. **Leak guard**: no truth key, label or canary appears in `inputs/` or `evidence/` (runner aborts; unit test).
-3. **Generator drift check**: committed files equal the generator output (`--check`, run in CI).
-4. **Verifier gap found by the benchmark, fixed in rules not labels**: the first run showed a naive server's
+3. **Blind packet**: each of the 30 case files carries the transaction description, subjects, reference time and *all* independent evidence about them, and no label, kind, rationale or canary (unit-tested).
+4. **Generator drift check**: committed files equal the generator output (`--check`, run in CI).
+5. **Verifier gap found by the benchmark, fixed in rules not labels**: the first run showed a naive server's
    accusation on *conflicting* valid evidence reached DENY under the strict verifier (10/60 false accusations,
    all in `conflict`). Rule R11 (cap hard_deny at warn while strong benign evidence stands) was added; labels
    were not touched.

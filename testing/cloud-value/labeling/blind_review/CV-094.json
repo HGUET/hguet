@@ -1,0 +1,80 @@
+{
+  "available_independent_evidence": [
+    {
+      "claim": {
+        "code": "PROGRAM_CPI_DRAINS_FUNDS",
+        "polarity": "adverse"
+      },
+      "confidence": 0.95,
+      "evidence_id": "EV-0103",
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-07-01T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "class:cpi_hidden_drain",
+        "reproducible": false,
+        "source": "documented public attack class: cpi hidden drain",
+        "tier": "historical_class"
+      },
+      "subject": {
+        "id": "G7vo5g3mw88QEKfHZSFyjhHa58FjXPiaTFdmb1sLYWAZ",
+        "type": "program"
+      },
+      "valid_until": "2026-09-01T00:00:00Z"
+    },
+    {
+      "claim": {
+        "code": "PROGRAM_CPI_DRAINS_FUNDS",
+        "polarity": "retraction"
+      },
+      "confidence": 0.9,
+      "evidence_id": "EV-0104",
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "review concluded the earlier flag was wrong",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "retraction-of:EV-0103",
+        "reproducible": false,
+        "source": "documented public attack class: cpi hidden drain",
+        "tier": "historical_class"
+      },
+      "retracts": "EV-0103",
+      "subject": {
+        "id": "G7vo5g3mw88QEKfHZSFyjhHa58FjXPiaTFdmb1sLYWAZ",
+        "type": "program"
+      },
+      "valid_until": "2027-08-15T00:00:00Z"
+    }
+  ],
+  "format": "hguet-cv-blind-review-case/1",
+  "id": "CV-094",
+  "network": "devnet",
+  "note_on_evidence": "Evidence instances are synthetic fixtures of documented attack classes; judge whether, given ONLY the evidence fields (network, validity window, retraction, tier, confidence), the transaction should be treated as BAD, GOOD or UNKNOWN.",
+  "questions": {
+    "confidence_0_to_1": null,
+    "decisive_evidence_ids": [],
+    "reasoning": "",
+    "verdict": "BAD | GOOD | UNKNOWN"
+  },
+  "reference_time": "2026-11-01T00:00:00Z",
+  "subjects_to_assess": [
+    {
+      "id": "G7vo5g3mw88QEKfHZSFyjhHa58FjXPiaTFdmb1sLYWAZ",
+      "type": "program"
+    }
+  ],
+  "transaction": {
+    "instructions": [
+      "Call to program G7vo5g3mw88QEKfHZSFyjhHa58FjXPiaTFdmb1sLYWAZ with 2 accounts, 1 data bytes"
+    ],
+    "intent_covers": "the instructions above are within the signed spend/program limits",
+    "signed_intent_present": true
+  },
+  "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports"
+}

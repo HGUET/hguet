@@ -5,7 +5,7 @@
   },
   "cloud_request": {
     "data_scope": "metadata_only",
-    "format": "hguet-cloud-request/1",
+    "format": "cv-request-view/1",
     "intent_sha256": "b82513fc17376b25c5570f48f1f79be191e52f7ebb5dcb1c4055f71d5a84815d",
     "message_sha256": "40113531bd54b73776b7a03f5799c7bafb6e640697a4aca1fb62d0be40325895",
     "network": "testnet",

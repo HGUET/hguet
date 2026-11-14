@@ -1,0 +1,80 @@
+{
+  "available_independent_evidence": [
+    {
+      "claim": {
+        "code": "RECIPIENT_ADDRESS_POISONING",
+        "polarity": "adverse"
+      },
+      "confidence": 0.95,
+      "evidence_id": "EV-0026",
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-07-01T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "class:address_poisoning",
+        "reproducible": false,
+        "source": "documented public attack class: address poisoning",
+        "tier": "historical_class"
+      },
+      "subject": {
+        "id": "6YJPF2BgFWnG5pmfS3RaLoeJTutDxiAsj2YkqhEoQ16e",
+        "type": "account"
+      },
+      "valid_until": "2026-09-01T00:00:00Z"
+    },
+    {
+      "claim": {
+        "code": "RECIPIENT_ADDRESS_POISONING",
+        "polarity": "retraction"
+      },
+      "confidence": 0.9,
+      "evidence_id": "EV-0027",
+      "format": "hguet-cv-evidence/1",
+      "network": "devnet",
+      "observed_at": "2026-08-15T00:00:00Z",
+      "provenance": {
+        "instance_verified": false,
+        "method": "review concluded the earlier flag was wrong",
+        "note": "synthetic instance; the class/method is the documented part",
+        "reference": "retraction-of:EV-0026",
+        "reproducible": false,
+        "source": "documented public attack class: address poisoning",
+        "tier": "historical_class"
+      },
+      "retracts": "EV-0026",
+      "subject": {
+        "id": "6YJPF2BgFWnG5pmfS3RaLoeJTutDxiAsj2YkqhEoQ16e",
+        "type": "account"
+      },
+      "valid_until": "2027-08-15T00:00:00Z"
+    }
+  ],
+  "format": "hguet-cv-blind-review-case/1",
+  "id": "CV-024",
+  "network": "devnet",
+  "note_on_evidence": "Evidence instances are synthetic fixtures of documented attack classes; judge whether, given ONLY the evidence fields (network, validity window, retraction, tier, confidence), the transaction should be treated as BAD, GOOD or UNKNOWN.",
+  "questions": {
+    "confidence_0_to_1": null,
+    "decisive_evidence_ids": [],
+    "reasoning": "",
+    "verdict": "BAD | GOOD | UNKNOWN"
+  },
+  "reference_time": "2026-11-01T00:00:00Z",
+  "subjects_to_assess": [
+    {
+      "id": "6YJPF2BgFWnG5pmfS3RaLoeJTutDxiAsj2YkqhEoQ16e",
+      "type": "account"
+    }
+  ],
+  "transaction": {
+    "instructions": [
+      "System transfer of 1000 lamports from the fee payer to 6YJPF2BgFWnG5pmfS3RaLoeJTutDxiAsj2YkqhEoQ16e"
+    ],
+    "intent_covers": "the instructions above are within the signed spend/program limits",
+    "signed_intent_present": true
+  },
+  "what_you_may_use": "only this file; do NOT open truth/, scenario titles, generator code or reports"
+}

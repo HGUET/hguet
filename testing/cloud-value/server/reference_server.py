@@ -1,8 +1,9 @@
 """Reference MOCK Cloud server for the Cloud Value Benchmark. MODEL ONLY.
 
-It answers a metadata-only request with a signed CloudAssessment-shaped document built from the
-independent evidence fixtures. It never sees ground truth (it takes the request and the evidence
-directory only). Profiles model server behaviours a verifier must cope with:
+It answers with the public protocol's `SignedPayload` (JCS canonical CloudAssessment signed over the
+domain-separated bytes), built from the independent evidence fixtures. It never sees ground truth
+(it takes the request view and the evidence directory only). Profiles model server behaviours a
+verifier must cope with:
 
   strict   filters by network, validity window, retractions and tier; accuses only on verified
            historical/lab evidence; reports hypothetical risk as informational only
@@ -10,39 +11,27 @@ directory only). Profiles model server behaviours a verifier must cope with:
   oversell strict, plus claims "safety:subject_reputable" even with no benign evidence
   silent   no answer (models an unreachable server)
 
-The signature scheme is a stand-in (Ed25519, key `cloud:reference-signer`). The real protocol uses
-ML-DSA-87 over canonical JSON; the verifier takes the algorithm from a registry so that swap is a
-configuration change, not a redesign.
+Signature: ML-DSA-87 through OpenSSL >= 3.5 when present (a deterministic TEST key, see
+verify/trust/test_issuers.json), otherwise the explicitly labelled TEST-ONLY-ED25519 fallback. The
+algorithm used is reported with every result; neither is a production HGUET key.
 """
 import hashlib
 import json
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 CV = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CV.parent / "lib"))
+sys.path.insert(0, str(CV / "verify"))
+sys.path.insert(0, str(CV / "protocol"))
 import crypto_tx as ct  # noqa: E402
+import jcs  # noqa: E402
+import mldsa  # noqa: E402
+from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, GENESIS, fmt_time, parse_time, subjects_digest  # noqa: E402
 
-SIGNER_LABEL = "cloud:reference-signer"
-KEY_ID = "bench-cloud-key-1"
-ALG = "reference-ed25519-v1"
-DOMAIN = b"HGUET-CLOUD-ASSESSMENT\0"
-GENESIS = {"devnet": "bench-genesis-devnet", "testnet": "bench-genesis-testnet", "mainnet": "bench-genesis-mainnet"}
 COST_UNITS_PER_ASSESSMENT = 1.0  # nominal benchmark unit, NOT a price
-
-
-def parse_time(text):
-    return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
-
-
-def fmt_time(epoch):
-    return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def sha(data):
-    return hashlib.sha256(data).hexdigest()
+KEY_IDS = {"ML-DSA-87": "bench-issuer-mldsa87-1", "TEST-ONLY-ED25519": "bench-issuer-ed25519-1"}
 
 
 def load_evidence(directory):
@@ -50,19 +39,43 @@ def load_evidence(directory):
 
 
 def evidence_digest_of(record):
-    return sha(ct.canonical_json(record))
+    return hashlib.sha256(jcs.canonicalize(record)).hexdigest()
 
 
-def signer_public_b58():
-    return ct.signer_pubkey(SIGNER_LABEL)
+class TestSigner:
+    """Signs protocol `SignedPayload`s with the deterministic TEST issuer key."""
+
+    def __init__(self):
+        self.mldsa = None
+        if mldsa.BACKEND.available():
+            self.mldsa = mldsa.BACKEND.test_keypair("cloud-issuer-1")[0]
+        self.algorithm = "ML-DSA-87" if self.mldsa else "TEST-ONLY-ED25519"
+        self.key_id = KEY_IDS[self.algorithm]
+
+    def sign(self, payload_dict, purpose="cloud_assessment", *, flip_signature=False):
+        return self.sign_bytes(jcs.canonicalize(payload_dict), purpose, flip_signature=flip_signature)
+
+    def sign_bytes(self, body, purpose="cloud_assessment", *, flip_signature=False):
+        """Sign arbitrary payload bytes (tests use this to produce validly signed NON-canonical payloads)."""
+        message = DOMAINS[purpose] + body
+        if self.mldsa:
+            signature = mldsa.BACKEND.test_sign(self.mldsa, message)
+        else:
+            signature = ct.ed25519_sign(ct.seed_for("cloud:reference-signer"), message)
+        if flip_signature:
+            signature = bytes([signature[0] ^ 1]) + signature[1:]
+        return {"canonical_payload": body, "signature": signature, "key_id": self.key_id,
+                "signing_algorithm": self.algorithm}
 
 
-def sign_envelope(assessment, *, tamper_signature=False):
-    signature = ct.ed25519_sign(ct.seed_for(SIGNER_LABEL), DOMAIN + ct.canonical_json(assessment))
-    if tamper_signature:
-        signature = bytes([signature[0] ^ 1]) + signature[1:]
-    return {"assessment": assessment,
-            "signature": {"alg": ALG, "key_id": KEY_ID, "sig_b58": ct.b58encode(signature)}}
+SIGNER = None
+
+
+def signer():
+    global SIGNER
+    if SIGNER is None:
+        SIGNER = TestSigner()
+    return SIGNER
 
 
 class ReferenceCloudServer:
@@ -75,6 +88,7 @@ class ReferenceCloudServer:
         self.records = load_evidence(evidence_dir)
         self.cost_units = COST_UNITS_PER_ASSESSMENT
         self.last_latency_s = 0.0
+        self._cache = {}
 
     # --- helpers -----------------------------------------------------------
     def _for_subjects(self, request):
@@ -93,14 +107,9 @@ class ReferenceCloudServer:
                 and not self._retracted(record))
 
     # --- main --------------------------------------------------------------
-    def assess(self, request, now_iso):
-        started = time.perf_counter()
-        if self.profile == "silent":
-            self.last_latency_s = time.perf_counter() - started
-            return None
+    def assess_payload(self, request, now_iso):
         now = parse_time(now_iso)
-        findings, cited, benign_cited = [], [], []
-        adverse = benign = []
+        findings, cited = [], []
         usable = [r for r in self._for_subjects(request) if self._usable(r, request, now)]
         adverse = [r for r in usable if r["claim"]["polarity"] == "adverse"]
         benign = [r for r in usable if r["claim"]["polarity"] == "benign"]
@@ -134,23 +143,34 @@ class ReferenceCloudServer:
         if self.profile == "oversell" and "safety:subject_reputable" not in passed:
             passed.append("safety:subject_reputable")  # claimed without any supporting evidence
         unknown = [] if (adverse or benign) else ["subject_reputation"]
-        assessment = {
+        cited = list({r["evidence_id"]: r for r in cited}.values())  # one source entry per evidence record
+        digests = sorted(evidence_digest_of(r) for r in cited)
+        return {
             "schema_version": 1, "kind": "cloud_assessment", "network": request["network"],
             "genesis_hash": GENESIS[request["network"]], "message_sha256": request["message_sha256"],
             "intent_sha256": request["intent_sha256"], "requested_profile": request["profile"],
             "capabilities_performed": ["subject_reputation_lookup"],
             "capabilities_unavailable": ["onchain_simulation", "alt_resolution"],
             "risk_snapshot_id": "bench-evidence-snapshot-v1", "ruleset_version": "reference-ruleset-1",
-            "evidence_digest": sha(ct.canonical_json(sorted(evidence_digest_of(r) for r in cited))),
+            "evidence_digest": hashlib.sha256(jcs.canonicalize(digests)).hexdigest(),
             "sources": [{"source_id": r["evidence_id"], "kind": r["provenance"]["tier"],
                          "observed_at": r["observed_at"], "evidence_sha256": evidence_digest_of(r),
                          "freshness_seconds": max(0, int(now - parse_time(r["observed_at"])))} for r in cited],
             "findings": findings,
             "coverage": {"required": ["subject_reputation"], "passed": passed, "unknown": unknown},
             "issued_at": now_iso, "expires_at": fmt_time(now + 3600),
-            "quote_id": request["message_sha256"][:32], "environment": "sandbox", "data_scope": request["data_scope"],
-            "subjects_sha256": sha(ct.canonical_json(request["subjects"])),
+            "quote_id": request["message_sha256"][:32], "environment": ENVIRONMENT_FOR_NETWORK[request["network"]],
+            "data_scope": request["data_scope"], "subjects_sha256": subjects_digest(request["subjects"]),
             "transaction_sha256": request["transaction_sha256"],
         }
+
+    def assess(self, request, now_iso):
+        started = time.perf_counter()
+        if self.profile == "silent":
+            self.last_latency_s = time.perf_counter() - started
+            return None
+        key = (self.profile, request["message_sha256"], now_iso)
+        if key not in self._cache:
+            self._cache[key] = signer().sign(self.assess_payload(request, now_iso))
         self.last_latency_s = time.perf_counter() - started
-        return sign_envelope(assessment)
+        return self._cache[key]
