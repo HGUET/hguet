@@ -234,6 +234,7 @@ def setup():
 
 def teardown():
     for user in USERS:
+        sh("pkill", "-KILL", "-u", user)  # a crashed run must not leave services behind
         sh("userdel", user)
     for group in GROUPS:
         sh("groupdel", group)
@@ -407,7 +408,7 @@ def split_only(backend, marker):
     code, out, err = finish(gw, 20)
     elapsed = time.monotonic() - started
     dripper.kill()
-    dripper.communicate()
+    dripper.wait()  # stdin already closed: communicate() raises on Python 3.13
     check(tag + "slow-drip client cut off by the total deadline", code == 40 and elapsed < 10, (code, elapsed))
     check(tag + "slow-drip left journal empty", journal() == [], journal())
 
@@ -461,6 +462,67 @@ def split_only(backend, marker):
         stop(backend)
 
 
+def resilience():
+    """Long-lived gateway + backend: sequential refusals, backend restart, slow
+    peer head-of-line blocking, and one-winner replay under concurrent clients."""
+    tag = "[resilience] "
+    clear_journal()
+    mkdir_owned(RUN_GW, GW, CLIENTS, 0o2750)
+    mkdir_owned(RUN_BK, SIGNER, BACKEND, 0o2750)
+    backend = spawn(SIGNER, "run_signer_backend.py", "--backend", str(ETC / "backend.json"))
+    wait_for(BSOCK, backend)
+    gw = spawn(GW, "run_signer_admission.py", "--admission", str(ETC / "admission.json"))
+    wait_for(SOCK, gw)
+
+    for _ in range(10):
+        client(DENIED)
+        client(ALLOWED, b"garbage")
+    check(tag + "20 sequential refusals leave both services running and the journal empty",
+          gw.poll() is None and backend.poll() is None and journal() == [], (gw.poll(), backend.poll(), journal()))
+
+    stop(backend)
+    r = client(ALLOWED)
+    check(tag + "backend down: refused while the gateway keeps running",
+          refused(r) and gw.poll() is None and journal() == [], (r.stdout[:80], gw.poll()))
+    backend = spawn(SIGNER, "run_signer_backend.py", "--backend", str(ETC / "backend.json"))
+    wait_for(BSOCK, backend)
+    r = client(ALLOWED)
+    check(tag + "after backend restart the gateway serves again", b"signer_refusal" in r.stdout and len(journal()) == 1,
+          (r.stdout[:80], journal()))
+
+    # Head-of-line blocking is bounded by the read deadline (requests are serial).
+    clear_journal()
+    dripper = subprocess.Popen(["runuser", "-u", ALLOWED, "--", "/usr/bin/python3", "-I", "-c", CLIENT,
+                                str(SOCK), "30"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    dripper.stdin.write(b"{")
+    dripper.stdin.close()
+    time.sleep(0.3)
+    started = time.monotonic()
+    r = client(ALLOWED)
+    latency = time.monotonic() - started
+    dripper.kill()
+    dripper.wait()  # stdin already closed: communicate() raises on Python 3.13
+    print("  info %slegitimate client waited %.1fs behind a slow peer" % (tag, latency))
+    check(tag + "client behind a slow peer is served within the bounded deadline",
+          b"signer_refusal" in r.stdout and latency < 20, (latency, r.stdout[:80]))
+
+    # Concurrent clients, same intent_id: exactly one winner, atomic journal.
+    clear_journal()
+    procs = [subprocess.Popen(["runuser", "-u", ALLOWED, "--", "/usr/bin/python3", "-I", "-c", CLIENT, str(SOCK)],
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+             for _ in range(8)]
+    outputs = []
+    for proc in procs:
+        out, _ = proc.communicate(REQUEST, timeout=120)
+        outputs.append(out)
+    winners = sum(1 for out in outputs if b"signer_refusal" in out)
+    check(tag + "8 concurrent clients with one intent_id: exactly one reaches the signer, journal has one marker",
+          winners == 1 and len(journal()) == 1, (winners, journal()))
+    check(tag + "all services still running", gw.poll() is None and backend.poll() is None)
+    stop(gw)
+    stop(backend)
+
+
 try:
     setup()
     if not sandbox_works_for(SIGNER):
@@ -473,6 +535,7 @@ try:
     write_cfg(split=True)
     gateway_user, backend, marker = common_scenarios(split=True)
     split_only(backend, marker)
+    resilience()
 finally:
     teardown()
 

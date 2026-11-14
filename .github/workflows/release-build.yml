@@ -1,0 +1,32 @@
+name: Reproducible CLI build (unsigned test artifacts)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0   # must match rust-toolchain.toml
+      - name: Verify two builds from different directories are bit-identical
+        run: python scripts/build_release.py --verify-reproducible
+      - name: Build artifacts and SHA-256 sums
+        run: python scripts/build_release.py
+      - name: Show hashes
+        shell: bash
+        run: cat dist/dist/SHA256SUMS dist/dist/BUILD-INFO.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hguet-${{ matrix.os }}-unsigned
+          path: dist/dist/
+          if-no-files-found: error
