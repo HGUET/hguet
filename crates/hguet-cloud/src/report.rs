@@ -656,6 +656,116 @@ mod tests {
         assert_eq!(code(&bonus, &e), "ASSESSMENT_KEYS");
     }
 
+
+    #[test]
+    fn separately_pinned_report_keys_verify_their_own_domains() {
+        use std::fs::{self, OpenOptions};
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+        struct EphemeralKey {
+            private: std::path::PathBuf,
+            public: Vec<u8>,
+        }
+        impl Drop for EphemeralKey {
+            fn drop(&mut self) {
+                let _ = fs::remove_file(&self.private);
+            }
+        }
+        fn key() -> Option<EphemeralKey> {
+            let generated = Command::new("openssl")
+                .args(["genpkey", "-algorithm", "ML-DSA-87"])
+                .output().ok()?;
+            if !generated.status.success() {
+                if std::env::var_os("HGUET_REQUIRE_PQ_SIGNING").is_some() {
+                    panic!("ML-DSA-87 separate issuer-key test cannot skip");
+                }
+                return None;
+            }
+            let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "hguet-report-keys-{}-{id}.pem", std::process::id()
+            ));
+            let mut options = OpenOptions::new();
+            options.create_new(true).write(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut output = options.open(&path).unwrap();
+            output.write_all(&generated.stdout).unwrap();
+            let derived = Command::new("openssl")
+                .args(["pkey", "-in"]).arg(&path)
+                .arg("-pubout").output().unwrap();
+            assert!(derived.status.success());
+            Some(EphemeralKey {
+                private: path,
+                public: derived.stdout,
+            })
+        }
+        fn sign(key: &EphemeralKey, domain: Domain, payload: &[u8]) -> Vec<u8> {
+            let input = [domain.bytes(), payload].concat();
+            let mut child = Command::new("openssl")
+                .args(["pkeyutl", "-sign", "-rawin", "-inkey"])
+                .arg(&key.private)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn().unwrap();
+            child.stdin.take().unwrap().write_all(&input).unwrap();
+            let result = child.wait_with_output().unwrap();
+            assert!(result.status.success());
+            result.stdout
+        }
+        let (Some(receipt_key), Some(assessment_key)) = (key(), key()) else {
+            return;
+        };
+        let receipt_pin = PinnedKey::from_public_pem(&receipt_key.public, "openssl").unwrap();
+        let assessment_pin = PinnedKey::from_public_pem(&assessment_key.public, "openssl").unwrap();
+        assert_ne!(receipt_pin.key_id(), assessment_pin.key_id());
+
+        let assessment_payload = bytes(&assessment_json());
+        let receipt_payload = bytes(&receipt_json(&assessment_payload));
+        let signed_assessment = SignedPayload {
+            signature: sign(&assessment_key, Domain::CloudAssessment, &assessment_payload),
+            canonical_payload: assessment_payload.clone(),
+            key_id: assessment_pin.key_id().into(),
+            signing_algorithm: "ML-DSA-87".into(),
+        };
+        let signed_receipt = SignedPayload {
+            signature: sign(&receipt_key, Domain::PaymentReceipt, &receipt_payload),
+            canonical_payload: receipt_payload,
+            key_id: receipt_pin.key_id().into(),
+            signing_algorithm: "ML-DSA-87".into(),
+        };
+        let quote = quote();
+        let receipt_expectations = ReceiptExpectations {
+            quote: &quote,
+            network: "devnet",
+            genesis_hash: GENESIS,
+            message_sha256: [1; 32],
+            assessment_payload: Some(&assessment_payload),
+        };
+        let caps = vec!["network_health".to_owned()];
+        let assessment_expectations = assessment_expectations(&caps);
+        assert!(verify_paid_check_with_keys(
+            &signed_receipt, Some(&signed_assessment),
+            &receipt_pin, &assessment_pin,
+            &receipt_expectations, &assessment_expectations
+        ).is_ok(), "domain-specific pinned keys must independently verify");
+        assert!(verify_paid_check_with_keys(
+            &signed_receipt, Some(&signed_assessment),
+            &assessment_pin, &receipt_pin,
+            &receipt_expectations, &assessment_expectations
+        ).is_err(), "swapped issuer keys must never verify");
+        assert!(verify_paid_check(
+            &signed_receipt, Some(&signed_assessment), &receipt_pin,
+            &receipt_expectations, &assessment_expectations
+        ).is_err(), "legacy single-key helper cannot silently accept different keys");
+    }
+
     #[test]
     fn cloud_findings_never_change_the_local_decision() {
         let capabilities = vec!["network_health".to_owned()];
