@@ -136,9 +136,15 @@ For **every** debit or authority change, include the actual effected account, ow
 
 ### Local signer port integration — interface only, permanently blocked
 
-An isolated workspace crate, `hguet-signer`, offers `SignerRequest`, `SignerRefusal` and a placeholder `SignerBackend` trait. Its local preflight independently reparses original Solana transaction bytes, verifies an exact-message PaymentIntent signature with a separately pinned public key, and recomputes the block-only `SigningBoundary`. The sole gateway method `guarded_sign` returns `Result<Infallible,SignerRefusal>`: **no successful result exists and the backend is never called**. There is no key storage, wallet SDK, signing implementation or broadcast path.
+The isolated workspace crate `hguet-signer` offers read-only `SignerRequest`, `SignerRefusal` and a **separate operator-configured agent JSON admission module**. Its preflight independently reparses original Solana transaction bytes, verifies an exact-message PaymentIntent signature with a separately pinned public key, and recomputes the block-only `SigningBoundary`. The former public `SignerBackend` trait was **removed**: `guarded_sign(request)` returns `Result<Infallible,SignerRefusal>` without any device/backend argument. There is no key storage, wallet SDK, signing implementation or broadcast path.
 
 The CLI command `signer-preflight` requires `--offline`, `--intent` and `--trusted-key`, rejects `--rpc-url`, and returns a block-only refusal. The unreleased CLI-only `signer-refusal.schema.json` prohibits claims of approval, device invocation or transaction broadcast. This is not an enforced production signing perimeter: a consumer could call unrelated signer APIs outside HGUET, and execution-time spending enforcement remains unsolved.
+
+### Operator/agent process boundary
+
+The standalone hguet-signer-isolate process reads exactly one **bounded stdin JSON** request with original_transaction_b64 and signed_intent; an agent cannot include network, pin, clock, policy, RPC approval or signing action fields. OperatorTrust receives the public key and cluster via **separate process startup configuration** and uses the OS clock, not a submitted timestamp. Strict unknown-field rejection and canonical Base64 decode take place before the existing exact-message Ed25519 verifier. The response is always BLOCK, never an authorization grant.
+
+This process boundary does not establish OS sandboxing, independent protected launcher, exclusive device custody, one-time replay prevention or hardware verification. A hostile parent with process-launch control could select another operator key/cluster. These are unresolved prerequisites, not hidden by a successful local test. See [Trusted Signer Isolation threat model](trusted-signer-isolation.md).
 
 ## 5. What Transaction X-Ray must display
 
