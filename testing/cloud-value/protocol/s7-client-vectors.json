@@ -1,6 +1,857 @@
 {
  "cases": [
   {
+   "algo": "subjects_sha256",
+   "description": "empty set is valid: digest of []",
+   "expect": {
+    "canonical": "[]",
+    "ok": true,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+   },
+   "id": "SUBJ-P-001",
+   "input": {
+    "network": "devnet",
+    "subjects": []
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "single program",
+   "expect": {
+    "canonical": "[{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "8939d7a193ba5caad3d28f4c58f6c333e1b3b8352483f3158054f9b24aa5bf6a"
+   },
+   "id": "SUBJ-P-002",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "order on the wire is irrelevant",
+   "expect": {
+    "canonical": "[{\"category\":\"mint\",\"network\":\"devnet\",\"subject_id\":\"8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR\"},{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "d2192e9e722cf907c193f6713e152f93bab5d32b751fbceff0c82ceffdf1df64"
+   },
+   "id": "SUBJ-P-003",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "mint",
+      "network": "devnet",
+      "subject_id": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR"
+     },
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "same set, other wire order, same digest as SUBJ-P-003",
+   "expect": {
+    "canonical": "[{\"category\":\"mint\",\"network\":\"devnet\",\"subject_id\":\"8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR\"},{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "d2192e9e722cf907c193f6713e152f93bab5d32b751fbceff0c82ceffdf1df64"
+   },
+   "id": "SUBJ-P-004",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     },
+     {
+      "category": "mint",
+      "network": "devnet",
+      "subject_id": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "all four categories sort by category then id",
+   "expect": {
+    "canonical": "[{\"category\":\"destination\",\"network\":\"devnet\",\"subject_id\":\"CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8\"},{\"category\":\"merchant\",\"network\":\"devnet\",\"subject_id\":\"shop-1\"},{\"category\":\"mint\",\"network\":\"devnet\",\"subject_id\":\"8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR\"},{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "47e0449646fadcdf9a3672d61ca1bef332c461ece5da418bd82d71c90c3dc227"
+   },
+   "id": "SUBJ-P-005",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "shop-1"
+     },
+     {
+      "category": "destination",
+      "network": "devnet",
+      "subject_id": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8"
+     },
+     {
+      "category": "mint",
+      "network": "devnet",
+      "subject_id": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR"
+     },
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "ids of one category sort bytewise (base58 is case-sensitive)",
+   "expect": {
+    "canonical": "[{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"},{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR\"},{\"category\":\"program\",\"network\":\"devnet\",\"subject_id\":\"CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8\"}]",
+    "ok": true,
+    "sha256": "d2008a4400c97b94639b075a613ff2e79d75689e5fe979e831adceb1a93604fc"
+   },
+   "id": "SUBJ-P-006",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8"
+     },
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     },
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "same ids on another network are another digest",
+   "expect": {
+    "canonical": "[{\"category\":\"program\",\"network\":\"testnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "198cf7e33502643ff2208d7932cbe22c73e76b5b2650b8f07a2d990ce49cb243"
+   },
+   "id": "SUBJ-P-007",
+   "input": {
+    "network": "testnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "testnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "mainnet subject on mainnet request",
+   "expect": {
+    "canonical": "[{\"category\":\"destination\",\"network\":\"mainnet\",\"subject_id\":\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"}]",
+    "ok": true,
+    "sha256": "af7c25785918279555b8b1251f6b2362c6832b0c04b6dfbf22978c18d2f33e53"
+   },
+   "id": "SUBJ-P-008",
+   "input": {
+    "network": "mainnet",
+    "subjects": [
+     {
+      "category": "destination",
+      "network": "mainnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "merchant identifier charset",
+   "expect": {
+    "canonical": "[{\"category\":\"merchant\",\"network\":\"devnet\",\"subject_id\":\"Acme_Shop.v2:eu-1\"}]",
+    "ok": true,
+    "sha256": "881ed972482d751a96d2f4e8d77684f88817577461a9376da254c1ca69eaed7e"
+   },
+   "id": "SUBJ-P-009",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "Acme_Shop.v2:eu-1"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "duplicate subject is an error, never collapsed",
+   "expect": {
+    "error": "SUBJECT_DUPLICATE",
+    "ok": false
+   },
+   "id": "SUBJ-N-001",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     },
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "unknown category",
+   "expect": {
+    "error": "SUBJECT_UNKNOWN_CATEGORY",
+    "ok": false
+   },
+   "id": "SUBJ-N-002",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "alt_table",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "subject network differs from request network",
+   "expect": {
+    "error": "SUBJECT_NETWORK_MISMATCH",
+    "ok": false
+   },
+   "id": "SUBJ-N-003",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "mainnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "unknown network name",
+   "expect": {
+    "error": "NETWORK_UNKNOWN",
+    "ok": false
+   },
+   "id": "SUBJ-N-004",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "localnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "non-base58 id (contains 0)",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-005",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "00000000000000000000000000000000000000000000"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "base58 of 31 bytes",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-006",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "5SV2hdVK1ZezefdyJMyk8fvkE9qZvZshnqmvg28eJp"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "base58 of 33 bytes",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-007",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "2VVBLCT63vjAyYsAdKNX5RUsRUGGd6MnaDJ6ubWMqKRqv"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "non-canonical base58 (extra leading 1)",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-008",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": "14vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "surrounding whitespace",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-009",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "network": "devnet",
+      "subject_id": " 4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "merchant with Unicode (Cyrillic lookalike)",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-010",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "pаypal"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "merchant too long",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-011",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "empty merchant id",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-012",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": ""
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "merchant id with a trailing newline",
+   "expect": {
+    "error": "SUBJECT_ID_INVALID",
+    "ok": false
+   },
+   "id": "SUBJ-N-017",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "shop-1\n"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "more than 64 subjects",
+   "expect": {
+    "error": "SUBJECT_SET_TOO_LARGE",
+    "ok": false
+   },
+   "id": "SUBJ-N-013",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m0"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m1"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m2"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m3"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m4"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m5"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m6"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m7"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m8"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m9"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m10"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m11"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m12"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m13"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m14"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m15"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m16"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m17"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m18"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m19"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m20"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m21"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m22"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m23"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m24"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m25"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m26"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m27"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m28"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m29"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m30"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m31"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m32"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m33"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m34"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m35"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m36"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m37"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m38"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m39"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m40"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m41"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m42"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m43"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m44"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m45"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m46"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m47"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m48"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m49"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m50"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m51"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m52"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m53"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m54"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m55"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m56"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m57"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m58"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m59"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m60"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m61"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m62"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m63"
+     },
+     {
+      "category": "merchant",
+      "network": "devnet",
+      "subject_id": "m64"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "extra key in a subject object",
+   "expect": {
+    "error": "SUBJECT_MALFORMED",
+    "ok": false
+   },
+   "id": "SUBJ-N-014",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "label": "x",
+      "network": "devnet",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "missing key in a subject object",
+   "expect": {
+    "error": "SUBJECT_MALFORMED",
+    "ok": false
+   },
+   "id": "SUBJ-N-015",
+   "input": {
+    "network": "devnet",
+    "subjects": [
+     {
+      "category": "program",
+      "subject_id": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi"
+     }
+    ]
+   }
+  },
+  {
+   "algo": "subjects_sha256",
+   "description": "unknown request network",
+   "expect": {
+    "error": "NETWORK_UNKNOWN",
+    "ok": false
+   },
+   "id": "SUBJ-N-016",
+   "input": {
+    "network": "localnet",
+    "subjects": []
+   }
+  },
+  {
    "algo": "memo_reference",
    "description": "memo text for a quote id",
    "expect": {

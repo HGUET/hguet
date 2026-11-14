@@ -249,6 +249,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hguet-cloud"
+version = "0.0.0"
+dependencies = [
+ "bs58",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "hguet-core"
 version = "0.0.0"
 dependencies = [
