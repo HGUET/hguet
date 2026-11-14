@@ -14,7 +14,7 @@ def check(schema, value):
 
 def main():
     names = ["payment-intent", "signed-payment-intent", "security-verdict",
-             "signing-boundary", "signer-refusal"]
+             "signing-boundary", "signer-refusal", "signer-agent-request"]
     schemas = {n:read(n+".schema.json") for n in names}
     for s in schemas.values(): Draft202012Validator.check_schema(s)
     intent = {
@@ -147,7 +147,35 @@ def main():
     ]:
         forged=dict(refusal,**{field:True})
         assert list(Draft202012Validator(schemas["signer-refusal"]).iter_errors(forged))
+    # The agent side cannot set operator policy, trusted signer pin, local
+    # time, RPC, approval or device command in the isolated process request.
+    signed_example=json.loads(
+        (BASE.parent.parent/"tests/fixtures/signed-direct-token-source-cap-equal.json")
+        .read_text(encoding="utf-8"))
+    agent_request={
+        "schema_version":1,
+        "kind":"hguet_signer_preflight",
+        "original_transaction_b64":(BASE.parent.parent/
+            "tests/fixtures/legacy-spl-transfer-checked-authority-signer.base64")
+            .read_text(encoding="utf-8").strip(),
+        "signed_intent":signed_example,
+    }
+    check(schemas["signer-agent-request"],agent_request)
+    for name,value in [
+        ("network","mainnet"),("trusted_key","untrusted"),
+        ("now_unix",1),("allow",True),
+        ("rpc_result",{"status":"rpc_succeeded"}),
+        ("signing_gate","allow"),("device_command","sign_transaction"),
+    ]:
+        forged=dict(agent_request,**{name:value})
+        assert list(Draft202012Validator(schemas["signer-agent-request"])
+            .iter_errors(forged)),name
+    forged=dict(agent_request,schema_version=2)
+    assert list(Draft202012Validator(schemas["signer-agent-request"]).iter_errors(forged))
+    forged=dict(agent_request,
+        signed_intent=dict(signed_example,allow=True))
+    assert list(Draft202012Validator(schemas["signer-agent-request"]).iter_errors(forged))
     # SecurityVerdict schema permits future ALLOW, but current CLI NEVER emits it.
-    print("PASS: 5 draft schemas; no signer approval, hardware invocation or transaction broadcast.")
+    print("PASS: 6 draft schemas; isolated agent cannot set trust, RPC approval, device commands or signing grants.")
 
 if __name__=="__main__": main()
