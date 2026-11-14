@@ -100,6 +100,22 @@ def _verify_launcher_install():
             os.close(fd)
 
 
+def _verify_protected_binary_install(binary):
+    # FD pinning stops pathname swaps but NOT in-place writes to the same
+    # inode. Root ownership and protected ancestor directories are mandatory
+    # for the protected service so its unprivileged UID cannot write the ELF.
+    _secure_ancestors(os.path.dirname(binary), {0})
+    fd = os.open(binary, os.O_RDONLY | NOFOLLOW)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or \
+           st.st_mode & 0o022 or not st.st_mode & 0o111:
+            raise sandbox.SandboxError(
+                "protected executable must be root-owned, executable and immutable to signer service")
+    finally:
+        os.close(fd)
+
+
 def load_operator_policy(path):
     data = _trusted_file(path)
     try:
@@ -117,7 +133,9 @@ def load_operator_policy(path):
         raise sandbox.SandboxError("untrusted operator network")
     if not cfg["binary"].startswith("/") or not cfg["replay_directory"].startswith("/"):
         raise sandbox.SandboxError("absolute operator paths are mandatory")
-    # Both are validated against the pinned sandbox before any state write.
+    # The executable's inode must be administrator-owned as well as hashed.
+    # Otherwise its *contents* could change while the verified FD is open.
+    _verify_protected_binary_install(cfg["binary"])
     fd = sandbox.open_pinned_executable(cfg["binary"], cfg["binary_sha256"])
     os.close(fd)
     sandbox.make_bwrap_command(7, 8, cfg["network"], cfg["trusted_key"])
@@ -239,6 +257,9 @@ def reserve_once(directory, identifier):
 
 
 def run(argv=None, stdin=None):
+    if os.geteuid() == 0:
+        raise sandbox.SandboxError(
+            "refusing root execution; install a dedicated unprivileged signer service identity")
     parser = sandbox.Exit40Parser(description="protected BLOCK-only HGUET signer")
     parser.add_argument("--policy", required=True, help="root-owned operator policy JSON")
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
