@@ -26,7 +26,10 @@ mod tests {
     use super::*;
     #[test]
     fn correct_vps_default_is_not_an_ssh_url_or_port() {
-        assert_eq!(DEFAULT_CLOUD_ENDPOINT, format!("{DEFAULT_CLOUD_HOST}:{DEFAULT_CLOUD_PORT}"));
+        assert_eq!(
+            DEFAULT_CLOUD_ENDPOINT,
+            format!("{DEFAULT_CLOUD_HOST}:{DEFAULT_CLOUD_PORT}")
+        );
         assert!(!DEFAULT_CLOUD_ENDPOINT.contains('@'));
         assert!(!DEFAULT_CLOUD_ENDPOINT.starts_with("ssh://"));
         assert_eq!(DEFAULT_CLOUD_PORT, 443);

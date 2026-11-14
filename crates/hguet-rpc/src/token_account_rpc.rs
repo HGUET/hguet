@@ -6,14 +6,14 @@ use crate::{
     effects::{SimulationEffects, TokenBalanceDelta},
     mint_rpc::MintRpcSnapshot,
     token_account_state::{parse_token_2022_account, Token2022AccountState, MAX_ACCOUNT_BYTES},
-    token_semantics::{TOKEN_PROGRAM,TOKEN_2022_PROGRAM},
+    token_semantics::{TOKEN_2022_PROGRAM, TOKEN_PROGRAM},
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
-const MAX_ACCOUNT_QUERIES: usize=16;
+const MAX_ACCOUNT_QUERIES: usize = 16;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TokenAccountObservation {
@@ -36,95 +36,136 @@ pub struct TokenAccountRpcSnapshot {
     pub accounts: Vec<TokenAccountObservation>,
     pub limitation: String,
 }
-fn candidates(effects:&SimulationEffects)->Result<Vec<TokenBalanceDelta>,RpcError>{
-    let mut unique=BTreeMap::<String,TokenBalanceDelta>::new();
-    if let Some(rows)=&effects.token_deltas {
+fn candidates(effects: &SimulationEffects) -> Result<Vec<TokenBalanceDelta>, RpcError> {
+    let mut unique = BTreeMap::<String, TokenBalanceDelta>::new();
+    if let Some(rows) = &effects.token_deltas {
         for row in rows {
-            let valid=|s:&str|bs58::decode(s).into_vec()
-                .map(|v|v.len()==32).unwrap_or(false);
-            if !valid(&row.token_account)||!valid(&row.mint)||
-                row.owner.as_deref().is_some_and(|s|!valid(s)) {
+            let valid = |s: &str| {
+                bs58::decode(s)
+                    .into_vec()
+                    .map(|v| v.len() == 32)
+                    .unwrap_or(false)
+            };
+            if !valid(&row.token_account)
+                || !valid(&row.mint)
+                || row.owner.as_deref().is_some_and(|s| !valid(s))
+            {
                 return Err(RpcError::InvalidResponse);
             }
-            if let Some(previous)=unique.insert(row.token_account.clone(),row.clone()) {
-                if previous.mint!=row.mint||previous.owner!=row.owner {
+            if let Some(previous) = unique.insert(row.token_account.clone(), row.clone()) {
+                if previous.mint != row.mint || previous.owner != row.owner {
                     return Err(RpcError::InvalidResponse);
                 }
             }
         }
     }
-    if unique.len()>MAX_ACCOUNT_QUERIES{return Err(RpcError::TooLarge);}
+    if unique.len() > MAX_ACCOUNT_QUERIES {
+        return Err(RpcError::TooLarge);
+    }
     Ok(unique.into_values().collect())
 }
-pub fn fetch_candidate_token_accounts<T:JsonRpcTransport>(
-    transport:&T, endpoint:&str, simulation_slot:u64,
-    effects:&SimulationEffects, mints:Option<&MintRpcSnapshot>,
-)->Result<Option<TokenAccountRpcSnapshot>,RpcError>{
-    let rows=candidates(effects)?;
-    if rows.is_empty(){return Ok(None);}
-    if simulation_slot==0{return Err(RpcError::InvalidResponse);}
-    let addresses=rows.iter().map(|r|r.token_account.clone()).collect::<Vec<_>>();
-    let request=json!({"jsonrpc":"2.0","id":5,"method":"getMultipleAccounts",
+pub fn fetch_candidate_token_accounts<T: JsonRpcTransport>(
+    transport: &T,
+    endpoint: &str,
+    simulation_slot: u64,
+    effects: &SimulationEffects,
+    mints: Option<&MintRpcSnapshot>,
+) -> Result<Option<TokenAccountRpcSnapshot>, RpcError> {
+    let rows = candidates(effects)?;
+    if rows.is_empty() {
+        return Ok(None);
+    }
+    if simulation_slot == 0 {
+        return Err(RpcError::InvalidResponse);
+    }
+    let addresses = rows
+        .iter()
+        .map(|r| r.token_account.clone())
+        .collect::<Vec<_>>();
+    let request = json!({"jsonrpc":"2.0","id":5,"method":"getMultipleAccounts",
         "params":[addresses,{"encoding":"base64","commitment":"confirmed",
                              "minContextSlot":simulation_slot}]
     });
-    let reply=checked_result(transport.post_json(endpoint,&request)?,5)?;
-    let slot=reply.get("context").and_then(|v|v.get("slot"))
-        .and_then(Value::as_u64).filter(|slot|*slot>=simulation_slot)
+    let reply = checked_result(transport.post_json(endpoint, &request)?, 5)?;
+    let slot = reply
+        .get("context")
+        .and_then(|v| v.get("slot"))
+        .and_then(Value::as_u64)
+        .filter(|slot| *slot >= simulation_slot)
         .ok_or(RpcError::InvalidResponse)?;
-    let values=reply.get("value").and_then(Value::as_array)
+    let values = reply
+        .get("value")
+        .and_then(Value::as_array)
         .ok_or(RpcError::InvalidResponse)?;
-    if values.len()!=rows.len(){return Err(RpcError::InvalidResponse);}
-    let mut accounts=Vec::with_capacity(rows.len());
-    for (row,value) in rows.iter().zip(values) {
-        let mut observation=TokenAccountObservation{
-            address:row.token_account.clone(),
-            simulation_reported_mint:row.mint.clone(),
-            status:String::new(),state:None,
-            mint_matches_simulation_report:None,
-            authority_matches_simulation_report:None,
-            matching_mint_state_observed:false,
+    if values.len() != rows.len() {
+        return Err(RpcError::InvalidResponse);
+    }
+    let mut accounts = Vec::with_capacity(rows.len());
+    for (row, value) in rows.iter().zip(values) {
+        let mut observation = TokenAccountObservation {
+            address: row.token_account.clone(),
+            simulation_reported_mint: row.mint.clone(),
+            status: String::new(),
+            state: None,
+            mint_matches_simulation_report: None,
+            authority_matches_simulation_report: None,
+            matching_mint_state_observed: false,
         };
         if value.is_null() {
-            observation.status="missing".into();
+            observation.status = "missing".into();
             accounts.push(observation);
             continue;
         }
-        let obj=value.as_object().ok_or(RpcError::InvalidResponse)?;
-        if obj.get("executable").and_then(Value::as_bool)!=Some(false) {
+        let obj = value.as_object().ok_or(RpcError::InvalidResponse)?;
+        if obj.get("executable").and_then(Value::as_bool) != Some(false) {
             return Err(RpcError::InvalidResponse);
         }
-        let owner=obj.get("owner").and_then(Value::as_str)
+        let owner = obj
+            .get("owner")
+            .and_then(Value::as_str)
             .ok_or(RpcError::InvalidResponse)?;
-        if owner!=TOKEN_2022_PROGRAM && owner!=TOKEN_PROGRAM {
-            observation.status="not_token_2022".into();
+        if owner != TOKEN_2022_PROGRAM && owner != TOKEN_PROGRAM {
+            observation.status = "not_token_2022".into();
             accounts.push(observation);
             continue;
         }
-        let data=obj.get("data").and_then(Value::as_array)
+        let data = obj
+            .get("data")
+            .and_then(Value::as_array)
             .ok_or(RpcError::InvalidResponse)?;
-        if data.len()!=2||data[1].as_str()!=Some("base64") {
+        if data.len() != 2 || data[1].as_str() != Some("base64") {
             return Err(RpcError::InvalidResponse);
         }
-        let encoded=data[0].as_str().ok_or(RpcError::InvalidResponse)?;
-        if encoded.len()>MAX_ACCOUNT_BYTES.div_ceil(3)*4+4 {
+        let encoded = data[0].as_str().ok_or(RpcError::InvalidResponse)?;
+        if encoded.len() > MAX_ACCOUNT_BYTES.div_ceil(3) * 4 + 4 {
             return Err(RpcError::TooLarge);
         }
-        let bytes=STANDARD.decode(encoded).map_err(|_|RpcError::InvalidResponse)?;
-        let state=parse_token_2022_account(&row.token_account,owner,&bytes)?;
-        observation.mint_matches_simulation_report=Some(state.mint==row.mint);
+        let bytes = STANDARD
+            .decode(encoded)
+            .map_err(|_| RpcError::InvalidResponse)?;
+        let state = parse_token_2022_account(&row.token_account, owner, &bytes)?;
+        observation.mint_matches_simulation_report = Some(state.mint == row.mint);
         // Never correlate a later account to the *reported* mint when its own
         // decoded mint differs; that would create a false mint-state link.
-        observation.matching_mint_state_observed=mints.is_some_and(|snapshot|
-            snapshot.accounts.iter().any(|mint|
-                mint.address==state.mint && mint.address==row.mint &&
-                mint.status=="token_2022" && mint.state.is_some()));
-        observation.authority_matches_simulation_report=
-            row.owner.as_ref().map(|reported|state.token_authority==*reported);
-        observation.status=if owner==TOKEN_2022_PROGRAM {
+        observation.matching_mint_state_observed = mints.is_some_and(|snapshot| {
+            snapshot.accounts.iter().any(|mint| {
+                mint.address == state.mint
+                    && mint.address == row.mint
+                    && mint.status == "token_2022"
+                    && mint.state.is_some()
+            })
+        });
+        observation.authority_matches_simulation_report = row
+            .owner
+            .as_ref()
+            .map(|reported| state.token_authority == *reported);
+        observation.status = if owner == TOKEN_2022_PROGRAM {
             "token_2022"
-        } else {"legacy_token"}.into();
-        observation.state=Some(state);
+        } else {
+            "legacy_token"
+        }
+        .into();
+        observation.state = Some(state);
         accounts.push(observation);
     }
     Ok(Some(TokenAccountRpcSnapshot{
@@ -138,45 +179,64 @@ mod tests {
     use super::*;
     use crate::effects::CpiObservation;
     use std::cell::Cell;
-    struct Fake {slot:u64, response:Value,calls:Cell<usize>}
+    struct Fake {
+        slot: u64,
+        response: Value,
+        calls: Cell<usize>,
+    }
     impl JsonRpcTransport for Fake {
-        fn post_json(&self,_endpoint:&str,req:&Value)->Result<Value,RpcError>{
-            assert_eq!(req["method"],"getMultipleAccounts");
-            assert_eq!(req["id"],5);
-            assert_eq!(req["params"][1]["minContextSlot"],500);
-            self.calls.set(self.calls.get()+1);
+        fn post_json(&self, _endpoint: &str, req: &Value) -> Result<Value, RpcError> {
+            assert_eq!(req["method"], "getMultipleAccounts");
+            assert_eq!(req["id"], 5);
+            assert_eq!(req["params"][1]["minContextSlot"], 500);
+            self.calls.set(self.calls.get() + 1);
             Ok(json!({"jsonrpc":"2.0","id":5,"result":{
                 "context":{"slot":self.slot},"value":self.response}}))
         }
     }
-    fn effects(rows:Vec<TokenBalanceDelta>)->SimulationEffects{
-        SimulationEffects{
-            lamport_deltas:None,token_deltas:Some(rows),
-            cpi:CpiObservation{captured:false,group_count:None,instruction_count:None,
-                invoked_program_ids:vec![],token_instructions:vec![],
-                token_2022_extension_observations:vec![],
-                opaque_token_instruction_count:0,
-                token_2022_extension_instruction_count:0,
-                missing_compiled_token_data_count:0,
-                requires_semantic_review:true,limitations:vec![]},
-            simulated_fee_lamports:None,observed_fields:vec![],
-            missing_fields:vec![],warnings:vec![],
-            security_coverage:"partial_untrusted_rpc".into(),
+    fn effects(rows: Vec<TokenBalanceDelta>) -> SimulationEffects {
+        SimulationEffects {
+            lamport_deltas: None,
+            token_deltas: Some(rows),
+            cpi: CpiObservation {
+                captured: false,
+                group_count: None,
+                instruction_count: None,
+                invoked_program_ids: vec![],
+                token_instructions: vec![],
+                token_2022_extension_observations: vec![],
+                opaque_token_instruction_count: 0,
+                token_2022_extension_instruction_count: 0,
+                missing_compiled_token_data_count: 0,
+                requires_semantic_review: true,
+                limitations: vec![],
+            },
+            simulated_fee_lamports: None,
+            observed_fields: vec![],
+            missing_fields: vec![],
+            warnings: vec![],
+            security_coverage: "partial_untrusted_rpc".into(),
         }
     }
-    fn row(id:u8,mint:u8,owner:Option<u8>)->TokenBalanceDelta{
-        TokenBalanceDelta{
-            account_index:0,token_account:bs58::encode([id;32]).into_string(),
-            mint:bs58::encode([mint;32]).into_string(),
-            owner:owner.map(|id|bs58::encode([id;32]).into_string()),
-            decimals:6,before_raw_amount:None,after_raw_amount:None,
-            delta_raw_amount:None,complete_pair:false,
+    fn row(id: u8, mint: u8, owner: Option<u8>) -> TokenBalanceDelta {
+        TokenBalanceDelta {
+            account_index: 0,
+            token_account: bs58::encode([id; 32]).into_string(),
+            mint: bs58::encode([mint; 32]).into_string(),
+            owner: owner.map(|id| bs58::encode([id; 32]).into_string()),
+            decimals: 6,
+            before_raw_amount: None,
+            after_raw_amount: None,
+            delta_raw_amount: None,
+            complete_pair: false,
         }
     }
-    fn account(mint:u8,owner:u8)->Value {
-        let mut data=vec![0u8;166];
-        data[..32].fill(mint);data[32..64].fill(owner);
-        data[108]=1;data[165]=2;
+    fn account(mint: u8, owner: u8) -> Value {
+        let mut data = vec![0u8; 166];
+        data[..32].fill(mint);
+        data[32..64].fill(owner);
+        data[108] = 1;
+        data[165] = 2;
         data.extend(2u16.to_le_bytes());
         data.extend(8u16.to_le_bytes());
         data.extend(42u64.to_le_bytes());
@@ -184,108 +244,263 @@ mod tests {
             "data":[STANDARD.encode(data),"base64"]})
     }
     #[test]
-    fn token_account_mint_and_owner_correlate_without_atomic_claim(){
-        let fake=Fake{slot:501,response:json!([account(2,3)]),calls:Cell::new(0)};
-        let r=fetch_candidate_token_accounts(&fake,"https://example.org",500,
-            &effects(vec![row(1,2,Some(3))]),None).unwrap().unwrap();
-        assert_eq!(fake.calls.get(),1);
-        assert_eq!(r.accounts.len(),1);
-        assert_eq!(r.context_slot,501);
+    fn token_account_mint_and_owner_correlate_without_atomic_claim() {
+        let fake = Fake {
+            slot: 501,
+            response: json!([account(2, 3)]),
+            calls: Cell::new(0),
+        };
+        let r = fetch_candidate_token_accounts(
+            &fake,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, Some(3))]),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(fake.calls.get(), 1);
+        assert_eq!(r.accounts.len(), 1);
+        assert_eq!(r.context_slot, 501);
         assert!(!r.atomic_with_simulation);
-        assert_eq!(r.accounts[0].mint_matches_simulation_report,Some(true));
-        assert_eq!(r.accounts[0].authority_matches_simulation_report,Some(true));
+        assert_eq!(r.accounts[0].mint_matches_simulation_report, Some(true));
+        assert_eq!(
+            r.accounts[0].authority_matches_simulation_report,
+            Some(true)
+        );
         assert!(!r.accounts[0].matching_mint_state_observed);
-        assert_eq!(r.accounts[0].state.as_ref().unwrap().transfer_fee_withheld_raw.as_deref(),Some("42"));
+        assert_eq!(
+            r.accounts[0]
+                .state
+                .as_ref()
+                .unwrap()
+                .transfer_fee_withheld_raw
+                .as_deref(),
+            Some("42")
+        );
     }
     #[test]
-    fn later_slot_mint_and_authority_mismatch_are_evidence_not_authorization(){
-        let fake=Fake{slot:600,response:json!([account(4,5)]),calls:Cell::new(0)};
-        let r=fetch_candidate_token_accounts(&fake,"https://example.org",500,
-            &effects(vec![row(1,2,Some(3))]),None).unwrap().unwrap();
-        assert_eq!(r.accounts[0].mint_matches_simulation_report,Some(false));
-        assert_eq!(r.accounts[0].authority_matches_simulation_report,Some(false));
-        assert_eq!(r.accounts[0].status,"token_2022");
+    fn later_slot_mint_and_authority_mismatch_are_evidence_not_authorization() {
+        let fake = Fake {
+            slot: 600,
+            response: json!([account(4, 5)]),
+            calls: Cell::new(0),
+        };
+        let r = fetch_candidate_token_accounts(
+            &fake,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, Some(3))]),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(r.accounts[0].mint_matches_simulation_report, Some(false));
+        assert_eq!(
+            r.accounts[0].authority_matches_simulation_report,
+            Some(false)
+        );
+        assert_eq!(r.accounts[0].status, "token_2022");
     }
     #[test]
-    fn a_reported_mint_is_not_a_verified_link_when_account_bytes_disagree(){
-        use crate::mint_rpc::{MintAccountObservation,MintRpcSnapshot};
+    fn a_reported_mint_is_not_a_verified_link_when_account_bytes_disagree() {
+        use crate::mint_rpc::{MintAccountObservation, MintRpcSnapshot};
         use crate::mint_state::Token2022MintState;
-        let reported=bs58::encode([2u8;32]).into_string();
-        let snapshot=MintRpcSnapshot {
-            context_slot:510,simulation_slot:500,atomic_with_simulation:false,
-            accounts:vec![MintAccountObservation {
-                address:reported.clone(),status:"token_2022".into(),
-                state:Some(Token2022MintState {
-                    mint_address:reported,supply_raw:"0".into(),decimals:6,
-                    extensions:vec![],fee_config:None,hook:None,permanent_delegate:None,
-                    unknown_extension_count:0,confidential_extension_present:false,
-                    limitations:"fixture".into(),
+        let reported = bs58::encode([2u8; 32]).into_string();
+        let snapshot = MintRpcSnapshot {
+            context_slot: 510,
+            simulation_slot: 500,
+            atomic_with_simulation: false,
+            accounts: vec![MintAccountObservation {
+                address: reported.clone(),
+                status: "token_2022".into(),
+                state: Some(Token2022MintState {
+                    mint_address: reported,
+                    supply_raw: "0".into(),
+                    decimals: 6,
+                    extensions: vec![],
+                    fee_config: None,
+                    hook: None,
+                    permanent_delegate: None,
+                    unknown_extension_count: 0,
+                    confidential_extension_present: false,
+                    limitations: "fixture".into(),
                 }),
             }],
-            limitation:"fixture".into(),
+            limitation: "fixture".into(),
         };
-        let correct=Fake{slot:520,response:json!([account(2,3)]),calls:Cell::new(0)};
-        let matched=fetch_candidate_token_accounts(&correct,"https://example.org",500,
-            &effects(vec![row(1,2,Some(3))]),Some(&snapshot)).unwrap().unwrap();
+        let correct = Fake {
+            slot: 520,
+            response: json!([account(2, 3)]),
+            calls: Cell::new(0),
+        };
+        let matched = fetch_candidate_token_accounts(
+            &correct,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, Some(3))]),
+            Some(&snapshot),
+        )
+        .unwrap()
+        .unwrap();
         assert!(matched.accounts[0].matching_mint_state_observed);
-        let wrong=Fake{slot:521,response:json!([account(4,3)]),calls:Cell::new(0)};
-        let mismatched=fetch_candidate_token_accounts(&wrong,"https://example.org",500,
-            &effects(vec![row(1,2,Some(3))]),Some(&snapshot)).unwrap().unwrap();
+        let wrong = Fake {
+            slot: 521,
+            response: json!([account(4, 3)]),
+            calls: Cell::new(0),
+        };
+        let mismatched = fetch_candidate_token_accounts(
+            &wrong,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, Some(3))]),
+            Some(&snapshot),
+        )
+        .unwrap()
+        .unwrap();
         assert!(!mismatched.accounts[0].matching_mint_state_observed);
-        assert_eq!(mismatched.accounts[0].mint_matches_simulation_report,Some(false));
+        assert_eq!(
+            mismatched.accounts[0].mint_matches_simulation_report,
+            Some(false)
+        );
     }
     #[test]
-    fn legacy_spl_token_account_is_parsed_without_inventing_mint_tlv(){
-        let mut data=vec![0u8;165];
-        data[..32].fill(2);data[32..64].fill(3);
+    fn legacy_spl_token_account_is_parsed_without_inventing_mint_tlv() {
+        let mut data = vec![0u8; 165];
+        data[..32].fill(2);
+        data[32..64].fill(3);
         data[64..72].copy_from_slice(&100u64.to_le_bytes());
-        data[108]=1;
-        let f=Fake{slot:502,response:json!([{
-            "owner":TOKEN_PROGRAM,"executable":false,
-            "data":[STANDARD.encode(data),"base64"]
-        }]),calls:Cell::new(0)};
-        let r=fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(vec![row(1,2,Some(3))]),None).unwrap().unwrap();
-        assert_eq!(r.accounts[0].status,"legacy_token");
-        assert_eq!(r.accounts[0].mint_matches_simulation_report,Some(true));
-        assert_eq!(r.accounts[0].authority_matches_simulation_report,Some(true));
+        data[108] = 1;
+        let f = Fake {
+            slot: 502,
+            response: json!([{
+                "owner":TOKEN_PROGRAM,"executable":false,
+                "data":[STANDARD.encode(data),"base64"]
+            }]),
+            calls: Cell::new(0),
+        };
+        let r = fetch_candidate_token_accounts(
+            &f,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, Some(3))]),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(r.accounts[0].status, "legacy_token");
+        assert_eq!(r.accounts[0].mint_matches_simulation_report, Some(true));
+        assert_eq!(
+            r.accounts[0].authority_matches_simulation_report,
+            Some(true)
+        );
         assert!(r.accounts[0].state.is_some());
         assert!(!r.accounts[0].matching_mint_state_observed);
     }
     #[test]
-    fn missing_and_non_token2022_accounts_are_not_decoded_as_token2022(){
-        let f=Fake{slot:500,response:json!([null,{"owner":"11111111111111111111111111111111",
-            "executable":false}]),calls:Cell::new(0)};
-        let r=fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(vec![row(1,2,None),row(3,4,None)]),None).unwrap().unwrap();
-        assert_eq!(r.accounts[0].status,"missing");
-        assert_eq!(r.accounts[1].status,"not_token_2022");
-        assert!(r.accounts.iter().all(|a|a.state.is_none()));
+    fn missing_and_non_token2022_accounts_are_not_decoded_as_token2022() {
+        let f = Fake {
+            slot: 500,
+            response: json!([null,{"owner":"11111111111111111111111111111111",
+            "executable":false}]),
+            calls: Cell::new(0),
+        };
+        let r = fetch_candidate_token_accounts(
+            &f,
+            "https://example.org",
+            500,
+            &effects(vec![row(1, 2, None), row(3, 4, None)]),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(r.accounts[0].status, "missing");
+        assert_eq!(r.accounts[1].status, "not_token_2022");
+        assert!(r.accounts.iter().all(|a| a.state.is_none()));
     }
     #[test]
-    fn invalid_response_or_old_slot_rejected_and_no_extra_rpc_for_no_rows(){
-        let key=row(1,2,None);
-        let f=Fake{slot:499,response:json!([null]),calls:Cell::new(0)};
-        assert_eq!(fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(vec![key.clone()]),None).unwrap_err(),RpcError::InvalidResponse);
-        let f=Fake{slot:500,response:json!([{"owner":TOKEN_2022_PROGRAM,
-            "executable":false,"data":["BAD?!","base64"]}]),calls:Cell::new(0)};
-        assert_eq!(fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(vec![key]),None).unwrap_err(),RpcError::InvalidResponse);
-        let f=Fake{slot:500,response:json!([]),calls:Cell::new(0)};
-        assert!(fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(vec![]),None).unwrap().is_none());
-        assert_eq!(f.calls.get(),0);
+    fn invalid_response_or_old_slot_rejected_and_no_extra_rpc_for_no_rows() {
+        let key = row(1, 2, None);
+        let f = Fake {
+            slot: 499,
+            response: json!([null]),
+            calls: Cell::new(0),
+        };
+        assert_eq!(
+            fetch_candidate_token_accounts(
+                &f,
+                "https://example.org",
+                500,
+                &effects(vec![key.clone()]),
+                None
+            )
+            .unwrap_err(),
+            RpcError::InvalidResponse
+        );
+        let f = Fake {
+            slot: 500,
+            response: json!([{"owner":TOKEN_2022_PROGRAM,
+            "executable":false,"data":["BAD?!","base64"]}]),
+            calls: Cell::new(0),
+        };
+        assert_eq!(
+            fetch_candidate_token_accounts(
+                &f,
+                "https://example.org",
+                500,
+                &effects(vec![key]),
+                None
+            )
+            .unwrap_err(),
+            RpcError::InvalidResponse
+        );
+        let f = Fake {
+            slot: 500,
+            response: json!([]),
+            calls: Cell::new(0),
+        };
+        assert!(fetch_candidate_token_accounts(
+            &f,
+            "https://example.org",
+            500,
+            &effects(vec![]),
+            None
+        )
+        .unwrap()
+        .is_none());
+        assert_eq!(f.calls.get(), 0);
     }
     #[test]
-    fn excessive_or_conflicting_candidates_are_rejected_before_network(){
-        let f=Fake{slot:500,response:json!([]),calls:Cell::new(0)};
-        let too_many=(1..=17).map(|id|row(id,20,None)).collect::<Vec<_>>();
-        assert_eq!(fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(too_many),None).unwrap_err(),RpcError::TooLarge);
-        let same_address_two_mints=vec![row(1,2,None),row(1,3,None)];
-        assert_eq!(fetch_candidate_token_accounts(&f,"https://example.org",500,
-            &effects(same_address_two_mints),None).unwrap_err(),RpcError::InvalidResponse);
-        assert_eq!(f.calls.get(),0);
+    fn excessive_or_conflicting_candidates_are_rejected_before_network() {
+        let f = Fake {
+            slot: 500,
+            response: json!([]),
+            calls: Cell::new(0),
+        };
+        let too_many = (1..=17).map(|id| row(id, 20, None)).collect::<Vec<_>>();
+        assert_eq!(
+            fetch_candidate_token_accounts(
+                &f,
+                "https://example.org",
+                500,
+                &effects(too_many),
+                None
+            )
+            .unwrap_err(),
+            RpcError::TooLarge
+        );
+        let same_address_two_mints = vec![row(1, 2, None), row(1, 3, None)];
+        assert_eq!(
+            fetch_candidate_token_accounts(
+                &f,
+                "https://example.org",
+                500,
+                &effects(same_address_two_mints),
+                None
+            )
+            .unwrap_err(),
+            RpcError::InvalidResponse
+        );
+        assert_eq!(f.calls.get(), 0);
     }
 }
