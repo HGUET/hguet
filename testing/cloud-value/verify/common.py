@@ -25,8 +25,39 @@ def fmt_time(epoch):
     return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def subjects_digest(subjects):
-    """Canonical subject-set binding used by the benchmark. The public proto says only 'canonical sorted
-    risk-subject set'; this exact canonicalisation is an ASSUMPTION to be confirmed by the protocol owners."""
-    ordered = sorted(subjects, key=lambda s: (s["type"], s["id"]))
+# Benchmark subject types -> public Subject.category. `alt_table` has no category in the public proto; it appears
+# only in reference-server scenarios (never sent to a real server) and keeps its own name there.
+CATEGORY_FOR_TYPE = {"program": "program", "mint": "mint", "account": "destination", "alt_table": "alt_table",
+                     "destination": "destination", "merchant": "merchant"}  # last two: already S7.1 categories
+
+
+def subjects_digest(subjects, network):
+    """S7.1 canonical subject set (docs/architecture/canonical-contract-s7.md in HGUET/server, adopted by the
+    benchmark): SHA-256(JCS([{category, network, subject_id}, ...])) sorted byte-wise by
+    (category, network, subject_id); duplicates are an error. Address validity is the server's job and is not
+    re-checked here because benchmark fixtures use synthetic ids."""
+    items = [{"category": CATEGORY_FOR_TYPE[s["type"]], "network": network, "subject_id": s["id"]} for s in subjects]
+    keys = [(i["category"].encode(), i["network"].encode(), i["subject_id"].encode()) for i in items]
+    if len(set(keys)) != len(keys):
+        raise ValueError("duplicate subject")
+    ordered = [i for _, i in sorted(zip(keys, items), key=lambda p: p[0])]
     return hashlib.sha256(jcs.canonicalize(ordered)).hexdigest()
+
+
+def evidence_manifest(records):
+    """S7.1 manifest: JCS array of the records sorted by their own JCS bytes; a duplicate record is an error."""
+    encoded = sorted(jcs.canonicalize(r) for r in records)
+    if len(set(encoded)) != len(encoded):
+        raise ValueError("duplicate evidence record")
+    return b"[" + b",".join(encoded) + b"]"
+
+
+def evidence_sha256(record):
+    """Per-source digest: SHA-256 of the manifest the source attests (here: a manifest of its one record)."""
+    return hashlib.sha256(evidence_manifest([record])).hexdigest()
+
+
+def evidence_digest(records):
+    """Assessment digest: SHA-256 of the manifest of the deduplicated union of all cited records."""
+    unique = {jcs.canonicalize(r): r for r in records}
+    return hashlib.sha256(evidence_manifest(list(unique.values()))).hexdigest()
