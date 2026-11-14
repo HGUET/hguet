@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/signer-agent-request.schema.json",
+  "title": "HGUET untrusted agent → separate BLOCK-only signer preflight request",
+  "description": "Software IPC shape only: no signer capability. Trusted network, time and operator-pinned public key are provisioned independently, never inside this request. Rust also enforces max 65536 JSON bytes, max 16384 decoded transaction bytes and canonical Base64.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "original_transaction_b64",
+    "signed_intent"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "hguet_signer_preflight"
+    },
+    "original_transaction_b64": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 21852,
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+    },
+    "signed_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payload_b64",
+        "signer_pubkey_b58",
+        "signature_b58"
+      ],
+      "properties": {
+        "payload_b64": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 21852,
+          "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+        },
+        "signer_pubkey_b58": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 44,
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "signature_b58": {
+          "type": "string",
+          "minLength": 80,
+          "maxLength": 88,
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]+$"
+        }
+      }
+    }
+  }
+}
