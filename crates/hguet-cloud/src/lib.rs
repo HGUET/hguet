@@ -5,6 +5,10 @@
 //! Every function returns a stable error code that matches the server's golden vectors
 //! (`tests/vectors.rs` reproduces them from `testing/cloud-value/protocol/s7-client-vectors.json`).
 
+pub mod proto_policy;
+#[rustfmt::skip] // generated file: kept byte-identical to gen_proto_table.py output
+mod proto_table;
+
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 

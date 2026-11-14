@@ -1,5 +1,6 @@
 """Protocol interoperability tests: codec derived from hguet.proto, JCS, ML-DSA-87 KATs, TLS flow harness."""
 import hashlib
+import importlib.util
 import json
 import os
 import ssl
@@ -148,6 +149,14 @@ class S7Vectors(unittest.TestCase):
             except ProfileError as error:
                 got = {"ok": False, "error": error.code}
             self.assertEqual(got, case["expect"], case["id"])
+
+    def test_the_rust_field_table_is_generated_from_the_public_proto(self):
+        tool = CV / "tools" / "gen_proto_table.py"
+        spec = importlib.util.spec_from_file_location("gen_proto_table", tool)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        on_disk = module.TARGET.read_text(encoding="utf-8")  # universal newlines: CRLF checkouts compare equal
+        self.assertEqual(on_disk, module.render(), "run testing/cloud-value/tools/gen_proto_table.py")
 
     def test_signature_and_memo_helpers(self):
         for case in self.cases("solana_signature"):
