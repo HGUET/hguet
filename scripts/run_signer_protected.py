@@ -259,6 +259,30 @@ def reserve_once(directory, identifier):
         os.close(directory_fd)
 
 
+def process_request(policy, raw):
+    """Reserve the intent, run the sandboxed BLOCK-only signer, validate output.
+
+    Shared by the stdin entrypoint and the signer backend. The replay marker is
+    created BEFORE the sandbox and is never released, even on failure.
+    """
+    identity = _parse_replay_identity(raw, policy)
+    reserve_once(policy["replay_directory"], identity)
+    command = [
+        sys.executable,
+        str(Path(__file__).absolute().with_name("run_signer_sandbox.py")),
+        "--binary", policy["binary"],
+        "--binary-sha256", policy["binary_sha256"],
+        "--network", policy["network"],
+        "--trusted-key", policy["trusted_key"],
+    ]
+    try:
+        result = subprocess.run(command, input=raw, capture_output=True, timeout=18,
+                                check=False, env={"LANG": "C"}, close_fds=True)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise sandbox.SandboxError("protected sandbox launch failed; replay marker retained") from error
+    return sandbox.checked_refusal(result.stdout, result.returncode)
+
+
 def run(argv=None, stdin=None):
     if os.geteuid() == 0:
         raise sandbox.SandboxError(
@@ -272,25 +296,7 @@ def run(argv=None, stdin=None):
     # Read before journal; do not accept truncated input. File and replay
     # access are done by this service, never by sandboxed agent content.
     raw = (sys.stdin.buffer if stdin is None else stdin).read(AGENT_LIMIT+1)
-    identity = _parse_replay_identity(raw, policy)
-    reserve_once(policy["replay_directory"], identity)
-
-    # Use only root-owned installed launcher source and policy-bound options.
-    # Launch with a bounded subprocess; it NEVER signs or grants approval.
-    command = [
-        sys.executable,
-        str(Path(__file__).absolute().with_name("run_signer_sandbox.py")),
-        "--binary", policy["binary"],
-        "--binary-sha256", policy["binary_sha256"],
-        "--network", policy["network"],
-        "--trusted-key", policy["trusted_key"],
-    ]
-    try:
-        result = subprocess.run(command, input=raw, capture_output=True, timeout=18,
-                                check=False, env={"LANG":"C"}, close_fds=True)
-    except (OSError, subprocess.TimeoutExpired) as error:
-        raise sandbox.SandboxError("protected sandbox launch failed; replay marker retained") from error
-    output = sandbox.checked_refusal(result.stdout, result.returncode)
+    output = process_request(policy, raw)
     # No signed reply or permission token; just a refusal and an OS exit 20.
     sys.stdout.buffer.write(output + (b"" if output.endswith(b"\n") else b"\n"))
     return 20

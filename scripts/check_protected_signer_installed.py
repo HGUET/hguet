@@ -77,7 +77,10 @@ raw_bytes=subprocess.run(["sudo","-n","cat",str(marker)],
 assert len(raw_bytes)>64
 if first.returncode==40:
     assert b"sandbox" in first.stderr.lower() or b"bubblewrap" in first.stderr.lower(),first.stderr[:1000]
-    print("SKIP: runner denied required sandbox; durable replay marker still present")
+    if os.environ.get("HGUET_REQUIRE_LIVE")=="1":
+        raise SystemExit("FAIL: live sandbox required (HGUET_REQUIRE_LIVE=1) but runner denied it: "+
+                         first.stderr.decode(errors="replace")[:300])
+    print("SKIP: runner denied required sandbox; durable replay marker still present -- NOT a pass for live isolation")
 # One-use identity comes from the signed intent ID, not JSON whitespace.
 second=run(args,json.dumps(json.loads(request),indent=3).encode())
 assert second.returncode==40,(second.returncode,second.stderr[:1000])

@@ -152,6 +152,8 @@ jobs:
           cargo build -p hguet-signer --bin hguet-signer-isolate
           python scripts/check_isolated_signer.py target/debug/hguet-signer-isolate
       - name: Verify Linux Bubblewrap signer sandbox and mandatory fail-closed behavior
+        env:
+          HGUET_REQUIRE_LIVE: "1"   # a skipped live isolation test must fail the build
         run: |
           python scripts/check_signer_sandbox.py
           # Namespace capability varies by runner/AppArmor policy. Never
@@ -165,11 +167,17 @@ jobs:
       - name: Verify Unix peer admission rejects unauthorized local callers before replay reservation
         run: |
           python scripts/check_signer_admission.py
-      - name: Live multi-UID admission test (service, allowed, unauthorized users)
+      - name: Offline split gateway/backend identity checks and no-signing static guard
+        run: |
+          python scripts/check_signer_backend.py
+          python scripts/check_no_signing_paths.py
+      - name: Live multi-UID admission test (single and split identity topologies)
+        env:
+          HGUET_REQUIRE_LIVE: "1"   # SKIP is not an acceptable result here
         run: |
           # Creates and removes throw-away accounts. Prints SKIP, never a
           # fake PASS, if the runner cannot provide the needed namespaces.
-          sudo python3 scripts/check_signer_admission_users.py target/debug/hguet-signer-isolate
+          sudo env HGUET_REQUIRE_LIVE=1 python3 scripts/check_signer_admission_users.py target/debug/hguet-signer-isolate
       - name: Assert protected launcher is fail-closed and prevents persistent intent replay
         run: |
           # Host-independent adversarial tests exercise an actual fsync'ed
@@ -177,6 +185,8 @@ jobs:
           # installed root-owned service path is NOT faked as live validated.
           python scripts/check_protected_signer.py
       - name: Exercise administrator-installed protected launcher under separate service UID
+        env:
+          HGUET_REQUIRE_LIVE: "1"
         run: |
           set -euo pipefail
           # Synthetic only. Root-owned source, policy and ELF, journal owned by

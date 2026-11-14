@@ -6,9 +6,18 @@ closed with exit 40 and no output. Never make a network call or touch a key.
 """
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+def skip(reason):
+    """A skipped security check is NOT a pass. HGUET_REQUIRE_LIVE=1 makes it fail."""
+    if os.environ.get("HGUET_REQUIRE_LIVE")=="1":
+        print("FAIL: required live sandbox test cannot run (HGUET_REQUIRE_LIVE=1): "+reason)
+        sys.exit(1)
+    print("SKIP: "+reason+" -- NOT a pass; live isolation is unverified here")
+    sys.exit(0)
 
 ROOT=Path(__file__).resolve().parents[1]
 BIN=(ROOT/"target/debug/hguet-signer-isolate").resolve()
@@ -34,8 +43,7 @@ if not Path("/usr/bin/bwrap").exists():
     assert result.returncode==40
     assert not result.stdout
     assert b"HGUET_SANDBOX_BLOCKED" in result.stderr
-    print("SKIP: Bubblewrap not installed; mandatory fail-closed launcher verified")
-    sys.exit(0)
+    skip("Bubblewrap not installed (fail-closed launcher verified)")
 
 # The probe must require namespaces, no capability fallback, and never grant
 # the sandboxed process host network or home access.
@@ -56,8 +64,7 @@ if not available:
     assert result.returncode==40,(result.returncode,result.stderr[:1000])
     assert not result.stdout
     assert b"HGUET_SANDBOX_BLOCKED" in result.stderr
-    print("SKIP: runner denies required kernel namespaces; sandbox launcher fails closed")
-    sys.exit(0)
+    skip("runner denies required kernel namespaces (fail-closed launcher verified)")
 
 assert result.returncode==20,(result.returncode,result.stderr[:2000])
 data=json.loads(result.stdout)
