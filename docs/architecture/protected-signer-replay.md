@@ -235,3 +235,14 @@ backend stop/restart (journal persists, gateway fails closed while it is down),
 read-only and group-accessible journal, malformed/duplicate-key/oversized
 requests, slow-drip client, pre-existing file or symlink at the socket path,
 and corrupted operator JSON.
+
+## Gateway lifecycle
+
+`run_signer_admission.py` now serves connections sequentially until SIGTERM
+(SIGTERM removes only the socket inode it bound). A refused, malformed or
+slow peer is answered with `HGUET_ADMISSION_BLOCKED` and the service keeps
+running, so an unauthorized group member can no longer consume a one-shot
+`accept`. `--once` restores the single-request mode used by the tests. Requests
+are still handled one at a time: a peer in the socket group can occupy the
+gateway for up to the 5 s read deadline (or the backend deadline for admitted
+callers), so availability against permitted peers is bounded, not guaranteed.
