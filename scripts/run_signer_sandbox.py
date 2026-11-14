@@ -153,7 +153,8 @@ def make_bwrap_command(executable_fd, seccomp_fd, network, trusted_key):
     # linker; the executable itself is pinned by opened FD.
     return [
         BWRAP_PATH,
-        "--unshare-all",          # incl. network, pid, ipc, mount, user namespaces
+        "--unshare-all",          # network, pid, ipc, mount, uts, cgroup (user is only "-try" here)
+        "--unshare-user",         # MANDATORY: --disable-userns needs a hard user ns (bwrap >= 0.8)
         "--disable-userns",       # no nested user namespace escape
         "--assert-userns-disabled",
         "--cap-drop", "ALL",

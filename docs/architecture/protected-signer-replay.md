@@ -150,11 +150,32 @@ running the protected launcher **as the signer service account**.
 The underlying protected launcher remains available to an already
 compromised service UID; this gate alone does not remove that risk.
 
-**Tests:** `scripts/check_signer_admission.py` checks real Linux peer
-credentials on a socketpair, unauthorized UID rejection before payload
-read, strict admission policy, input bounds and rejection of forged
-successful child responses. CI integration is an offline unit test;
-**a live provisioned-socket test on the target host is not yet complete**.
-Only an explicitly tested OS deployment with controlled service identity
-and Unix socket permissions can validate this boundary. No signing,
-wallet, key custody, spending authorization or broadcast is enabled.
+**Socket group and timeouts.** The socket inherits the group of its
+directory only if that directory is setgid (for example mode `2750`,
+service-owned, group = the clients group); otherwise it takes the service
+user's primary group and group members cannot connect. The directory must stay
+non-group-writable so no other UID can unlink, rename or replace the socket.
+Group membership is a coarse first filter; the pinned UID in `SO_PEERCRED` is
+the actual admission decision, so a group member with another UID is refused
+before any payload is read. The request must arrive within a **total** 5 s
+budget (not per `recv`), so a slow-drip peer cannot stall the one-shot gate;
+replies use a 5 s send timeout. The gate unlinks only the exact socket inode it
+bound itself, never a pre-existing or substituted path.
+
+**Known limitation (asserted by the live test):** any process already running
+as the signer-service UID can invoke the protected launcher directly and skip
+the gateway allow-list. It still only receives a BLOCK refusal and can burn
+intent identifiers. UID separation is therefore **not user authentication**.
+
+**Tests:** `scripts/check_signer_admission.py` is the offline unit test (real
+peer credentials on a socketpair, unauthorized UID rejection before payload
+read, strict admission policy, input bounds, total read deadline, forged
+child responses). `scripts/check_signer_admission_users.py` is a **live test
+that must run as root on Linux**: it creates a service, an allowed and an
+unauthorized (same socket group) user plus an outsider, and exercises
+`Unix socket -> SO_PEERCRED -> protected signer -> replay journal ->
+Bubblewrap -> BLOCK`, replay refusal, socket tamper attempts and direct
+launcher calls. It prints `SKIP` (not PASS) when root, the user tools or
+Bubblewrap namespaces are unavailable. Live validation on a production host
+and an independent security review are still outstanding. No signing, wallet,
+key custody, spending authorization or broadcast is enabled.

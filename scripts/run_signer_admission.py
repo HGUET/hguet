@@ -17,10 +17,14 @@ import stat
 import struct
 import subprocess
 import sys
+import time
 
 import run_signer_protected as protected
 
 MAX_REQUEST = protected.AGENT_LIMIT
+# Total wall-clock budget for receiving one request (defeats slow-drip peers).
+REQUEST_DEADLINE_SECONDS = 5.0
+SEND_TIMEOUT_SECONDS = 5.0
 ADMISSION_FIELDS = frozenset({
     "schema_version", "kind", "socket_path", "allowed_client_uid",
     "protected_policy",
@@ -77,11 +81,18 @@ def peer_identity(connection):
 
 
 def read_request(connection):
-    connection.settimeout(5)
+    deadline = time.monotonic() + REQUEST_DEADLINE_SECONDS
     chunks = []
     size = 0
     while True:
-        block = connection.recv(min(8192, MAX_REQUEST + 1 - size))
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise protected.sandbox.SandboxError("admission request deadline exceeded")
+        connection.settimeout(remaining)
+        try:
+            block = connection.recv(min(8192, MAX_REQUEST + 1 - size))
+        except socket.timeout as exc:
+            raise protected.sandbox.SandboxError("admission request deadline exceeded") from exc
         if not block:
             break
         chunks.append(block)
@@ -134,12 +145,16 @@ def run(argv=None):
     verify_socket_parent(path)
     previous = os.umask(0o117)
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    bound_inode = None
     try:
         server.bind(path)
+        bound = os.lstat(path)
+        bound_inode = (bound.st_dev, bound.st_ino)
         os.chmod(path, 0o660)
         server.listen(1)
         server.settimeout(15)
         with server.accept()[0] as connection:
+            connection.settimeout(SEND_TIMEOUT_SECONDS)
             try:
                 output = admit_one(connection, cfg)
                 connection.sendall(output + (b"" if output.endswith(b"\n") else b"\n"))
@@ -154,13 +169,15 @@ def run(argv=None):
     finally:
         server.close()
         os.umask(previous)
-        # Only clean up the socket we own, not a substituted path.
-        try:
-            st = os.lstat(path)
-            if stat.S_ISSOCK(st.st_mode) and st.st_uid == os.geteuid():
-                os.unlink(path)
-        except FileNotFoundError:
-            pass
+        # Only unlink the exact socket inode THIS process bound. A failed bind
+        # (pre-existing path) or a substituted path is never removed.
+        if bound_inode is not None:
+            try:
+                st = os.lstat(path)
+                if stat.S_ISSOCK(st.st_mode) and (st.st_dev, st.st_ino) == bound_inode:
+                    os.unlink(path)
+            except FileNotFoundError:
+                pass
 
 
 if __name__ == "__main__":

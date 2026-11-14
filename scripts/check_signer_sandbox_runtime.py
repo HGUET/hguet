@@ -40,7 +40,7 @@ if not Path("/usr/bin/bwrap").exists():
 # The probe must require namespaces, no capability fallback, and never grant
 # the sandboxed process host network or home access.
 probe=[
-    "/usr/bin/bwrap","--unshare-all",
+    "/usr/bin/bwrap","--unshare-all","--unshare-user",
     "--disable-userns","--assert-userns-disabled",
     "--cap-drop","ALL",
     "--clearenv",

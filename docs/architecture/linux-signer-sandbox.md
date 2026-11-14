@@ -47,3 +47,11 @@ Exit **20** requires a valid block-only signer-refusal result *from inside a suc
 - The existing Rust and CLI tests validate signature and message checks, strictly allowed agent input and unconditional block-only outcomes.
 
 See [Trusted Signer Isolation threat model](trusted-signer-isolation.md).
+
+## Bubblewrap user namespace requirement
+
+`--unshare-all` only *tries* to create a user namespace (`--unshare-user-try`),
+and bwrap refuses `--disable-userns` without a hard `--unshare-user`
+(observed with bubblewrap 0.11.1). The launcher therefore passes
+`--unshare-user` explicitly. Before this, every live launch failed closed
+with exit 40, so the runtime test only ever reported SKIP.
