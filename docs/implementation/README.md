@@ -333,6 +333,29 @@ Within its permitted scope, the report distinguishes **what is actually checked*
 
 The public `PaymentIntent` v1 schema, domain-separated Ed25519 signatures and Cloud pricing **have not changed**. This is a new CLI wrapper field, not an alteration of the public `SecurityVerdict` contract. No private keys, wallet APIs, signing, broadcast or automatic payment approval are introduced. The remaining work requires a customer-controlled signer with fail-closed verification on the exact bytes and a defensible *execution-time* bound on all relevant SOL/token/fee/CPI effects; the current model cannot provide that proof.
 
+## Local customer signer integration seam (implemented, BLOCK-only, no wallet)
+
+New workspace crate: `crates/hguet-signer` (version 0.0.0, unpublished). It is a **separate local, offline, read-only preflight boundary** for eventual customer-controlled hardware/software signer integration. No private keys, wallet SDKs, hardware-device transport, signature generation or transaction broadcast exist. This is **not** an automated payment product.
+
+- `SignerRequest` requires original wire bytes, the untrusted signed PaymentIntent envelope, a **separately supplied pinned public key**, intended Solana network and a caller-controlled trusted local Unix time. It never accepts an agent-authored verdict, an RPC result or a serialized `SigningBoundary` as an authorization grant.
+- `inspect_signer_request` independently parses the original message, decodes supported static direct token operations, and calls `hguet-core::verify_intent` for the exact message hash, network, time bounds and Ed25519 signature against the independently pinned key. Invalid wire, missing independent key, altered message, wrong network, expired intent, and invalid transaction signatures are distinct fail-closed refusal reasons.
+- `SignerBackend` is an **interface placeholder** only. `guarded_sign` returns `Result<Infallible,SignerRefusal>`: its success type is uninhabited, its implementation never calls the backend, and a test backend that panics if invoked confirms that it is unreachable. No production signer backend is linked into the CLI.
+- The `SignerRefusal` object has `signing_gate="block"`, `signing_permitted=false`, `signer_backend_invoked=false`, `signature_created=false`, `transaction_broadcast=false` regardless of a verified intent. Its optional nested `signing_boundary` retains the signed declaration and unsolved execution warnings. These results **must not be used as a wallet signing token**.
+- All validation is offline. No CLI action creates a signature, submits to Solana, accesses Cloud or logs a secret key. A malicious caller could of course invoke some *other* software's signing API; HGUET currently has **no device isolation or exclusive hardware signer control**, and this module must not be described as proven onchain enforcement.
+
+The actual CLI adapter is:
+
+```sh
+cargo run -p hguet -- signer-preflight tests/fixtures/legacy-spl-transfer-checked-authority-signer.base64 \
+  --encoding base64 --network devnet --offline \
+  --intent tests/fixtures/signed-direct-token-source-cap-equal.json \
+  --trusted-key 2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ --json
+```
+
+**The command always returns exit code 20 (refusal)** when a transaction and envelope are readable; malformed arguments/files return code 40, never signing. The key shown is a **public, synthetic test-only Ed25519 identity**, not a key to use with real funds. Even with matching source/mint caps, a signed intent verifies **declarations**, not CPI, fees, bank execution, or permission to sign. `--offline` is required and `--rpc-url` is explicitly refused by this command.
+
+The new `protocol/v1/signer-refusal.schema.json` is an **unreleased, CLI-only output schema** that freezes every signer/broadcast capability flag to false. `signing-boundary.schema.json` remains a separate schema for the nested boundary. Synthetic Rust tests and CI run the real CLI twice: one valid, independently pinned envelope and one wrong pinned key; both must refuse, with no signer backend call and no external RPC. Future engineering must separately design exclusive device access, trusted intent acquisition, isolated key handling and an execution-time enforced spending policy; a green local preflight does not deliver those properties.
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
