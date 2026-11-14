@@ -87,8 +87,8 @@ answer, and `combine()` leaves the local verdict untouched.
    byte-wise; `evidence_digest` is SHA-256 of the union manifest of the cited records. The proposal is still not
    confirmed by the public protocol owner as a wire contract; the server cross-check
    (`scripts/crosscheck_public.py`) reports 0 disagreements.
-3. Definition of `sources[].evidence_sha256` and `evidence_digest` (benchmark: sha256(JCS(record)) and
-   sha256(JCS(sorted digests))).
+3. `sources[].evidence_sha256` / `evidence_digest`: now the S7.1 rules (see item 2): the digest of the manifest a
+   source attests, and of the union manifest of all cited records.
 4. Redaction format of `ClientEvidence.canonical_local_evidence_json` (benchmark sends `{}`).
 5. How a client proves the negotiated TLS group, and how the first issuer key is distributed.
 6. Whether the quote Memo and `payment_signature` format are fixed (the receipt schema needs >= 64 characters).
