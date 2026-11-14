@@ -63,9 +63,6 @@ assert "--dev-bind" not in cmd
 assert "/home" not in cmd and "/etc" not in cmd
 assert cmd[cmd.index("--setenv")+1]=="LANG"
 assert cmd[-4:] == [
-    "/app/hguet-signer-isolate","--network","devnet",
-    "--trusted-key"][-4:] if False else True
-assert cmd[-4:] == [
     "--network","devnet","--trusted-key",
     "2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ"]
 
