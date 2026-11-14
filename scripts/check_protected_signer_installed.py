@@ -65,7 +65,9 @@ listing=subprocess.run(["sudo","-n","find",str(ledger_path),
                        capture_output=True,text=True,check=True).stdout.strip().splitlines()
 assert len(listing)==1,listing
 marker=Path(listing[0])
-assert marker.stat().st_mode & 0o777==0o600
+marker_mode=subprocess.run(["sudo","-n","stat","-c","%a",str(marker)],
+                           check=True,capture_output=True,text=True).stdout.strip()
+assert marker_mode=="600",marker_mode
 raw_bytes=subprocess.run(["sudo","-n","cat",str(marker)],
                          check=True,capture_output=True).stdout
 assert len(raw_bytes)>64
