@@ -382,6 +382,14 @@ A successful launch creates isolated network and other namespaces, drops capabil
 
 CI checks the BPF policies, bad result rejection, protected inode against file-swap attacks, wrong executable digest, and fail-closed process creation. On CI runners without permitted unprivileged namespaces, it reports that **live namespace execution was skipped**, while still checking the absence of unsafe fallback. This is not a real wallet-signing security boundary; direct Rust process invocation remains possible and also BLOCK-only. See [Linux signer sandbox architecture](../architecture/linux-signer-sandbox.md).
 
+## Protected Signer Launch & Replay Protection (optional Linux path, BLOCK-only)
+
+The new operator-controlled entrypoint, `scripts/run_signer_protected.py`, accepts **only** a `--policy` argument pointing to a protected root-owned JSON configuration. It derives the trusted network, Ed25519 public key pin, executable SHA-256 and persistent replay directory exclusively from that file; the untrusted agent supplies only transaction bytes and a signed intent via stdin. The Python launcher/module sources, policy and path ancestors must be root-owned and not agent-writable. The ledger directory must belong only to the dedicated signer service account (0700). HGUET does not create this service account or protected installation automatically.
+
+Before launching the mandatory Bubblewrap sandbox, the new launcher makes a **single-use reservation** indexed by the signed PaymentIntent's `intent_id`, pinned issuer and network. An atomic `O_EXCL` marker (0600) is written and both marker and directory are `fsync`ed. The reservation remains after all failures, timeouts and invalid signatures; reformatting the same agent JSON or changing transaction bytes cannot reset the reservation. Failed journal creation or a repeat exits with code **40** and never launches the sandbox. The sandboxed Rust signer still independently checks the exact Ed25519 signature and **always refuses** signing.
+
+**Critical limitation:** The host reservation happens *before* the sandbox verifies the Ed25519 signature. Any caller with a known intent identifier may prematurely occupy its slot and cause denial of service, so independent client authentication is required before a future production service could expose this interface. A privileged attacker could roll back/remove filesystem markers. This is **not** a hardware-backed anti-replay counter, protected service deployment or release-ready signer. See [protected launch and replay documentation](../architecture/protected-signer-replay.md).
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
