@@ -160,6 +160,12 @@ jobs:
             sudo apt-get install -y -qq bubblewrap
           fi
           python scripts/check_signer_sandbox_runtime.py
+      - name: Assert protected launcher is fail-closed and prevents persistent intent replay
+        run: |
+          # Host-independent adversarial tests exercise an actual fsync'ed
+          # O_EXCL journal with 8 concurrent reservations. The privileged
+          # installed root-owned service path is NOT faked as live validated.
+          python scripts/check_protected_signer.py
       - name: Assert signer-preflight is offline, cryptographic and permanently blocked
         run: |
           # Public synthetic unsigned transaction and public test-only intent key.
