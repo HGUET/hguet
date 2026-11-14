@@ -92,3 +92,12 @@ answer, and `combine()` leaves the local verdict untouched.
 4. Redaction format of `ClientEvidence.canonical_local_evidence_json` (benchmark sends `{}`).
 5. How a client proves the negotiated TLS group, and how the first issuer key is distributed.
 6. Whether the quote Memo and `payment_signature` format are fixed (the receipt schema needs >= 64 characters).
+
+## Client-side rules aligned with the server's S7.1 proposal
+
+* The real-server adapter requests only registry capability ids (`network_health`, the one a real server evaluates);
+  the old benchmark-local id `subject_reputation_lookup` is no longer sent. The test server rejects ids outside the
+  server registry with `ERROR_BAD_REQUEST`, like the real server.
+* A quote is accepted only if `memo_reference` is exactly `HGUET:<quote_id>` (32 lowercase hex).
+* A payment signature must be canonical Base58 of exactly 64 bytes (not all zero) before anything is sent in a paid check.
+
