@@ -1,7 +1,7 @@
 //! End-to-end synthetic, exact-byte signed PaymentIntent and original wire
 //! transactions. No real wallet, RPC or onchain payment is contacted.
 use crate::*;
-use base64::{engine::general_purpose::STANDARD,Engine as _};
+use base64::{engine::general_purpose::STANDARD};
 use ed25519_dalek::{SigningKey,Signer};
 
 const LEGACY_TOKEN:&str="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";

@@ -90,7 +90,7 @@ pub fn fetch_candidate_mints<T:JsonRpcTransport>(
         }
         let encoded=data[0].as_str().ok_or(RpcError::InvalidResponse)?;
         // Strict transport limits, plus small per-account data bounds.
-        if encoded.len()>(MAX_MINT_BYTES+2)/3*4+4 {return Err(RpcError::TooLarge);}
+        if encoded.len()>MAX_MINT_BYTES.div_ceil(3)*4+4 {return Err(RpcError::TooLarge);}
         let bytes=STANDARD.decode(encoded).map_err(|_|RpcError::InvalidResponse)?;
         let state=parse_token_2022_mint(address,owner,&bytes)?;
         accounts.push(MintAccountObservation {

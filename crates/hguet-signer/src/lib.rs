@@ -95,6 +95,7 @@ pub fn inspect_signer_request(input:SignerRequest<'_>)->SignerRefusal{
 
 /// Requests have an uninhabited success type and NO backend argument.
 /// The only operation is refusal, even when the intent passes cryptography.
+#[allow(clippy::result_large_err)] // refusal carries a full report; this fn is never Ok (Infallible)
 pub fn guarded_sign(
     input:SignerRequest<'_>
 )->Result<Infallible,SignerRefusal>{

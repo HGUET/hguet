@@ -127,9 +127,10 @@ fn insert(
     sources.entry(key).or_default().add(origin,u128::from(amount))?;
     Ok(())
 }
+type AggregateParts=(BTreeMap<String,u64>,BTreeMap<(String,String),u64>,bool,bool);
 fn caps(
     trusted:Option<&PaymentIntentPayload>,
-)->Result<(BTreeMap<String,u64>,BTreeMap<(String,String),u64>,bool,bool),RpcError>{
+)->Result<AggregateParts,RpcError>{
     let mut mint_caps=BTreeMap::new();
     let mut source_caps=BTreeMap::new();
     let mut has_mint=false;

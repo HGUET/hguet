@@ -113,7 +113,7 @@ fn parse_args() -> Result<Args, String> {
     Ok(v)
 }
 fn limited_file(path:&str, max:u64)->Result<Vec<u8>,String>{
-    let mut f=fs::File::open(path).map_err(|_|"cannot open input file")?;
+    let f=fs::File::open(path).map_err(|_|"cannot open input file")?;
     if f.metadata().map_err(|_|"cannot stat input")?.len()>max{return Err("input exceeds size limit".into());}
     let mut b=Vec::new();
     f.take(max+1).read_to_end(&mut b).map_err(|_|"cannot read input file")?;
@@ -2098,7 +2098,7 @@ mod rpc_intent_tests {
         let intent = signed_intent();
         let unlisted = bs58::encode([2u8; 32]).into_string();
         assert!(rpc_intent_risks(
-            &intent, "rpc_failed", true, &[unlisted.clone()], Some((1_000, 100)),
+            &intent, "rpc_failed", true, std::slice::from_ref(&unlisted), Some((1_000, 100)),
         ).is_empty());
         assert!(rpc_intent_risks(
             &intent, "rpc_succeeded", false, &[unlisted], None,

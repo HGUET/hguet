@@ -90,7 +90,7 @@ pub fn inspect_direct_tokens(
     }
     Ok(DirectTokenAnalysis {
         recognized,opaque,total_token_program_instructions:total,
-        limitation:"Direct instruction bytes come from original wire, but ALT program/account identities may depend on one RPC; recognized operations are declarations only, not proof of signer authorization, executed transfers, gross debit, CPI effects or mint extensions".into(),
+        limitation:"Direct instruction bytes come from original wire, but ALT program/account identities may depend on one RPC; recognized operations are declarations only, not proof of signer authorization, executed transfers, gross debit, CPI effects or mint extensions",
     })
 }
 

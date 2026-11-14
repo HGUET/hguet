@@ -63,7 +63,7 @@ impl OperatorTrust {
         if envelope.schema_version!=1||envelope.kind!="hguet_signer_preflight" {
             return refused("ISOLATION_REQUEST_INVALID",None,false,None);
         }
-        if envelope.original_transaction_b64.len()>((MAX_ORIGINAL_TRANSACTION_BYTES+2)/3*4+4){
+        if envelope.original_transaction_b64.len()>(MAX_ORIGINAL_TRANSACTION_BYTES.div_ceil(3)*4+4){
             return refused("ISOLATION_PAYLOAD_TOO_LARGE",None,false,None);
         }
         let transaction=match STANDARD.decode(envelope.original_transaction_b64.as_bytes()){
