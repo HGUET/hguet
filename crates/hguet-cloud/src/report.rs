@@ -342,6 +342,9 @@ pub struct VerifiedPaidCheck {
 
 /// Verifies the receipt (and the assessment when the analysis completed): signatures with the pinned key first, then
 /// bindings. Both signed documents must pass; a completed receipt must hash exactly the assessment that came with it.
+/// Backwards-compatible verifier when an issuer intentionally uses one
+/// independently pinned ML-DSA-87 key for both report domains. Prefer
+/// verify_paid_check_with_keys for separately rotated assessment/receipt keys.
 pub fn verify_paid_check(
     signed_receipt: &SignedPayload,
     signed_assessment: Option<&SignedPayload>,
@@ -349,20 +352,45 @@ pub fn verify_paid_check(
     receipt_expectations: &ReceiptExpectations<'_>,
     assessment_expectations: &AssessmentExpectations<'_>,
 ) -> Result<VerifiedPaidCheck> {
-    let signed_ok = |signed: &SignedPayload, domain: Domain| {
-        key.verify(
-            domain,
-            &signed.canonical_payload,
-            &signed.signature,
-            &signed.key_id,
-            &signed.signing_algorithm,
-        )
-    };
-    if !signed_ok(signed_receipt, Domain::PaymentReceipt) {
+    verify_paid_check_with_keys(
+        signed_receipt,
+        signed_assessment,
+        key,
+        key,
+        receipt_expectations,
+        assessment_expectations,
+    )
+}
+
+/// Verifies each independently signed artifact against its OWN authenticated
+/// ML-DSA-87 issuer key. This matches the server's separate signer roles and
+/// supports secure per-domain key rotation without skipping any signature.
+/// Both keys MUST be pinned through an authenticated out-of-band channel.
+pub fn verify_paid_check_with_keys(
+    signed_receipt: &SignedPayload,
+    signed_assessment: Option<&SignedPayload>,
+    receipt_key: &PinnedKey,
+    assessment_key: &PinnedKey,
+    receipt_expectations: &ReceiptExpectations<'_>,
+    assessment_expectations: &AssessmentExpectations<'_>,
+) -> Result<VerifiedPaidCheck> {
+    if !receipt_key.verify(
+        Domain::PaymentReceipt,
+        &signed_receipt.canonical_payload,
+        &signed_receipt.signature,
+        &signed_receipt.key_id,
+        &signed_receipt.signing_algorithm,
+    ) {
         return Err(Error("RECEIPT_SIGNATURE_INVALID_SERVER"));
     }
     if let Some(assessment) = signed_assessment {
-        if !signed_ok(assessment, Domain::CloudAssessment) {
+        if !assessment_key.verify(
+            Domain::CloudAssessment,
+            &assessment.canonical_payload,
+            &assessment.signature,
+            &assessment.key_id,
+            &assessment.signing_algorithm,
+        ) {
             return Err(Error("ASSESSMENT_SIGNATURE_INVALID"));
         }
     }
