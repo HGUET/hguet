@@ -317,6 +317,22 @@ Additional CLI findings include `RPC_AGGREGATE_TOKEN_NON_ADDITIVE`, `RPC_AGGREGA
 
 The unit tests cover repeated checked CPI debits exceeding caps, two sources exceeding one mint cap while each source is below its own cap, same apparent 70-unit debit in all three categories **without** a false 210-unit total, incomplete and unchecked mint evidence, unlisted accounts and Token-2022 checked-fee transfers. Solana RPC and Cloud are not contacted by these synthetic tests.
 
+## Verified Spending Boundaries — block-only signing contract (implemented, **no signing permission**)
+
+The CLI now returns an additional **`signing_boundary`** object on parsed normal inspection/check paths, computed by `crates/hguet-rpc/src/signing_boundary.rs`. This is a *read-only, conservative readiness assessment for a future customer-controlled signer*, not a signer or authorization service. It has `signing_gate="block"`, `automated_signing_permitted=false`, `signer_side_enforcement_integrated=false`, `execution_bank_authenticated=false`, `total_native_sol_spending_proven=false` and `total_gross_token_spending_proven=false` **unconditionally**, including when a signed PaymentIntent is valid and the provider reports a successful simulation. Existing `SecurityVerdict` remains `UNKNOWN` or `DENY`; the boundary **never** issues `ALLOW`.
+
+Within its permitted scope, the report distinguishes **what is actually checked** from what is still unknown:
+
+- `independent_intent_verified_by_caller`: true only when the CLI has independently pinned and Ed25519-verified the signed exact-message PaymentIntent. The `assess_signing_boundary` library function itself **does not** verify the signature and must never receive an agent-supplied unverified payload.
+- `direct_mint_declaration_bound_checked` / `direct_source_declaration_bound_checked`: only true if the existing strict **original-wire** checked SPL Token/Token-2022 debit reviewers revalidate the signed cap lists; these bounds apply to explicit **direct declaration arguments**, not CPI, net effects, fees or actual executed gross spending. A checked mint cap alone does not imply a checked source cap.
+- `original_wire_program_allowlist_checked` and `original_wire_lookup_identity_unresolved`: preserve the signed allowed top-level programs and the lack of independently resolved ALT program/account identity. `unsupported_program_execution_surface` flags arbitrary top-level programs even if listed in an intent.
+- `direct_token_semantics_incomplete` includes opaque/unknown direct token operations, unresolved/dependent ALT addresses or missing binary decoding. The exact original token program/account indices and base58 data are only declarations.
+- `rpc_advisory_aggregate_available` and `rpc_advisory_cap_anomalies`: single-provider RPC adds **risk information only** and never removes a signer blocker. Missing/opaque CPI or incomplete token balance coverage also appears among the block reasons.
+
+`block_reasons` is a deterministic list of machine-readable issues such as `NO_INDEPENDENT_VERIFIED_INTENT`, `DIRECT_TOKEN_MINT_LIMIT_NOT_VERIFIED`, `DIRECT_TOKEN_SOURCE_LIMIT_NOT_VERIFIED`, `ORIGINAL_WIRE_ALT_IDENTITY_UNRESOLVED`, `CUSTOM_OR_UNSUPPORTED_PROGRAM_EFFECTS`, `RPC_CAP_ANOMALIES_ADVISORY`, and the unconditional `SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED`, `EXECUTION_BANK_NOT_AUTHENTICATED`, `TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN` and `TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN`. An unsigned transaction is ordinary *pre-signing* input: missing signatures are not falsely reported as invalid Ed25519 signatures, but also never grant permission. Invalid nonzero transaction signatures remain a separate rejection.
+
+The public `PaymentIntent` v1 schema, domain-separated Ed25519 signatures and Cloud pricing **have not changed**. This is a new CLI wrapper field, not an alteration of the public `SecurityVerdict` contract. No private keys, wallet APIs, signing, broadcast or automatic payment approval are introduced. The remaining work requires a customer-controlled signer with fail-closed verification on the exact bytes and a defensible *execution-time* bound on all relevant SOL/token/fee/CPI effects; the current model cannot provide that proof.
+
 ## Planned default Cloud server (configured, not active)
 
 The CLI has a compile-time **default future Cloud endpoint** `vps-d0669a91.vps.ovh.net:443` (authenticated TLS 1.3 + Protobuf/TCP, **NOT SSH**). View this setting without making any network request:
