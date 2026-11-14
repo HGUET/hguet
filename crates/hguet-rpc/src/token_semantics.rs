@@ -2,7 +2,10 @@
 //! The instruction list is supplied by ONE untrusted RPC node. These are
 //! instruction claims, not a verified state transition, gross debit or consent.
 //! Token-2022 extensions are intentionally opaque pending dedicated decoders.
-use crate::{extension_semantics::{inspect_token_2022_extension, Token2022ExtensionObservation}, RpcError};
+use crate::{
+    extension_semantics::{inspect_token_2022_extension, Token2022ExtensionObservation},
+    RpcError,
+};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -36,11 +39,19 @@ pub struct TokenCpiInstruction {
 
 pub(crate) enum TokenCpiDecode {
     Recognized(TokenCpiInstruction),
-    Opaque { extension: bool, missing_compiled: bool, observation: Option<Token2022ExtensionObservation> },
+    Opaque {
+        extension: bool,
+        missing_compiled: bool,
+        observation: Option<Token2022ExtensionObservation>,
+    },
 }
 
 fn opaque(extension: bool, missing_compiled: bool) -> TokenCpiDecode {
-    TokenCpiDecode::Opaque { extension, missing_compiled, observation: None }
+    TokenCpiDecode::Opaque {
+        extension,
+        missing_compiled,
+        observation: None,
+    }
 }
 
 /// Called only for canonical Token or Token-2022 program IDs previously
@@ -52,31 +63,50 @@ pub(crate) fn decode_token_cpi(
     parent_index: usize,
     inner_index: usize,
 ) -> Result<TokenCpiDecode, RpcError> {
-    if !is_token_program(program_id) { return Err(RpcError::InvalidResponse); }
+    if !is_token_program(program_id) {
+        return Err(RpcError::InvalidResponse);
+    }
 
     // jsonParsed may contain account addresses and provider-authored parsed
     // fields. Never trust those as binary-decoded semantics.
     let Some(raw_accounts) = ix.get("accounts").and_then(Value::as_array) else {
         return Ok(opaque(false, true));
     };
-    if raw_accounts.len() > MAX_CPI_ACCOUNTS { return Err(RpcError::TooLarge); }
+    if raw_accounts.len() > MAX_CPI_ACCOUNTS {
+        return Err(RpcError::TooLarge);
+    }
     if raw_accounts.iter().all(Value::is_string) {
         return Ok(opaque(false, true));
     }
     let mut accounts = Vec::with_capacity(raw_accounts.len());
     for raw in raw_accounts {
-        let index = raw.as_u64().and_then(|x| usize::try_from(x).ok())
+        let index = raw
+            .as_u64()
+            .and_then(|x| usize::try_from(x).ok())
             .ok_or(RpcError::InvalidResponse)?;
-        accounts.push(account_keys.get(index).ok_or(RpcError::InvalidResponse)?.clone());
+        accounts.push(
+            account_keys
+                .get(index)
+                .ok_or(RpcError::InvalidResponse)?
+                .clone(),
+        );
     }
 
     let Some(data) = ix.get("data").and_then(Value::as_str) else {
         return Ok(opaque(false, true));
     };
-    if data.len() > MAX_CPI_B58 { return Err(RpcError::TooLarge); }
-    let bytes = bs58::decode(data).into_vec().map_err(|_| RpcError::InvalidResponse)?;
-    if bytes.len() > MAX_CPI_DATA { return Err(RpcError::TooLarge); }
-    let Some(tag) = bytes.first().copied() else { return Ok(opaque(false, false)); };
+    if data.len() > MAX_CPI_B58 {
+        return Err(RpcError::TooLarge);
+    }
+    let bytes = bs58::decode(data)
+        .into_vec()
+        .map_err(|_| RpcError::InvalidResponse)?;
+    if bytes.len() > MAX_CPI_DATA {
+        return Err(RpcError::TooLarge);
+    }
+    let Some(tag) = bytes.first().copied() else {
+        return Ok(opaque(false, false));
+    };
     let extension = program_id == TOKEN_2022_PROGRAM && tag >= 25;
 
     let mut item = TokenCpiInstruction {
@@ -107,10 +137,15 @@ pub(crate) fn decode_token_cpi(
             if bytes.len() != if checked { 10 } else { 9 } || accounts.len() < min_accounts {
                 return Ok(opaque(extension, false));
             }
-            let amount = u64::from_le_bytes(bytes[1..9].try_into()
-                .map_err(|_| RpcError::InvalidResponse)?);
+            let amount = u64::from_le_bytes(
+                bytes[1..9]
+                    .try_into()
+                    .map_err(|_| RpcError::InvalidResponse)?,
+            );
             item.amount_raw = Some(amount.to_string());
-            if checked { item.decimals = Some(bytes[9]); }
+            if checked {
+                item.decimals = Some(bytes[9]);
+            }
             match tag {
                 3 => {
                     item.operation = "transfer".into();
@@ -126,7 +161,12 @@ pub(crate) fn decode_token_cpi(
                     item.authority = account(3);
                 }
                 4 | 13 => {
-                    item.operation = if checked { "approve_checked" } else { "approve" }.into();
+                    item.operation = if checked {
+                        "approve_checked"
+                    } else {
+                        "approve"
+                    }
+                    .into();
                     item.source_account = account(0);
                     if checked {
                         item.mint = account(1);
@@ -138,7 +178,12 @@ pub(crate) fn decode_token_cpi(
                     }
                 }
                 7 | 14 => {
-                    item.operation = if checked { "mint_to_checked" } else { "mint_to" }.into();
+                    item.operation = if checked {
+                        "mint_to_checked"
+                    } else {
+                        "mint_to"
+                    }
+                    .into();
                     item.mint = account(0);
                     item.destination_account = account(1);
                     item.authority = account(2);
@@ -154,7 +199,13 @@ pub(crate) fn decode_token_cpi(
         }
         // Revoke, CloseAccount, FreezeAccount, ThawAccount, SyncNative.
         5 | 9 | 10 | 11 | 17 => {
-            let needed = if tag == 17 { 1 } else if tag == 5 { 2 } else { 3 };
+            let needed = if tag == 17 {
+                1
+            } else if tag == 5 {
+                2
+            } else {
+                3
+            };
             if bytes.len() != 1 || accounts.len() < needed {
                 return Ok(opaque(extension, false));
             }
@@ -165,11 +216,18 @@ pub(crate) fn decode_token_cpi(
                 11 => "thaw_account",
                 17 => "sync_native",
                 _ => unreachable!("matched token opcode"),
-            }.into();
+            }
+            .into();
             item.source_account = account(0);
-            if tag == 9 { item.destination_account = account(1); }
-            if tag == 10 || tag == 11 { item.mint = account(1); }
-            if tag != 17 { item.authority = account(needed - 1); }
+            if tag == 9 {
+                item.destination_account = account(1);
+            }
+            if tag == 10 || tag == 11 {
+                item.mint = account(1);
+            }
+            if tag != 17 {
+                item.authority = account(needed - 1);
+            }
         }
         // SetAuthority: [6, authority_type, 0|1, optional 32-byte new key].
         6 => {
@@ -178,8 +236,7 @@ pub(crate) fn decode_token_cpi(
             }
             let next = match bytes[2] {
                 0 if bytes.len() == 3 => None,
-                1 if bytes.len() == 35 =>
-                    Some(bs58::encode(&bytes[3..35]).into_string()),
+                1 if bytes.len() == 35 => Some(bs58::encode(&bytes[3..35]).into_string()),
                 _ => return Ok(opaque(extension, false)),
             };
             item.operation = "set_authority".into();
@@ -191,13 +248,17 @@ pub(crate) fn decode_token_cpi(
         // Remaining base token instructions and ALL Token-2022 extensions
         // are opaque: their effects, including hooks and confidential flows,
         // may be security-critical.
-        _ => return Ok(TokenCpiDecode::Opaque {
-            extension,
-            missing_compiled:false,
-            observation:if extension {
-                inspect_token_2022_extension(&bytes,&accounts,parent_index,inner_index)
-            } else { None },
-        }),
+        _ => {
+            return Ok(TokenCpiDecode::Opaque {
+                extension,
+                missing_compiled: false,
+                observation: if extension {
+                    inspect_token_2022_extension(&bytes, &accounts, parent_index, inner_index)
+                } else {
+                    None
+                },
+            })
+        }
     }
     Ok(TokenCpiDecode::Recognized(item))
 }
@@ -208,14 +269,19 @@ mod tests {
     use serde_json::json;
 
     fn keys() -> Vec<String> {
-        (1..=5).map(|i| bs58::encode([i; 32]).into_string()).collect()
+        (1..=5)
+            .map(|i| bs58::encode([i; 32]).into_string())
+            .collect()
     }
     fn ix(accounts: &[u8], data: &[u8]) -> Map<String, Value> {
         json!({
             "programIdIndex":0,
             "accounts":accounts,
             "data":bs58::encode(data).into_string()
-        }).as_object().unwrap().clone()
+        })
+        .as_object()
+        .unwrap()
+        .clone()
     }
     fn recognized(data: &[u8], accounts: &[u8], program: &str) -> TokenCpiInstruction {
         match decode_token_cpi(program, &ix(accounts, data), &keys(), 2, 3).unwrap() {
@@ -225,14 +291,20 @@ mod tests {
     }
     #[test]
     fn decode_raw_transfer_checked_and_authority_account_roles() {
-        let item = recognized(&[12, 232, 3, 0, 0, 0, 0, 0, 0, 6],
-            &[1, 2, 3, 4], TOKEN_PROGRAM);
+        let item = recognized(
+            &[12, 232, 3, 0, 0, 0, 0, 0, 0, 6],
+            &[1, 2, 3, 4],
+            TOKEN_PROGRAM,
+        );
         assert_eq!(item.operation, "transfer_checked");
         assert_eq!(item.amount_raw.as_deref(), Some("1000"));
         assert_eq!(item.decimals, Some(6));
         assert_eq!(item.source_account.as_deref(), Some(keys()[1].as_str()));
         assert_eq!(item.mint.as_deref(), Some(keys()[2].as_str()));
-        assert_eq!(item.destination_account.as_deref(), Some(keys()[3].as_str()));
+        assert_eq!(
+            item.destination_account.as_deref(),
+            Some(keys()[3].as_str())
+        );
         assert_eq!(item.authority.as_deref(), Some(keys()[4].as_str()));
     }
     #[test]
@@ -242,19 +314,31 @@ mod tests {
         let item = recognized(&data, &[0, 1], TOKEN_2022_PROGRAM);
         assert_eq!(item.operation, "set_authority");
         assert_eq!(item.authority_type, Some(2));
-        assert_eq!(item.new_authority,
-            Some(bs58::encode([9u8; 32]).into_string()));
+        assert_eq!(
+            item.new_authority,
+            Some(bs58::encode([9u8; 32]).into_string())
+        );
         let revoked = recognized(&[6, 0, 0], &[0, 1], TOKEN_PROGRAM);
         assert_eq!(revoked.new_authority, None);
     }
     #[test]
     fn extension_unknown_and_bad_layout_never_become_decoded_transfer() {
         let extension = ix(&[0, 1], &[36, 5, 6]);
-        assert!(matches!(decode_token_cpi(TOKEN_2022_PROGRAM, &extension, &keys(), 0, 0),
-            Ok(TokenCpiDecode::Opaque { extension: true, .. })));
+        assert!(matches!(
+            decode_token_cpi(TOKEN_2022_PROGRAM, &extension, &keys(), 0, 0),
+            Ok(TokenCpiDecode::Opaque {
+                extension: true,
+                ..
+            })
+        ));
         let malformed = ix(&[0, 1, 2, 3], &[12, 0, 1]);
-        assert!(matches!(decode_token_cpi(TOKEN_PROGRAM, &malformed, &keys(), 0, 0),
-            Ok(TokenCpiDecode::Opaque { extension: false, .. })));
+        assert!(matches!(
+            decode_token_cpi(TOKEN_PROGRAM, &malformed, &keys(), 0, 0),
+            Ok(TokenCpiDecode::Opaque {
+                extension: false,
+                ..
+            })
+        ));
     }
     #[test]
     fn parsed_or_missing_cpi_data_is_not_trusted_as_binary_evidence() {
@@ -262,29 +346,40 @@ mod tests {
             "programId":TOKEN_PROGRAM,
             "parsed":{"type":"transferChecked","info":{"amount":"999999999"}}
         });
-        assert!(matches!(decode_token_cpi(TOKEN_PROGRAM, parsed.as_object().unwrap(),
-            &keys(), 0, 0), Ok(TokenCpiDecode::Opaque { missing_compiled: true, .. })));
+        assert!(matches!(
+            decode_token_cpi(TOKEN_PROGRAM, parsed.as_object().unwrap(), &keys(), 0, 0),
+            Ok(TokenCpiDecode::Opaque {
+                missing_compiled: true,
+                ..
+            })
+        ));
     }
     #[test]
     fn indexed_accounts_and_base58_data_fail_closed_on_forgery() {
         let bad_index = ix(&[99, 1, 2], &[3, 1, 0, 0, 0, 0, 0, 0, 0]);
         assert!(decode_token_cpi(TOKEN_PROGRAM, &bad_index, &keys(), 0, 0).is_err());
         let bad_data = json!({"accounts":[0,1,2],"data":"%notbase58"});
-        assert!(decode_token_cpi(TOKEN_PROGRAM, bad_data.as_object().unwrap(),
-            &keys(), 0, 0).is_err());
+        assert!(
+            decode_token_cpi(TOKEN_PROGRAM, bad_data.as_object().unwrap(), &keys(), 0, 0).is_err()
+        );
     }
     #[test]
     fn different_token_operations_have_distinct_account_roles() {
-        let approved = recognized(&[4, 10, 0, 0, 0, 0, 0, 0, 0],
-            &[0, 1, 2], TOKEN_PROGRAM);
+        let approved = recognized(&[4, 10, 0, 0, 0, 0, 0, 0, 0], &[0, 1, 2], TOKEN_PROGRAM);
         assert_eq!(approved.operation, "approve");
         assert_eq!(approved.delegate.as_deref(), Some(keys()[1].as_str()));
-        let minted = recognized(&[14, 1, 0, 0, 0, 0, 0, 0, 0, 9],
-            &[0, 1, 2], TOKEN_2022_PROGRAM);
+        let minted = recognized(
+            &[14, 1, 0, 0, 0, 0, 0, 0, 0, 9],
+            &[0, 1, 2],
+            TOKEN_2022_PROGRAM,
+        );
         assert_eq!(minted.operation, "mint_to_checked");
         assert_eq!(minted.mint.as_deref(), Some(keys()[0].as_str()));
         let closed = recognized(&[9], &[0, 1, 2], TOKEN_PROGRAM);
         assert_eq!(closed.operation, "close_account");
-        assert_eq!(closed.destination_account.as_deref(), Some(keys()[1].as_str()));
+        assert_eq!(
+            closed.destination_account.as_deref(),
+            Some(keys()[1].as_str())
+        );
     }
 }
