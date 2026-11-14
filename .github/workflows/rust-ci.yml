@@ -173,7 +173,15 @@ jobs:
             sudo apt-get update -qq
             sudo apt-get install -y -qq bubblewrap
           fi
-          python scripts/check_signer_sandbox_runtime.py
+          probe="$(bwrap --unshare-all --unshare-user --disable-userns --assert-userns-disabled --cap-drop ALL --ro-bind /usr /usr --ro-bind-try /lib /lib --ro-bind-try /lib64 /lib64 /usr/bin/true 2>&1 || true)"
+          echo "::notice title=bwrap probe ${{ matrix.os }}::$(bwrap --version) probe=[${probe:-ok}]"
+          python scripts/check_signer_sandbox_runtime.py > /tmp/sandbox-runtime.out 2>&1 || {
+            echo "::error title=sandbox runtime ${{ matrix.os }}::$(tail -c 700 /tmp/sandbox-runtime.out | sed ':a;N;$!ba;s/
+/%0A/g')"
+            cat /tmp/sandbox-runtime.out
+            exit 1
+          }
+          cat /tmp/sandbox-runtime.out
       - name: Verify Unix peer admission rejects unauthorized local callers before replay reservation
         run: |
           python scripts/check_signer_admission.py
