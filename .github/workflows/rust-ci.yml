@@ -176,8 +176,7 @@ jobs:
           probe="$(bwrap --unshare-all --unshare-user --disable-userns --assert-userns-disabled --cap-drop ALL --ro-bind /usr /usr --ro-bind-try /lib /lib --ro-bind-try /lib64 /lib64 /usr/bin/true 2>&1 || true)"
           echo "::notice title=bwrap probe ${{ matrix.os }}::$(bwrap --version) probe=[${probe:-ok}]"
           python scripts/check_signer_sandbox_runtime.py > /tmp/sandbox-runtime.out 2>&1 || {
-            echo "::error title=sandbox runtime ${{ matrix.os }}::$(tail -c 700 /tmp/sandbox-runtime.out | sed ':a;N;$!ba;s/
-/%0A/g')"
+            echo "::error title=sandbox runtime ${{ matrix.os }}::$(tail -c 700 /tmp/sandbox-runtime.out | tr -s '[:space:]' ' ')"
             cat /tmp/sandbox-runtime.out
             exit 1
           }
