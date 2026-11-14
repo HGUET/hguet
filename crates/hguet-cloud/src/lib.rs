@@ -6,7 +6,9 @@
 //! (`tests/vectors.rs` reproduces them from `testing/cloud-value/protocol/s7-client-vectors.json`).
 
 mod evidence_validate;
+pub mod jcs;
 pub mod proto_policy;
+pub mod quote;
 mod strict_json;
 pub mod wire;
 
@@ -41,7 +43,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// Canonical Base58 of exactly 32 bytes (re-encodes to the same text).
-fn canonical_b58_32(text: &str) -> bool {
+pub(crate) fn canonical_b58_32(text: &str) -> bool {
     bs58::decode(text)
         .into_vec()
         .is_ok_and(|raw| raw.len() == 32 && bs58::encode(&raw).into_string() == text)
