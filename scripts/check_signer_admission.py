@@ -104,6 +104,19 @@ finally:
     a.close()
     b.close()
 
+# Slow-drip peers: the 5 s budget is TOTAL, not per recv(). A peer sending one
+# byte per interval must hit the overall deadline instead of stalling forever.
+a, b = socket.socketpair()
+try:
+    b.sendall(b"x")  # never EOF, never more data
+    with mock.patch.object(admission, "REQUEST_DEADLINE_SECONDS", 0.3):
+        started = admission.time.monotonic()
+        denied(lambda: admission.read_request(a), "deadline")
+        assert admission.time.monotonic() - started < 3
+finally:
+    a.close()
+    b.close()
+
 # A malicious or faulty child response cannot pass as a BLOCK refusal.
 a, b = socket.socketpair()
 try:

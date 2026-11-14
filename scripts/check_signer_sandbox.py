@@ -48,7 +48,7 @@ else:
 cmd=module.make_bwrap_command(17,19,"devnet",
     "2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ")
 for mandatory in (
-    "--unshare-all","--disable-userns","--assert-userns-disabled",
+    "--unshare-all","--unshare-user","--disable-userns","--assert-userns-disabled",
     "--new-session","--die-with-parent","--clearenv",
     "--seccomp","--ro-bind-fd","--cap-drop",
 ):

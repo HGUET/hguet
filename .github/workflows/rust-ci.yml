@@ -14,12 +14,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
       - name: Build workspace (no prebuilt artifacts)
         run: cargo build --workspace
       - name: Test offline parser and signed intent
         run: cargo test --workspace
       - name: Lint implementation
-        run: cargo clippy --workspace --all-targets
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Verify Rust CLI help
         run: cargo run -p hguet -- --help
       - name: Assert VPS endpoint is a non-SSH default and Cloud remains disabled
@@ -163,6 +165,11 @@ jobs:
       - name: Verify Unix peer admission rejects unauthorized local callers before replay reservation
         run: |
           python scripts/check_signer_admission.py
+      - name: Live multi-UID admission test (service, allowed, unauthorized users)
+        run: |
+          # Creates and removes throw-away accounts. Prints SKIP, never a
+          # fake PASS, if the runner cannot provide the needed namespaces.
+          sudo python3 scripts/check_signer_admission_users.py target/debug/hguet-signer-isolate
       - name: Assert protected launcher is fail-closed and prevents persistent intent replay
         run: |
           # Host-independent adversarial tests exercise an actual fsync'ed
