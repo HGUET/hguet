@@ -709,16 +709,37 @@ mod tests {
             })
         }
         fn sign(key: &EphemeralKey, domain: Domain, payload: &[u8]) -> Vec<u8> {
-            let input = [domain.bytes(), payload].concat();
-            let mut child = Command::new("openssl")
+            struct SignedInput(std::path::PathBuf);
+            impl Drop for SignedInput {
+                fn drop(&mut self) {
+                    let _ = fs::remove_file(&self.0);
+                }
+            }
+            let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let file = SignedInput(std::env::temp_dir().join(format!(
+                "hguet-report-message-{}-{id}.bin",
+                std::process::id()
+            )));
+            let mut options = OpenOptions::new();
+            options.create_new(true).write(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut output = options.open(&file.0).unwrap();
+            output
+                .write_all(&[domain.bytes(), payload].concat())
+                .unwrap();
+            output.sync_all().unwrap();
+            drop(output);
+            let result = Command::new("openssl")
                 .args(["pkeyutl", "-sign", "-rawin", "-inkey"])
                 .arg(&key.private)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .spawn()
+                .arg("-in")
+                .arg(&file.0)
+                .output()
                 .unwrap();
-            child.stdin.take().unwrap().write_all(&input).unwrap();
-            let result = child.wait_with_output().unwrap();
             assert!(result.status.success());
             result.stdout
         }
