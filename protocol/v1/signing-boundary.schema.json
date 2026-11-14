@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hguet.fr/schemas/v1/signing-boundary.schema.json",
+  "title": "HGUET local BLOCK-only signing boundary — unreleased, non-authorizing",
+  "description": "Read-only CLI audit wrapper, not signed authorization. The Rust implementation cannot permit signing or prove gross spend. This schema cannot be used as a wallet signing grant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "message_sha256",
+    "transaction_signature_status",
+    "independent_intent_verified_by_caller",
+    "native_sol_direct_transfer_declared_raw",
+    "direct_token_program_present",
+    "direct_mint_declaration_bound_checked",
+    "direct_source_declaration_bound_checked",
+    "original_wire_program_allowlist_checked",
+    "rpc_advisory_aggregate_available",
+    "rpc_advisory_cap_anomalies",
+    "original_wire_lookup_identity_unresolved",
+    "unsupported_program_execution_surface",
+    "direct_token_semantics_incomplete",
+    "signer_side_enforcement_integrated",
+    "execution_bank_authenticated",
+    "total_native_sol_spending_proven",
+    "total_gross_token_spending_proven",
+    "automated_signing_permitted",
+    "signing_gate",
+    "block_reasons",
+    "limitation"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "message_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "transaction_signature_status": {
+      "enum": [
+        "unsigned",
+        "partially_signed",
+        "verified",
+        "invalid"
+      ]
+    },
+    "independent_intent_verified_by_caller": {
+      "type": "boolean"
+    },
+    "native_sol_direct_transfer_declared_raw": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 39
+    },
+    "direct_token_program_present": {
+      "type": "boolean"
+    },
+    "direct_mint_declaration_bound_checked": {
+      "type": "boolean"
+    },
+    "direct_source_declaration_bound_checked": {
+      "type": "boolean"
+    },
+    "original_wire_program_allowlist_checked": {
+      "type": "boolean"
+    },
+    "rpc_advisory_aggregate_available": {
+      "type": "boolean"
+    },
+    "rpc_advisory_cap_anomalies": {
+      "type": "boolean"
+    },
+    "original_wire_lookup_identity_unresolved": {
+      "type": "boolean"
+    },
+    "unsupported_program_execution_surface": {
+      "type": "boolean"
+    },
+    "direct_token_semantics_incomplete": {
+      "type": "boolean"
+    },
+    "signer_side_enforcement_integrated": {
+      "const": false
+    },
+    "execution_bank_authenticated": {
+      "const": false
+    },
+    "total_native_sol_spending_proven": {
+      "const": false
+    },
+    "total_gross_token_spending_proven": {
+      "const": false
+    },
+    "automated_signing_permitted": {
+      "const": false
+    },
+    "signing_gate": {
+      "const": "block"
+    },
+    "block_reasons": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "const": "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED"
+          }
+        },
+        {
+          "contains": {
+            "const": "EXECUTION_BANK_NOT_AUTHENTICATED"
+          }
+        },
+        {
+          "contains": {
+            "const": "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN"
+          }
+        },
+        {
+          "contains": {
+            "const": "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN"
+          }
+        }
+      ]
+    },
+    "limitation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  }
+}
