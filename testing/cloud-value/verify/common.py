@@ -17,6 +17,43 @@ DOMAINS = {
 }
 
 
+# Capability identifiers of the HGUET/server registry (docs/implementation/capability-registry.md). Only
+# `network_health` is evaluated by a real server today; the other ids exist but are not implemented.
+SERVER_CAPABILITY_IDS = ("network_health", "program_risk", "program_upgrade_history", "behavior_window",
+                         "token_extensions", "authority_changes", "cpi_metadata", "independent_rpc_simulation",
+                         "extra_feed_lookup")
+REAL_SERVER_CAPABILITIES = ["network_health"]
+
+_B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+
+def b58encode(data):
+    number = int.from_bytes(data, "big")
+    out = ""
+    while number:
+        number, rem = divmod(number, 58)
+        out = _B58[rem] + out
+    return "1" * (len(data) - len(data.lstrip(b"\x00"))) + out
+
+
+def canonical_solana_signature(text):
+    """S7.1: Base58 text of exactly 64 bytes that re-encodes to the identical text and is not all zero."""
+    if not isinstance(text, str) or not text or not text.isascii() or any(c not in _B58 for c in text):
+        return False
+    number = 0
+    for char in text:
+        number = number * 58 + _B58.index(char)
+    raw = number.to_bytes((number.bit_length() + 7) // 8, "big")
+    raw = b"\x00" * (len(text) - len(text.lstrip("1"))) + raw
+    return len(raw) == 64 and b58encode(raw) == text and any(raw)
+
+
+def canonical_memo(quote_id):
+    """S7.1: the payment memo is exactly `HGUET:<quote_id>` with a 32-lowercase-hex quote id."""
+    ok = isinstance(quote_id, str) and len(quote_id) == 32 and all(c in "0123456789abcdef" for c in quote_id)
+    return "HGUET:" + quote_id if ok else None
+
+
 def parse_time(text):
     return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 

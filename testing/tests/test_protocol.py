@@ -20,10 +20,17 @@ import proto_codec as pc  # noqa: E402
 import protocol_client as client  # noqa: E402
 import reference_server as rs  # noqa: E402
 import tls_fixture  # noqa: E402
-from common import GENESIS  # noqa: E402
+from common import GENESIS, b58encode, canonical_memo, canonical_solana_signature  # noqa: E402
 from trust import TrustStore  # noqa: E402
 
 NOW = "2026-11-01T00:00:00Z"
+SIG1 = b58encode(bytes([1]) * 64)  # canonical Solana signature shape (64 bytes, Base58)
+SIG2 = b58encode(bytes([2]) * 64)
+
+
+def sig(label):
+    """A deterministic, canonical-shaped synthetic Solana signature for a test payment label."""
+    return b58encode(hashlib.sha256(label.encode()).digest() * 2)
 INPUTS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted((CV / "inputs").glob("CV-*.json"))}
 EVIDENCE = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((CV / "evidence").glob("EV-*.json"))]
 REGISTRY = rules.Registry(EVIDENCE)
@@ -246,8 +253,8 @@ class TlsFlow(unittest.TestCase):
         quote, secret = self.adapter.request_quote(self.request, NOW)
         self.assertEqual(quote["environment"], "sandbox")
         self.assertEqual(quote["network"], self.request["network"])
-        self.server.register_synthetic_payment("SYNTHETIC-DEVNET-PAYMENT-1", int(quote["lamports_due"]))
-        bundle = self.adapter.paid_check(self.request, quote, secret, "SYNTHETIC-DEVNET-PAYMENT-1", NOW)
+        self.server.register_synthetic_payment(SIG1, int(quote["lamports_due"]))
+        bundle = self.adapter.paid_check(self.request, quote, secret, SIG1, NOW)
         verification, receipt = bundle["verification"], bundle["receipt"]
         self.assertTrue(verification["accepted"], verification["discard_reason"])
         self.assertEqual(rules.combine("UNKNOWN", verification), "DENY")
@@ -257,6 +264,38 @@ class TlsFlow(unittest.TestCase):
         self.assertIn("paid_check_request", self.server.wire_log)
         self.assertEqual(set(self.server.tls_versions), {"TLSv1.3"})
 
+    def test_payment_signatures_must_be_canonical_before_anything_is_sent(self):
+        quote, secret = self.adapter.request_quote(self.request, NOW)
+        sent = list(self.server.wire_log)
+        for bad in ("SYNTHETIC-DEVNET-PAYMENT-1", "", "1" * 64, SIG1[:-1], SIG1.replace(SIG1[3], "0", 1)):
+            with self.assertRaises(client.ProtocolFailure) as caught:
+                self.adapter.paid_check(self.request, quote, secret, bad, NOW)
+            self.assertEqual(caught.exception.reason, "payment_signature_not_canonical", bad)
+        self.assertEqual(self.server.wire_log, sent, "nothing may be sent for a malformed signature")
+
+    def test_server_rejects_capabilities_outside_the_registry_and_client_sends_registry_ids(self):
+        quote, _ = self.adapter.request_quote(self.request, NOW)
+        self.assertEqual(quote["requested_capabilities"], ["network_health"])
+        with self.assertRaises(client.ProtocolFailure):
+            session = self.adapter._session()
+            try:
+                self.adapter._handshake(session)
+                name, body = session.exchange("price_quote_request", dict(
+                    client.build_quote_request(self.request, bytes(32), 10 ** 9, GENESIS),
+                    requested_capabilities=["subject_reputation_lookup"]))
+                if name == "protocol_error":
+                    raise client.ProtocolFailure("rejected", body.get("code", ""))
+            finally:
+                session.close()
+
+    def test_memo_and_signature_helpers_follow_the_s7_1_rules(self):
+        self.assertEqual(canonical_memo("a" * 32), "HGUET:" + "a" * 32)
+        for bad in ("a" * 31, "A" * 32, "a" * 33, "", "g" * 32, "quote-123"):
+            self.assertIsNone(canonical_memo(bad))
+        self.assertTrue(canonical_solana_signature(SIG1))
+        for bad in ("", "0" + SIG1[1:], SIG1[:-1], "1" * 64, "é" + SIG1, None, 5):
+            self.assertFalse(canonical_solana_signature(bad), repr(bad))
+
     def test_without_an_external_payment_there_is_no_answer(self):
         self.assertIsNone(self.adapter.assess(self.request, NOW))
         self.assertNotIn("paid_check_request", self.server.wire_log)
@@ -264,8 +303,8 @@ class TlsFlow(unittest.TestCase):
 
     def test_assess_with_a_registered_payment_returns_a_verified_bundle(self):
         quote, secret = self.adapter.request_quote(self.request, NOW)
-        self.server.register_synthetic_payment("SYNTHETIC-DEVNET-PAYMENT-2", int(quote["lamports_due"]))
-        self.adapter.payments = {self.request["message_sha256"]: {"payment_signature": "SYNTHETIC-DEVNET-PAYMENT-2",
+        self.server.register_synthetic_payment(SIG2, int(quote["lamports_due"]))
+        self.adapter.payments = {self.request["message_sha256"]: {"payment_signature": SIG2,
                                                                   "claim_secret_hex": secret.hex()}}
         bundle = self.adapter.assess(self.request, NOW)
         self.assertIsNotNone(bundle)
@@ -279,29 +318,29 @@ class TlsFlow(unittest.TestCase):
     def test_protocol_prescribed_rejections(self):
         quote, secret = self.adapter.request_quote(self.request, NOW)
         # claim secret is mandatory
-        self.server.register_synthetic_payment("P-A", int(quote["lamports_due"]))
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, os.urandom(32), "P-A", NOW)),
+        self.server.register_synthetic_payment(sig("P-A"), int(quote["lamports_due"]))
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, os.urandom(32), sig("P-A"), NOW)),
                          "server_error:ERROR_CLAIM_AUTH_FAILED")
         # an unknown / underpaid / unfinalised payment is refused
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, "NOT-REGISTERED", NOW)),
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, sig("NOT-REGISTERED"), NOW)),
                          "server_error:ERROR_INVALID_PAYMENT")
-        self.server.register_synthetic_payment("P-LOW", 1)
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, "P-LOW", NOW)),
+        self.server.register_synthetic_payment(sig("P-LOW"), 1)
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, sig("P-LOW"), NOW)),
                          "server_error:ERROR_INVALID_PAYMENT")
-        self.server.register_synthetic_payment("P-PENDING", int(quote["lamports_due"]), finalized=False)
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, "P-PENDING", NOW)),
+        self.server.register_synthetic_payment(sig("P-PENDING"), int(quote["lamports_due"]), finalized=False)
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, sig("P-PENDING"), NOW)),
                          "server_error:ERROR_PAYMENT_NOT_FINALIZED")
         # one payment, one claim
-        bundle = self.adapter.paid_check(self.request, quote, secret, "P-A", NOW)
+        bundle = self.adapter.paid_check(self.request, quote, secret, sig("P-A"), NOW)
         self.assertTrue(bundle["verification"]["accepted"])
         other = INPUTS["CV-002"]["cloud_request"]
         other_quote, other_secret = self.adapter.request_quote(other, NOW)
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(other, other_quote, other_secret, "P-A", NOW)),
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(other, other_quote, other_secret, sig("P-A"), NOW)),
                          "server_error:ERROR_PAYMENT_ALREADY_CLAIMED")
         # quotes expire
         self.server.set_clock("2026-11-01T01:00:00Z")
-        self.server.register_synthetic_payment("P-LATE", int(quote["lamports_due"]))
-        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, "P-LATE", NOW)),
+        self.server.register_synthetic_payment(sig("P-LATE"), int(quote["lamports_due"]))
+        self.assertEqual(self.failure(lambda: self.adapter.paid_check(self.request, quote, secret, sig("P-LATE"), NOW)),
                          "server_error:ERROR_QUOTE_EXPIRED")
 
     def test_price_cap_and_network_are_enforced(self):
@@ -323,7 +362,7 @@ class TlsFlow(unittest.TestCase):
 
     def test_a_dishonest_server_answer_never_reaches_the_verdict(self):
         quote, secret = self.adapter.request_quote(self.request, NOW)
-        self.server.register_synthetic_payment("P-X", int(quote["lamports_due"]))
+        self.server.register_synthetic_payment(sig("P-X"), int(quote["lamports_due"]))
         original = self.server.engine.assess_payload
 
         def other_transaction(view, now_iso):
@@ -331,7 +370,7 @@ class TlsFlow(unittest.TestCase):
             body["message_sha256"] = "0" * 64  # an answer about a different transaction
             return body
         with mock.patch.object(self.server.engine, "assess_payload", side_effect=other_transaction):
-            bundle = self.adapter.paid_check(self.request, quote, secret, "P-X", NOW)
+            bundle = self.adapter.paid_check(self.request, quote, secret, sig("P-X"), NOW)
         self.assertFalse(bundle["verification"]["accepted"])
         self.assertEqual(bundle["verification"]["discard_reason"], "binding_mismatch")
         for local in ("UNKNOWN", "DENY"):
@@ -339,8 +378,8 @@ class TlsFlow(unittest.TestCase):
 
     def test_receipt_must_bind_to_the_assessment(self):
         quote, secret = self.adapter.request_quote(self.request, NOW)
-        self.server.register_synthetic_payment("P-R", int(quote["lamports_due"]))
-        bundle = self.adapter.paid_check(self.request, quote, secret, "P-R", NOW)
+        self.server.register_synthetic_payment(sig("P-R"), int(quote["lamports_due"]))
+        bundle = self.adapter.paid_check(self.request, quote, secret, sig("P-R"), NOW)
         stored = self.server.results[quote["quote_id"]]
         other_assessment = rs.signer().sign({"x": 1})
         with self.assertRaises(client.ProtocolFailure) as caught:

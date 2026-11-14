@@ -39,7 +39,8 @@ import assessment_rules as rules  # noqa: E402
 import jcs  # noqa: E402
 import mldsa  # noqa: E402
 import proto_codec as pc  # noqa: E402
-from common import DOMAINS, ENVIRONMENT_FOR_NETWORK, parse_time, subjects_digest  # noqa: E402
+from common import (DOMAINS, ENVIRONMENT_FOR_NETWORK, REAL_SERVER_CAPABILITIES, canonical_memo,  # noqa: E402
+                    canonical_solana_signature, parse_time, subjects_digest)  # noqa: E402
 from trust import TrustStore  # noqa: E402
 
 # Public cluster genesis hashes. MUST be cross-checked with the cluster's getGenesisHash (protocol requirement).
@@ -140,7 +141,7 @@ def build_quote_request(request, claim_secret_sha256, maximum_lamports, genesis_
         "network": request["network"], "genesis_hash": genesis_map[request["network"]],
         "message_sha256": bytes.fromhex(request["message_sha256"]),
         "intent_sha256": bytes.fromhex(request["intent_sha256"]) if request.get("intent_sha256") else b"",
-        "profile": request["profile"], "requested_capabilities": ["subject_reputation_lookup"],
+        "profile": request["profile"], "requested_capabilities": list(REAL_SERVER_CAPABILITIES),
         "scope": "DATA_SCOPE_METADATA_ONLY", "claim_secret_sha256": claim_secret_sha256,
         "maximum_lamports": str(maximum_lamports), "subjects": subjects,
         "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"], request["network"])),
@@ -170,6 +171,8 @@ def verify_quote(signed_quote, request, claim_commitment_hex, maximum_lamports, 
     for field, value in expected.items():
         if payload[field] != value:
             raise ProtocolFailure("quote_binding_mismatch", field)
+    if payload["memo_reference"] != canonical_memo(payload["quote_id"]):
+        raise ProtocolFailure("quote_memo_not_canonical")
     if int(payload["lamports_due"]) > int(maximum_lamports):
         raise ProtocolFailure("quote_price_exceeds_cap")
     if not parse_time(payload["issued_at"]) <= now < parse_time(payload["expires_at"]):
@@ -244,7 +247,7 @@ class RealServerAdapter:
 
     def _handshake(self, session):
         name, hello = session.exchange("client_hello", {"supported_majors": [1], "max_minor": 0,
-                                                       "requested_capabilities": ["subject_reputation_lookup"],
+                                                       "requested_capabilities": list(REAL_SERVER_CAPABILITIES),
                                                        "cli_release": CLI_RELEASE})
         if name != "server_hello" or hello.get("selected_major") != 1:
             raise ProtocolFailure("version_negotiation")
@@ -277,6 +280,8 @@ class RealServerAdapter:
 
     def paid_check(self, request, quote, claim_secret, payment_signature, now_iso):
         """Phase 2 (only after the operator paid EXTERNALLY): returns {verification, receipt} or raises."""
+        if not canonical_solana_signature(payment_signature):
+            raise ProtocolFailure("payment_signature_not_canonical")
         subjects = subject_messages(request["subjects"], request["network"])
         paid = {
             "quote_id": bytes.fromhex(quote["quote_id"]), "claim_secret": claim_secret,
@@ -285,7 +290,7 @@ class RealServerAdapter:
             "transaction_sha256": bytes.fromhex(request["transaction_sha256"]) if request.get("transaction_sha256") else b"",
             "intent_sha256": bytes.fromhex(request["intent_sha256"]) if request.get("intent_sha256") else b"",
             "network": request["network"], "genesis_hash": self.genesis_map[request["network"]],
-            "profile": request["profile"], "requested_capabilities": ["subject_reputation_lookup"],
+            "profile": request["profile"], "requested_capabilities": list(REAL_SERVER_CAPABILITIES),
             "scope": "DATA_SCOPE_METADATA_ONLY", "raw_transaction_consent": False,
             "evidence": {"canonical_local_evidence_json": b"{}", "subjects": subjects, "local_decision": ""},
             "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"], request["network"])),

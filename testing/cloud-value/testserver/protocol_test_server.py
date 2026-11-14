@@ -27,7 +27,8 @@ import crypto_tx as ct  # noqa: E402
 import jcs  # noqa: E402
 import proto_codec as pc  # noqa: E402
 import reference_server as rs  # noqa: E402
-from common import GENESIS, fmt_time, parse_time, subjects_digest  # noqa: E402
+from common import (GENESIS, REAL_SERVER_CAPABILITIES, SERVER_CAPABILITY_IDS, fmt_time, parse_time,  # noqa: E402
+                    subjects_digest)
 
 TYPE_FOR_CATEGORY = {"program": "program", "mint": "mint", "destination": "account"}
 USD_PRICE_MICROS, SOL_USD_MICROS = 50_000, 150_000_000  # synthetic tariff / FX, nothing real
@@ -121,7 +122,7 @@ class ProtocolTestServer:
             if 1 not in body.get("supported_majors", []):
                 return self._error("ERROR_PROTOCOL_UNSUPPORTED")
             return "server_hello", {"selected_major": 1, "selected_minor": 0,
-                                    "available_capabilities": ["subject_reputation_lookup"],
+                                    "available_capabilities": list(REAL_SERVER_CAPABILITIES),
                                     "server_release": "protocol-test-harness"}
         if name == "price_quote_request":
             return self._quote(body)
@@ -145,6 +146,9 @@ class ProtocolTestServer:
                     for s in req.get("subjects", [])]
         if subjects_digest(subjects, req["network"]) != req["subjects_sha256"].hex():
             return self._error("ERROR_BAD_REQUEST", "subjects_sha256 does not match the subject set")
+        capabilities = req.get("requested_capabilities", [])
+        if not capabilities or len(set(capabilities)) != len(capabilities) or                 any(c not in SERVER_CAPABILITY_IDS for c in capabilities):
+            return self._error("ERROR_BAD_REQUEST", "requested capability is not in the server registry")
         due = USD_PRICE_MICROS * 10 ** 9 // SOL_USD_MICROS
         if due > int(req["maximum_lamports"]):
             return self._error("ERROR_PRICE_EXCEEDED")
