@@ -1,0 +1,33 @@
+{
+  "acceptable_final": [
+    "UNKNOWN",
+    "WARN"
+  ],
+  "adverse_enforcement": null,
+  "canary": "CVCANARY-3b5101d82c1b4793",
+  "category": "transfer_hook_honeypot",
+  "category_id": "C05",
+  "decisive_evidence": [
+    "EV-0053",
+    "EV-0054"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-049",
+  "kind": "conflict",
+  "label": "UNKNOWN",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "Two valid, independent records disagree and neither supersedes the other: unresolved.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": false
+}

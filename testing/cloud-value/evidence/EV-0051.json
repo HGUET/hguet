@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_TRANSFER_HOOK_MALICIOUS",
+    "polarity": "adverse"
+  },
+  "confidence": 0.4,
+  "evidence_id": "EV-0051",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "no observed occurrence",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "hypothesis:transfer_hook_honeypot",
+    "reproducible": false,
+    "source": "threat-model note",
+    "tier": "hypothetical"
+  },
+  "subject": {
+    "id": "4r2eMpfxcSy95AwuK68ukERVFVLe1Y7YqkQp9a7WtHAa",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

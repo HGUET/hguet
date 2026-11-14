@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "DENY"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-e073ae9e9031cb71",
+  "category": "transfer_hook_honeypot",
+  "category_id": "C05",
+  "decisive_evidence": [
+    "EV-0045"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-041",
+  "kind": "tp_historical",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject is a member of a documented transfer_hook_honeypot pattern; only external knowledge shows it.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": true
+}

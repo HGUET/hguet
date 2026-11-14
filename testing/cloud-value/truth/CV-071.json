@@ -1,0 +1,32 @@
+{
+  "acceptable_final": [
+    "WARN",
+    "DENY"
+  ],
+  "adverse_enforcement": "warn",
+  "canary": "CVCANARY-18e72cdc9523a035",
+  "category": "freeze_authority_risk",
+  "category_id": "C08",
+  "decisive_evidence": [
+    "EV-0078"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-071",
+  "kind": "tp_historical",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject is a member of a documented freeze_authority_risk pattern; only external knowledge shows it.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": true
+}

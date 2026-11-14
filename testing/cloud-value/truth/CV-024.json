@@ -1,0 +1,34 @@
+{
+  "acceptable_final": [
+    "UNKNOWN"
+  ],
+  "adverse_enforcement": null,
+  "canary": "CVCANARY-d25ecae6f1341c38",
+  "category": "address_poisoning",
+  "category_id": "C03",
+  "decisive_evidence": [
+    "EV-0027"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [
+    "superseded",
+    "expired"
+  ],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-024",
+  "kind": "fp_stale_retracted",
+  "label": "GOOD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The only adverse record expired and was retracted as erroneous; accusing the subject is a false accusation.",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": false
+}

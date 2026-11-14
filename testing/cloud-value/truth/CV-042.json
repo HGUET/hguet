@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "DENY"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-b6af40c3d3e56645",
+  "category": "transfer_hook_honeypot",
+  "category_id": "C05",
+  "decisive_evidence": [
+    "EV-0046"
+  ],
+  "decisive_tier": "lab_simulation",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-042",
+  "kind": "tp_lab",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": true,
+    "independent_review": {
+      "reviewers": [],
+      "status": "pending_human_review"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "A recorded deterministic simulation shows the harmful behaviour (transfer_hook_honeypot).",
+  "requires_cloud_evidence": true,
+  "tamper": null,
+  "threat_present": true
+}

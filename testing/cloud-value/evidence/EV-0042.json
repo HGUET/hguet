@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_IMPERSONATION",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0042",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-01T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:fake_mint",
+    "reproducible": false,
+    "source": "documented public attack class: fake mint",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "2pEJyyYPJpnZebsB2pheDbamaC88TPHHfVw7UNbiJpgX",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

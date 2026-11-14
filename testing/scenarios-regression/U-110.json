@@ -1,0 +1,47 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED"
+    ],
+    "findings_required": [
+      [
+        "SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-110",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMTAiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI3MTQzNWI1MzExMDdjNGY3ODdkZDk2MTQ0ZjFkNTU3YTc3YjlhMmU2ZDU4NGU0YTUzNmM4ZDViMDVhZTFmMTUyIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAifQ==",
+      "signature_b58": "4A3L4RGnpziq1uRHSU6L4WV7wv1ey3V5vgPnAgdSW2yCd34TwT6AwRkYSaPtKCn9vLrZvo7fWp2otAczP1FfbA2L",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "71435b531107c4f787dd96144f1d557a77b9a2e6d584e4a536c8d5b05ae1f152",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEEOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKnJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwEDAwECAAkDCgAAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Without token caps there is no signed token scope to violate: the transfer is unauthorised-but-unbounded, not a form violation.",
+  "smoke": false,
+  "title": "Unchecked Transfer under a SOL-only intent (no token caps)",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

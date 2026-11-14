@@ -332,3 +332,44 @@ def sign_intent(payload: dict, issuer_label="issuer:trusted", *, tamper=False):
     return {"payload_b64": base64.b64encode(envelope_payload).decode(),
             "signer_pubkey_b58": signer_pubkey(issuer_label),
             "signature_b58": b58encode(signature)}
+
+
+# ------------------------------------------------- Ed25519 verification (RFC 8032)
+def _decompress(data: bytes):
+    if len(data) != 32:
+        return None
+    value = int.from_bytes(data, "little")
+    y, sign = value & ((1 << 255) - 1), value >> 255
+    if y >= _P:
+        return None
+    x = _xrecover(y)
+    if (x * x - (y * y - 1) * _inv(_D * y * y + 1)) % _P:
+        return None  # not on the curve
+    if x % 2 != sign:
+        x = _P - x
+    if x == 0 and sign == 1:
+        return None
+    return (x % _P, y, 1, x * y % _P)
+
+
+def _points_equal(p, q):
+    return (p[0] * q[2] - q[0] * p[2]) % _P == 0 and (p[1] * q[2] - q[1] * p[2]) % _P == 0
+
+
+def ed25519_verify(public: bytes, message: bytes, signature: bytes) -> bool:
+    """Strict-enough RFC 8032 verification (canonical S, on-curve points)."""
+    if len(public) != 32 or len(signature) != 64:
+        return False
+    a_point, r_point = _decompress(public), _decompress(signature[:32])
+    if a_point is None or r_point is None:
+        return False
+    s = int.from_bytes(signature[32:], "little")
+    if s >= _L:
+        return False
+    h = _hash(signature[:32] + public + message) % _L
+    return _points_equal(_mul(s, _B), _add(r_point, _mul(h, a_point)))
+
+
+def canonical_json(value) -> bytes:
+    """Deterministic JSON (sorted keys, no spaces, UTF-8): a JCS-like canonicalisation for fixtures."""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")

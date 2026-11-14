@@ -1,0 +1,31 @@
+{
+  "acceptable_final": [
+    "DENY"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-9df60a46c3ab4377",
+  "category": "address_poisoning",
+  "category_id": "C03",
+  "decisive_evidence": [
+    "EV-0025"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-023",
+  "kind": "local_covers",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "DENY",
+  "rationale": "Already visibly over the signed spend cap, so local analysis denies on its own; the external evidence is corroborating and must not be counted as an additional detection.",
+  "requires_cloud_evidence": false,
+  "tamper": null,
+  "threat_present": true
+}

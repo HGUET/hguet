@@ -1,0 +1,33 @@
+{
+  "acceptable_final": [
+    "UNKNOWN"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-5b9147327920b6b6",
+  "category": "fake_mint",
+  "category_id": "C04",
+  "decisive_evidence": [
+    "EV-0044"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [
+    "expired_assessment"
+  ],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-040",
+  "kind": "tamper",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject really is bad, but the Cloud answer is expired_assessment; a verifier must discard it and the final answer stays at the local UNKNOWN (no credit for a tampered finding).",
+  "requires_cloud_evidence": true,
+  "tamper": "expired_assessment",
+  "threat_present": true
+}

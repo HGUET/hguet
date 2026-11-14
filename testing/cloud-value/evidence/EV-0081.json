@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_FREEZE_AUTHORITY_RISK",
+    "polarity": "adverse"
+  },
+  "confidence": 0.95,
+  "evidence_id": "EV-0081",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-07-01T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:freeze_authority_risk",
+    "reproducible": false,
+    "source": "documented public attack class: freeze authority risk",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "Ad2ptFMN2EYgjz8rk8eZAaSB4Bqy8KP6YPZ1tE1vSdpT",
+    "type": "mint"
+  },
+  "valid_until": "2026-09-01T00:00:00Z"
+}

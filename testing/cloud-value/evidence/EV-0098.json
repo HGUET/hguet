@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "ALT_RESOLVES_TO_DRAINER_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.85,
+  "evidence_id": "EV-0098",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-15T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:alt_resolves_to_drainer",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (alt_resolves_to_drainer)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "9XefnSS11avQ3GY7fH9a4vs5r5s7ZoEjT4j6gZ5RFsUb",
+    "type": "alt_table"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

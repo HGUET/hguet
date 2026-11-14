@@ -1,0 +1,33 @@
+{
+  "acceptable_final": [
+    "UNKNOWN"
+  ],
+  "adverse_enforcement": "hard_deny",
+  "canary": "CVCANARY-80afc5e9264396d6",
+  "category": "malicious_program",
+  "category_id": "C01",
+  "decisive_evidence": [
+    "EV-0011"
+  ],
+  "decisive_tier": "historical_class",
+  "expected_verifier_discards": [
+    "bad_signature"
+  ],
+  "format": "hguet-cv-truth/1",
+  "id": "CV-010",
+  "kind": "tamper",
+  "label": "BAD",
+  "labeling": {
+    "authored_by": "generator:build_cloud_value.py v1 (single author)",
+    "critical": false,
+    "independent_review": {
+      "reviewers": [],
+      "status": "rule_cross_check_only"
+    }
+  },
+  "local_expected": "UNKNOWN",
+  "rationale": "The subject really is bad, but the Cloud answer is bad_signature; a verifier must discard it and the final answer stays at the local UNKNOWN (no credit for a tampered finding).",
+  "requires_cloud_evidence": true,
+  "tamper": "bad_signature",
+  "threat_present": true
+}

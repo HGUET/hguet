@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_CONFISCATORY_TRANSFER_FEE",
+    "polarity": "adverse"
+  },
+  "confidence": 0.95,
+  "evidence_id": "EV-0066",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "synthetic instance of a publicly documented class; no on-chain instance verified",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:confiscatory_transfer_fee",
+    "reproducible": false,
+    "source": "documented public attack class: confiscatory transfer fee",
+    "tier": "historical_class"
+  },
+  "subject": {
+    "id": "FxAgL8K7tTkeQcL17CCKh5nvRMpqXTZpQ3qYz4om85wv",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

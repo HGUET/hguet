@@ -1,0 +1,28 @@
+{
+  "claim": {
+    "code": "MINT_IMPERSONATION",
+    "polarity": "adverse"
+  },
+  "confidence": 0.9,
+  "evidence_id": "EV-0035",
+  "extra": {
+    "lab_input_sha256": "2dd83ac355e1d032a448064cedb397ff2086c7588d0d13a44fd98582e78ebddc"
+  },
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:fake_mint",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (fake_mint)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "HkNAr9hYtdYokQ6WvCt9EB924jwFPg36w44u4j5MYWoR",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

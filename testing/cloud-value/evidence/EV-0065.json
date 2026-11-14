@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "CONFISCATORY_TRANSFER_FEE_REPUTABLE",
+    "polarity": "benign"
+  },
+  "confidence": 0.85,
+  "evidence_id": "EV-0065",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-15T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "model inputs recorded in the fixture",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "class:confiscatory_transfer_fee",
+    "reproducible": true,
+    "source": "deterministic benchmark model run (confiscatory_transfer_fee)",
+    "tier": "lab_simulation"
+  },
+  "subject": {
+    "id": "Hxp3GZmQBCzgG8oQ3XbvQXG78bkkxujZJghhN5644tFU",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}

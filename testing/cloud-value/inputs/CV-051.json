@@ -1,0 +1,38 @@
+{
+  "clock": "2026-11-01T00:00:00Z",
+  "cloud_harness": {
+    "tamper": null
+  },
+  "cloud_request": {
+    "data_scope": "metadata_only",
+    "format": "hguet-cloud-request/1",
+    "intent_sha256": "40b3d632bfd5e5f76261bd3c246529f27916d2ece5220de1ae30fe9e5982c03d",
+    "message_sha256": "cfa286cd884a05c8d0905a2b97414886c9d618484e7428be66485d0a0393e335",
+    "network": "devnet",
+    "profile": "strict",
+    "subjects": [
+      {
+        "id": "6PBBE4NvoL6cyHWSAn7kdiEozPWhVcYVsix5bp6e8BgX",
+        "type": "mint"
+      }
+    ],
+    "transaction_sha256": "57551435a940ca2e44444a7ec083cc93f025260dace81fcddaaa86d06ed47393"
+  },
+  "format": "hguet-cv-input/1",
+  "id": "CV-051",
+  "intent": {
+    "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiY3YtQ1YtMDUxIiwibmV0d29yayI6ImRldm5ldCIsIm1lc3NhZ2Vfc2hhMjU2IjoiY2ZhMjg2Y2Q4ODRhMDVjOGQwOTA1YTJiOTc0MTQ4ODZjOWQ2MTg0ODRlNzQyOGJlNjY0ODVkMGEwMzkzZTMzNSIsIm5vdF9iZWZvcmVfdW5peCI6MSwiZXhwaXJlc19hdF91bml4Ijo0MTAyNDQ0ODAwLCJhbGxvd2VkX3Byb2dyYW1faWRzIjpbIjExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwiVG9rZW56UWRCTmJMcVA1VkVoZGtBUzZFUEZMQzFQSG5CcUNYRXBQeHVFYiJdLCJtYXhfc3BlbmRfbGFtcG9ydHMiOiI1MDAwIiwidG9rZW5fc3BlbmRfbGltaXRzIjpbeyJtaW50IjoiNlBCQkU0TnZvTDZjeUhXU0FuN2tkaUVvelBXaFZjWVZzaXg1YnA2ZThCZ1giLCJtYXhfZGViaXRfcmF3IjoiMTAwMCJ9XX0=",
+    "signature_b58": "3P83JsfnsqL2pd5GaVmsmxT3pAnXeH58xLpDDa4zVgDbSR1C4ZVV82fJdU587bVc6B2tuf7CpoPB2H7A5hW5ea1y",
+    "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "network": "devnet",
+  "policy_toml": null,
+  "rpc": {
+    "mode": "none"
+  },
+  "transaction": {
+    "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmW0JrX+mJB2gZ9v9hHRXHTIGF9Xt/GjZ8zu2yyRfspY3J8cKux0anresiLyckvMJKbVggkaiRq1A8x0UTSR30EyT/i4A6LFDpS9zrnb0CSJLNiy/F6ITP4e5baSZ9msy6QG3fbh7nWP3hhCXbzkbM3athr8TYO5DSf+vfko2KGL/IMbuy2syyRszCGRqNq7M0rpTHVXSoXPtfCX7MF+A3wXAQQEAQMCAAoM9AEAAAAAAAAG",
+    "encoding": "base64"
+  },
+  "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+}

@@ -1,0 +1,25 @@
+{
+  "claim": {
+    "code": "MINT_PERMANENT_DELEGATE_ABUSE",
+    "polarity": "adverse"
+  },
+  "confidence": 0.4,
+  "evidence_id": "EV-0073",
+  "format": "hguet-cv-evidence/1",
+  "network": "devnet",
+  "observed_at": "2026-10-10T00:00:00Z",
+  "provenance": {
+    "instance_verified": false,
+    "method": "no observed occurrence",
+    "note": "synthetic instance; the class/method is the documented part",
+    "reference": "hypothesis:permanent_delegate_mint",
+    "reproducible": false,
+    "source": "threat-model note",
+    "tier": "hypothetical"
+  },
+  "subject": {
+    "id": "44YZ53eKxhEXVP6Jm1CdcYPFhqYDmWqsKe4PukXVdC2z",
+    "type": "mint"
+  },
+  "valid_until": "2027-04-01T00:00:00Z"
+}
