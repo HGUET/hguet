@@ -20,7 +20,7 @@ Example *illustrative* operator policy (replace the SHA-256 with the **independe
 }
 ~~~
 
-The policy file, protected launcher and sandbox launcher source files must be **root-owned** regular files without group/world write permission, under root-owned protected ancestor directories. No symlinks are accepted. The replay directory must already exist, be owned by the *separate dedicated signer service UID*, and have restrictive permissions (0700). The untrusted agent must have a different OS identity without filesystem write/delete rights to the policy or journal. The prototype checks ownership and permissions, but **does not install or provision** the service account, secure launcher, or OS access control.
+The policy file, protected launcher, sandbox launcher Python source files **and signer ELF binary** must be **root-owned** regular files without group/world write permission, under root-owned protected ancestor directories. The executable must not be writable by the unprivileged signer service user, even after it is opened and SHA-256 checked, because inode-pinning alone cannot stop in-place mutation. No symlinks are accepted. The launcher explicitly **refuses execution with UID 0**. The replay directory must already exist, be owned by the *separate dedicated **non-root** signer service UID*, and have restrictive permissions (0700). The untrusted agent must have a different OS identity without filesystem write/delete rights to the policy or journal. The prototype checks ownership and permissions, but **does not install or provision** the service account, secure launcher, or OS access control.
 
 Example invocation from an independently configured trusted service:
 
