@@ -113,7 +113,10 @@ if len(sys.argv)>7:
         assert report["inspection"]["compiled_top_level_instructions"][0]["account_indices"] == [1,3,2,0]
     assert_block_only_signing(permitted,has_pinned_intent=True)
     assert permitted["signing_boundary"]["direct_source_declaration_bound_checked"] is True
-    assert permitted["signing_boundary"]["direct_mint_declaration_bound_checked"] is False
+    # This source-scoped fixture deliberately signs BOTH a per-mint and
+    # a per-source cap; each review must succeed independently.
+    assert permitted["signing_boundary"]["direct_mint_declaration_bound_checked"] is True
+    assert permitted["signing_boundary"]["direct_source_declaration_bound_checked"] is True
     verdict=permitted["verdict"]
     assert verdict["decision"] == "UNKNOWN"
     assert verdict["intent_status"] == "signature_verified"
