@@ -57,13 +57,17 @@ if first.returncode==20:
 else:
     assert first.stdout==b""
     assert b"HGUET_PROTECTED_BLOCKED" in first.stderr
-    print("SKIP: kernel refused protected Bubblewrap, no unsandboxed fallback")
+    # Do not call this a kernel namespace skip until we have proved the
+    # one-use marker was durably allocated before the launcher failed.
+    pass
 
 # The reservation must be durable *even if* the sandbox launch failed.
 listing=subprocess.run(["sudo","-n","find",str(ledger_path),
                         "-maxdepth","1","-name","*.used","-type","f"],
                        capture_output=True,text=True,check=True).stdout.strip().splitlines()
-assert len(listing)==1,listing
+assert len(listing)==1,(
+    "protected launcher refused before durable replay reservation: "+
+    first.stderr.decode(errors="replace")[:1200]+"; markers="+str(listing))
 marker=Path(listing[0])
 marker_mode=subprocess.run(["sudo","-n","stat","-c","%a",str(marker)],
                            check=True,capture_output=True,text=True).stdout.strip()
@@ -71,6 +75,9 @@ assert marker_mode=="600",marker_mode
 raw_bytes=subprocess.run(["sudo","-n","cat",str(marker)],
                          check=True,capture_output=True).stdout
 assert len(raw_bytes)>64
+if first.returncode==40:
+    assert b"sandbox" in first.stderr.lower() or b"bubblewrap" in first.stderr.lower(),first.stderr[:1000]
+    print("SKIP: runner denied required sandbox; durable replay marker still present")
 # One-use identity comes from the signed intent ID, not JSON whitespace.
 second=run(args,json.dumps(json.loads(request),indent=3).encode())
 assert second.returncode==40,(second.returncode,second.stderr[:1000])
