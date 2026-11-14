@@ -165,3 +165,140 @@ pub fn assess_signing_boundary(
         limitation:"This read-only gate never authorizes or signs. Only separately verified signed message/direct checked token declarations can be locally bounded. Missing intent, ALT, custom programs, Token-2022 extensions, unknown CPI, fees, account ownership, RPC simulation and final execution prevent proof of transaction-wide gross spending. A trusted, enforceable customer signer is not integrated; BLOCK is unconditional.",
     }
 }
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use crate::inspect_direct_tokens;
+    use hguet_core::{parse_transaction,TokenSpendLimit,TokenSourceLimit};
+    fn k(n:u8)->String{bs58::encode([n;32]).into_string()}
+    fn tx()->ParsedTransaction{
+        let mut v=vec![1];
+        v.extend([0u8;64]);
+        v.extend([1,0,1,5]);
+        for s in [k(1),k(2),k(3),k(4),TOKEN_PROGRAM.into()] {
+            v.extend(bs58::decode(s).into_vec().unwrap());
+        }
+        v.extend([9u8;32]);
+        v.extend([1,4,4,1,2,3,0,10,12]);
+        v.extend(40u64.to_le_bytes());
+        v.push(6);
+        parse_transaction(&v).unwrap()
+    }
+    fn intent(p:&ParsedTransaction)->PaymentIntentPayload{
+        PaymentIntentPayload{
+            schema_version:1,kind:"hguet_payment_intent".into(),
+            intent_id:"synthetic".into(),network:"devnet".into(),
+            message_sha256:p.message_sha256.clone(),
+            not_before_unix:1,expires_at_unix:4102444800,
+            allowed_program_ids:vec![TOKEN_PROGRAM.into()],
+            max_spend_lamports:"500".into(),
+            token_spend_limits:Some(vec![TokenSpendLimit{
+                mint:k(3),max_debit_raw:"40".into(),
+            }]),
+            token_source_limits:Some(vec![TokenSourceLimit{
+                mint:k(3),source_token_account:k(2),authority:k(1),
+                max_debit_raw:"40".into(),
+            }]),
+        }
+    }
+    #[test]
+    fn signed_direct_declaration_caps_can_be_checked_but_never_grant_signing(){
+        let p=tx();
+        let decoded=inspect_direct_tokens(&p,None).unwrap();
+        assert_eq!(decoded.recognized[0].decoded.amount_raw.as_deref(),Some("40"));
+        let intent=intent(&p);
+        let result=assess_signing_boundary(&p,Some(&intent),Some(&decoded),None);
+        assert!(result.independent_intent_verified_by_caller);
+        assert!(result.direct_token_program_present);
+        assert!(result.direct_mint_declaration_bound_checked);
+        assert!(result.direct_source_declaration_bound_checked);
+        assert!(result.original_wire_program_allowlist_checked);
+        assert_eq!(result.signing_gate,"block");
+        assert!(!result.automated_signing_permitted);
+        assert!(!result.total_native_sol_spending_proven);
+        assert!(!result.total_gross_token_spending_proven);
+        assert!(!result.signer_side_enforcement_integrated);
+        assert!(result.block_reasons.contains(&"SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED"));
+        assert!(result.block_reasons.contains(&"TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN"));
+        assert!(!result.block_reasons.contains(&"DIRECT_TOKEN_MINT_LIMIT_NOT_VERIFIED"));
+    }
+    #[test]
+    fn untrusted_absent_intent_never_gets_direct_declaration_cap_status(){
+        let p=tx();
+        let decoded=inspect_direct_tokens(&p,None).unwrap();
+        let r=assess_signing_boundary(&p,None,Some(&decoded),None);
+        assert!(!r.independent_intent_verified_by_caller);
+        assert!(!r.direct_mint_declaration_bound_checked);
+        assert!(!r.direct_source_declaration_bound_checked);
+        assert!(r.block_reasons.contains(&"NO_INDEPENDENT_VERIFIED_INTENT"));
+        assert!(r.block_reasons.contains(&"DIRECT_TOKEN_MINT_LIMIT_NOT_VERIFIED"));
+        assert!(r.block_reasons.contains(&"DIRECT_TOKEN_SOURCE_LIMIT_NOT_VERIFIED"));
+        assert!(!r.automated_signing_permitted);
+    }
+    #[test]
+    fn invalid_or_mismatched_intent_and_overcap_never_create_a_verified_bound(){
+        let p=tx();
+        let decoded=inspect_direct_tokens(&p,None).unwrap();
+        let mut i=intent(&p);
+        i.message_sha256="f".repeat(64);
+        let r=assess_signing_boundary(&p,Some(&i),Some(&decoded),None);
+        assert!(!r.independent_intent_verified_by_caller);
+        assert!(!r.direct_mint_declaration_bound_checked);
+        assert!(r.block_reasons.contains(&"INTENT_MESSAGE_OR_LOOKUP_UNRESOLVED"));
+        i.message_sha256=p.message_sha256.clone();
+        i.token_source_limits.as_mut().unwrap()[0].max_debit_raw="39".into();
+        let r=assess_signing_boundary(&p,Some(&i),Some(&decoded),None);
+        assert!(r.direct_mint_declaration_bound_checked);
+        assert!(!r.direct_source_declaration_bound_checked);
+        assert!(r.block_reasons.contains(&"DIRECT_TOKEN_SOURCE_LIMIT_NOT_VERIFIED"));
+        assert!(!r.automated_signing_permitted);
+    }
+    #[test]
+    fn verified_transaction_signature_does_not_prove_business_consent(){
+        let mut p=tx();
+        p.transaction_signature_status=TransactionSignatureStatus::Verified;
+        let decoded=inspect_direct_tokens(&p,None).unwrap();
+        let r=assess_signing_boundary(&p,Some(&intent(&p)),Some(&decoded),None);
+        assert_eq!(r.transaction_signature_status,TransactionSignatureStatus::Verified);
+        assert!(!r.automated_signing_permitted);
+        assert!(!r.execution_bank_authenticated);
+    }
+    #[test]
+    fn rpc_derived_alt_and_unknown_decoder_are_explicit_signing_blockers(){
+        let mut p=tx();
+        let decoded=inspect_direct_tokens(&p,None).unwrap();
+        p.unresolved_lookup_addresses=1;
+        let r=assess_signing_boundary(&p,Some(&intent(&p)),None,None);
+        assert!(r.original_wire_lookup_identity_unresolved);
+        assert!(r.block_reasons.contains(&"ORIGINAL_WIRE_ALT_IDENTITY_UNRESOLVED"));
+        assert!(!r.direct_mint_declaration_bound_checked);
+        assert!(!r.automated_signing_permitted);
+        let p=tx();
+        let mut d=decoded;
+        d.recognized[0].account_addresses_from_lookup=true;
+        let r=assess_signing_boundary(&p,Some(&intent(&p)),Some(&d),None);
+        assert!(r.direct_token_semantics_incomplete);
+        assert!(r.block_reasons.contains(&"DIRECT_TOKEN_SEMANTICS_INCOMPLETE"));
+        assert!(!r.automated_signing_permitted);
+    }
+    #[test]
+    fn original_wire_custom_program_is_explicit_unbounded_effect_surface(){
+        let mut p=tx();
+        p.program_ids.push(k(7));
+        let r=assess_signing_boundary(&p,Some(&intent(&p)),None,None);
+        assert!(r.unsupported_program_execution_surface);
+        assert!(r.block_reasons.contains(&"CUSTOM_OR_UNSUPPORTED_PROGRAM_EFFECTS"));
+        assert!(r.block_reasons.contains(&"SIGNED_PROGRAM_ALLOWLIST_NOT_SATISFIED"));
+        assert!(!r.automated_signing_permitted);
+    }
+    #[test]
+    fn empty_signed_mint_cap_still_blocks_checked_token_transfer(){
+        let p=tx();let direct=inspect_direct_tokens(&p,None).unwrap();
+        let mut i=intent(&p);
+        i.token_spend_limits=Some(vec![]);
+        let r=assess_signing_boundary(&p,Some(&i),Some(&direct),None);
+        assert!(!r.direct_mint_declaration_bound_checked);
+        assert!(r.block_reasons.contains(&"DIRECT_TOKEN_MINT_LIMIT_NOT_VERIFIED"));
+    }
+}
