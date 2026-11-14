@@ -100,4 +100,11 @@ answer, and `combine()` leaves the local verdict untouched.
   server registry with `ERROR_BAD_REQUEST`, like the real server.
 * A quote is accepted only if `memo_reference` is exactly `HGUET:<quote_id>` (32 lowercase hex).
 * A payment signature must be canonical Base58 of exactly 64 bytes (not all zero) before anything is sent in a paid check.
+* The Protobuf decoder follows the S7.1 critical/unknown-field policy: unknown numbers >= 1000 are skipped as
+  non-critical extensions, any other unknown field, duplicate singular field, oneof conflict, overlong varint, invalid
+  UTF-8, bad bool/uint32/enum, group wire type or truncation is an error with a stable code.
+* `ClientEvidence.canonical_local_evidence_json` is built by `build_client_evidence` (decision, finding codes and coverage
+  names only; canonical JSON) and checked by `validate_client_evidence`; the adapter no longer sends `{}`.
+* `protocol/s7-client-vectors.json` is an unchanged copy of the proto-policy, client-evidence, signature and memo
+  vectors from HGUET/server (S7.1 PROPOSAL); the client reproduces all 57 with the same outcomes and error codes.
 

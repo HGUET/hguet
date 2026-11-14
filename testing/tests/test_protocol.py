@@ -20,7 +20,8 @@ import proto_codec as pc  # noqa: E402
 import protocol_client as client  # noqa: E402
 import reference_server as rs  # noqa: E402
 import tls_fixture  # noqa: E402
-from common import GENESIS, b58encode, canonical_memo, canonical_solana_signature  # noqa: E402
+from common import (GENESIS, ProfileError, b58encode, build_client_evidence, canonical_memo,  # noqa: E402
+                    canonical_solana_signature, validate_client_evidence)
 from trust import TrustStore  # noqa: E402
 
 NOW = "2026-11-01T00:00:00Z"
@@ -117,6 +118,48 @@ class Codec(unittest.TestCase):
             pc.read_frame(lambda n: (1 << 20 + 1).to_bytes(4, "big")[:n] if False else b"\xff\xff\xff\xff")
         with self.assertRaises(pc.ProtoError):
             pc.read_frame(lambda n: b"\x00\x00\x00\x00")  # zero-length frame is invalid
+
+
+S7_VECTORS = json.loads((CV / "protocol" / "s7-client-vectors.json").read_text(encoding="utf-8"))["cases"]
+
+
+class S7Vectors(unittest.TestCase):
+    """The client's own implementations reproduce the server's S7.1 golden vectors (same outcome, same error code)."""
+
+    def cases(self, algo):
+        found = [c for c in S7_VECTORS if c["algo"] == algo]
+        self.assertTrue(any(c["expect"]["ok"] for c in found) and any(not c["expect"]["ok"] for c in found), algo)
+        return found
+
+    def test_proto_policy(self):
+        for case in self.cases("proto_policy"):
+            try:
+                pc.decode("Envelope", bytes.fromhex(case["input"]["envelope_hex"]))
+                got = {"ok": True}
+            except pc.ProtoError as error:
+                got = {"ok": False, "error": error.code}
+            self.assertEqual(got, case["expect"], case["id"])
+
+    def test_client_evidence(self):
+        for case in self.cases("client_evidence"):
+            data, decision = bytes.fromhex(case["input"]["bytes_hex"]), case["input"]["local_decision"]
+            try:
+                got = {"ok": True, "result": validate_client_evidence(data, decision)}
+            except ProfileError as error:
+                got = {"ok": False, "error": error.code}
+            self.assertEqual(got, case["expect"], case["id"])
+
+    def test_signature_and_memo_helpers(self):
+        for case in self.cases("solana_signature"):
+            self.assertEqual(canonical_solana_signature(case["input"]["signature"]), case["expect"]["ok"], case["id"])
+        for case in self.cases("memo_reference"):
+            self.assertEqual(canonical_memo(case["input"]["quote_id"]) is not None, case["expect"]["ok"], case["id"])
+
+    def test_builder_output_is_always_valid_and_minimal(self):
+        data = build_client_evidence("WARN", ["Z_CODE", "A_CODE"], ["rpc_agreement", "alt"])
+        self.assertEqual(validate_client_evidence(data, "WARN"), "OK")
+        self.assertEqual(data, b'{"coverage":["alt","rpc_agreement"],"finding_codes":["A_CODE","Z_CODE"],"kind":"hguet_client_evidence","local_decision":"WARN","schema_version":1}')
+        self.assertEqual(validate_client_evidence(b"", "ALLOW"), "ABSENT")
 
 
 class Jcs(unittest.TestCase):
@@ -295,6 +338,22 @@ class TlsFlow(unittest.TestCase):
         self.assertTrue(canonical_solana_signature(SIG1))
         for bad in ("", "0" + SIG1[1:], SIG1[:-1], "1" * 64, "é" + SIG1, None, 5):
             self.assertFalse(canonical_solana_signature(bad), repr(bad))
+
+    def test_paid_check_sends_only_the_redacted_client_evidence_profile(self):
+        sent = []
+        original = client.ProtocolSession.exchange
+
+        def spy(session, name, body):
+            if name == "paid_check_request":
+                sent.append(body["evidence"])
+            return original(session, name, body)
+
+        quote, secret = self.adapter.request_quote(self.request, NOW)
+        self.server.register_synthetic_payment(SIG1, int(quote["lamports_due"]))
+        with mock.patch.object(client.ProtocolSession, "exchange", spy):
+            self.adapter.paid_check(self.request, quote, secret, SIG1, NOW)
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(validate_client_evidence(sent[0]["canonical_local_evidence_json"], sent[0]["local_decision"]), "OK")
 
     def test_without_an_external_payment_there_is_no_answer(self):
         self.assertIsNone(self.adapter.assess(self.request, NOW))

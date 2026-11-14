@@ -40,7 +40,7 @@ import jcs  # noqa: E402
 import mldsa  # noqa: E402
 import proto_codec as pc  # noqa: E402
 from common import (DOMAINS, ENVIRONMENT_FOR_NETWORK, REAL_SERVER_CAPABILITIES, canonical_memo,  # noqa: E402
-                    canonical_solana_signature, parse_time, subjects_digest)  # noqa: E402
+                    build_client_evidence, canonical_solana_signature, parse_time, subjects_digest)  # noqa: E402
 from trust import TrustStore  # noqa: E402
 
 # Public cluster genesis hashes. MUST be cross-checked with the cluster's getGenesisHash (protocol requirement).
@@ -292,7 +292,8 @@ class RealServerAdapter:
             "network": request["network"], "genesis_hash": self.genesis_map[request["network"]],
             "profile": request["profile"], "requested_capabilities": list(REAL_SERVER_CAPABILITIES),
             "scope": "DATA_SCOPE_METADATA_ONLY", "raw_transaction_consent": False,
-            "evidence": {"canonical_local_evidence_json": b"{}", "subjects": subjects, "local_decision": ""},
+            "evidence": {"canonical_local_evidence_json": build_client_evidence("UNKNOWN"), "subjects": subjects,
+                         "local_decision": "UNKNOWN"},
             "subjects_sha256": bytes.fromhex(subjects_digest(request["subjects"], request["network"])),
         }
         session = self._session()
