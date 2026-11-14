@@ -56,6 +56,8 @@ After an explicitly opted-in successful simulation, the CLI can select source ac
 
 
 
+## 2. Solana formats and canonical identity
+
 Current official Solana docs describe **legacy**, **v0**, and **v1** transaction formats; v1 has different size and account/resource-limit semantics. The implementation must be version-aware.
 
 - Legacy and v0: respect the documented 1,232-byte wire limit; v0 may use Address Lookup Tables (ALTs).
@@ -71,6 +73,8 @@ All indexed accounts must resolve to concrete addresses. Missing lookup table, R
 The `AggregateTokenSpending` report joins **namespaced evidence**, not transfers: (1) directly declared checked token source debits from the original wire; (2) checked SPL Token/Token-2022 source CPI amounts reported by one RPC; and (3) the magnitude of negative complete-pair token account **net** deltas reported by that RPC. They are independently summed per mint and per (mint, source account) using bounded integer arithmetic, with each category separately compared against independently verified signed mint/source caps. They are **never added together** or claimed as total gross token spending. A provider net delta may net out transfers in or include accounts outside the intended payer, and unchecked transfers have no declared mint. Cross-provider trust, atomic execution-time account state, hidden program/hook CPI and signer-side spending enforcement remain unproven. CLI JSON provides `aggregate_token_spending` only for successful opt-in simulations, with `total_gross_token_spend_proven=false` and `onchain_spend_limit_enforced=false`. All aggregate cap mismatches are **advisory**.
 
 
+
+## 3. RPC adapter
 
 Use a configured provider and robust JSON-RPC parser. Minimum methods:
 
@@ -106,6 +110,8 @@ Simulation request should ordinarily specify:
 - `minContextSlot` is a minimum acceptable context slot, **not** an instruction to execute historically at a specific slot.
 - A successful simulation from one RPC is **not consensus**, finality, definitive ordering or proof of future transaction effects.
 - Query balance/account deltas carefully; token transfers can affect source, destination, fees, rent and authority. An opaque instruction may cause side effects outside known decoders.
+
+## 4. Instruction coverage and token safety
 
 ### Verified Spending Boundaries — block-only future signer interface
 
