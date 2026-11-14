@@ -6,6 +6,7 @@ This directory is the **canonical public contract** shared by `HGUET/hguet` (Rus
 
 ## Files
 
+- [signer-agent-request.schema.json](signer-agent-request.schema.json) — strict untrusted agent → local signer-process stdin request shape; only original transaction and separately signed intent. Trust key, network, clock, RPC, policy, and any approval/device command are forbidden in the payload.
 - [signer-refusal.schema.json](signer-refusal.schema.json) — local `signer-preflight` BLOCK-only refusal report, with device invocation, signing and broadcast flags frozen to false. The nested signing boundary is schema-checked separately; this CLI wrapper is not an authorization certificate or a change to the signed PaymentIntent.
 - [signing-boundary.schema.json](signing-boundary.schema.json) — CLI-only, non-authorizing **block-only** audit report for prospective customer-controlled signer implementations. The schema forbids `ALLOW`, any automated signing permission, or claims of proven bank execution/total spending; it is **not a signed protocol message or authorization token** and does not change PaymentIntent v1 signatures.
 - [hguet.proto](hguet.proto) — TLS-framed Protobuf: `PriceQuoteRequest`, `PriceQuoteResult`, `PaidCheckRequest`, `PaidCheckStatus`, pending `CheckReceipt`, terminal `CheckResult`.
