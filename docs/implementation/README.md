@@ -339,7 +339,7 @@ New workspace crate: `crates/hguet-signer` (version 0.0.0, unpublished). It is a
 
 - `SignerRequest` requires original wire bytes, the untrusted signed PaymentIntent envelope, a **separately supplied pinned public key**, intended Solana network and a caller-controlled trusted local Unix time. It never accepts an agent-authored verdict, an RPC result or a serialized `SigningBoundary` as an authorization grant.
 - `inspect_signer_request` independently parses the original message, decodes supported static direct token operations, and calls `hguet-core::verify_intent` for the exact message hash, network, time bounds and Ed25519 signature against the independently pinned key. Invalid wire, missing independent key, altered message, wrong network, expired intent, and invalid transaction signatures are distinct fail-closed refusal reasons.
-- `SignerBackend` is an **interface placeholder** only. `guarded_sign` returns `Result<Infallible,SignerRefusal>`: its success type is uninhabited, its implementation never calls the backend, and a test backend that panics if invoked confirms that it is unreachable. No production signer backend is linked into the CLI.
+- The earlier public `SignerBackend` trait was **removed entirely**. `guarded_sign(request) -> Result<Infallible,SignerRefusal>` has no device/backend argument and no representable success type. Neither the CLI nor another caller can reach a signing backend through this API; no device or wallet backend exists.
 - The `SignerRefusal` object has `signing_gate="block"`, `signing_permitted=false`, `signer_backend_invoked=false`, `signature_created=false`, `transaction_broadcast=false` regardless of a verified intent. Its optional nested `signing_boundary` retains the signed declaration and unsolved execution warnings. These results **must not be used as a wallet signing token**.
 - All validation is offline. No CLI action creates a signature, submits to Solana, accesses Cloud or logs a secret key. A malicious caller could of course invoke some *other* software's signing API; HGUET currently has **no device isolation or exclusive hardware signer control**, and this module must not be described as proven onchain enforcement.
 
@@ -355,6 +355,24 @@ cargo run -p hguet -- signer-preflight tests/fixtures/legacy-spl-transfer-checke
 **The command always returns exit code 20 (refusal)** when a transaction and envelope are readable; malformed arguments/files return code 40, never signing. The key shown is a **public, synthetic test-only Ed25519 identity**, not a key to use with real funds. Even with matching source/mint caps, a signed intent verifies **declarations**, not CPI, fees, bank execution, or permission to sign. `--offline` is required and `--rpc-url` is explicitly refused by this command.
 
 The new `protocol/v1/signer-refusal.schema.json` is an **unreleased, CLI-only output schema** that freezes every signer/broadcast capability flag to false. `signing-boundary.schema.json` remains a separate schema for the nested boundary. Synthetic Rust tests and CI run the real CLI twice: one valid, independently pinned envelope and one wrong pinned key; both must refuse, with no signer backend call and no external RPC. Future engineering must separately design exclusive device access, trusted intent acquisition, isolated key handling and an execution-time enforced spending policy; a green local preflight does not deliver those properties.
+
+## Trusted Signer Isolation — operator-configured process and strict agent input (implemented, BLOCK-only)
+
+The new standalone executable **hguet-signer-isolate** has a deliberately narrow, offline **stdin JSON** boundary: the untrusted agent supplies only schema_version=1, kind=hguet_signer_preflight, original_transaction_b64 and signed_intent. The public protocol/v1/signer-agent-request.schema.json declares that shape. Rust additionally rejects unknown nested/top-level fields, noncanonical Base64, JSON larger than 65,536 bytes, transactions larger than 16,384 bytes and unexpected request kinds. Inputs cannot carry an authorization decision, RPC simulation, device command, pin, network or clock.
+
+The **OperatorTrust** object owns the network and independently provisioned public intent verification key, supplied when the process starts rather than by the agent. Its current process uses the OS local clock to validate expiry. It independently parses original transaction bytes and verifies the intent's exact-message Ed25519 signature before always returning a SignerRefusal. The process has no RPC URL, signer backend, wallet SDK or broadcast action, so the agent cannot invoke any of these through this interface. A malformed agent payload yields a schema-constrained BLOCK refusal (exit code 20); invalid operator flags/configuration give exit code 40.
+
+Example of the isolated process invocation (the public key is synthetic; input JSON is sent on stdin):
+
+~~~sh
+cargo run -p hguet-signer --bin hguet-signer-isolate -- \
+  --network devnet --trusted-key 2iXtA8oeZqUU5pofxK971TCEvFGfems2AcDRaZHKD2pQ \
+  < /path/to/untrusted-agent-request.json
+~~~
+
+CI also builds this executable and invokes scripts/check_isolated_signer.py, which probes a verified signed intent, wrong independent key, forged allow/signing_gate, injected time/network/pin/RPC fields, unexpected device commands, malformed nested JSON and oversized input. Every valid-path outcome **remains refusal** with signature_created=false, signer_backend_invoked=false, transaction_broadcast=false. No source transaction or signed envelope is echoed in output.
+
+**Security boundary, not full isolation:** This is a separate local *process* and authenticated cryptographic preflight of untrusted input, but **not** a protected OS user, sandbox, secure enclave, trusted hardware signer, verified process launch or tamper-proof public-key provisioning. A malicious parent process that controls launch arguments can replace the operator pin or cluster. The system clock can be altered. No one-time replay ledger, exclusive wallet device access, runtime CPI/fee bound, trusted display, or transaction execution proof exists. These are independent release blockers, not solved by passing CI. See [Trusted Signer Isolation threat model](../architecture/trusted-signer-isolation.md).
 
 ## Planned default Cloud server (configured, not active)
 
