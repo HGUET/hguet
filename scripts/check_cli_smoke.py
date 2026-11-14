@@ -9,6 +9,21 @@ base = Path(__file__).resolve().parents[1]
 schema = json.loads((base/"protocol/v1/security-verdict.schema.json").read_text())
 report = json.loads(Path(sys.argv[1]).read_text())
 Draft202012Validator(schema).validate(report["verdict"])
+def assert_block_only_signing(report, *, has_pinned_intent=False):
+    boundary=report["signing_boundary"]
+    assert boundary["version"]==1
+    assert boundary["signing_gate"]=="block"
+    assert boundary["automated_signing_permitted"] is False
+    assert boundary["signer_side_enforcement_integrated"] is False
+    assert boundary["execution_bank_authenticated"] is False
+    assert boundary["total_native_sol_spending_proven"] is False
+    assert boundary["total_gross_token_spending_proven"] is False
+    assert boundary["independent_intent_verified_by_caller"] is has_pinned_intent
+    assert boundary["message_sha256"]==report["inspection"]["message_sha256"]
+    assert "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED" in boundary["block_reasons"]
+    assert "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN" in boundary["block_reasons"]
+
+assert_block_only_signing(report)
 parsed = report["inspection"]
 assert parsed["wire_format"] == "legacy"
 assert parsed["transaction_bytes"] == 134
@@ -30,12 +45,17 @@ if len(sys.argv)>2:
     assert parsed_v1["system_transfers"][0]["lamports"]=="500"
     assert parsed_v1["resource_config"]["compute_unit_limit"]==200000
     assert parsed_v1["resource_config"]["loaded_accounts_data_size_limit"]==65536
+    assert_block_only_signing(v1)
     assert v1["verdict"]["decision"]=="UNKNOWN"
     assert v1["verdict"]["simulation_status"]=="not_performed"
 if len(sys.argv)>3:
     direct = json.loads(Path(sys.argv[3]).read_text())
     Draft202012Validator(schema).validate(direct["verdict"])
     p = direct["inspection"]
+    assert_block_only_signing(direct)
+    assert direct["signing_boundary"]["direct_token_program_present"] is True
+    assert "DIRECT_TOKEN_MINT_LIMIT_NOT_VERIFIED" in direct["signing_boundary"]["block_reasons"]
+    assert "DIRECT_TOKEN_SOURCE_LIMIT_NOT_VERIFIED" in direct["signing_boundary"]["block_reasons"]
     assert p["wire_format"] == "legacy"
     assert p["transaction_bytes"] == 311
     assert p["instruction_count"] == 1
@@ -61,6 +81,10 @@ if len(sys.argv)>5:
     rejected = json.loads(Path(sys.argv[5]).read_text())
     for value in (permitted,rejected):
         Draft202012Validator(schema).validate(value["verdict"])
+    assert_block_only_signing(permitted,has_pinned_intent=True)
+    assert permitted["signing_boundary"]["direct_mint_declaration_bound_checked"] is True
+    assert permitted["signing_boundary"]["direct_source_declaration_bound_checked"] is False
+    assert "DIRECT_TOKEN_SOURCE_LIMIT_NOT_VERIFIED" in permitted["signing_boundary"]["block_reasons"]
     assert permitted["verdict"]["decision"]=="UNKNOWN"
     assert permitted["verdict"]["intent_status"]=="signature_verified"
     assert permitted["verdict"]["simulation_status"]=="not_performed"
@@ -87,6 +111,9 @@ if len(sys.argv)>7:
     for report in (permitted,rejected):
         Draft202012Validator(schema).validate(report["verdict"])
         assert report["inspection"]["compiled_top_level_instructions"][0]["account_indices"] == [1,3,2,0]
+    assert_block_only_signing(permitted,has_pinned_intent=True)
+    assert permitted["signing_boundary"]["direct_source_declaration_bound_checked"] is True
+    assert permitted["signing_boundary"]["direct_mint_declaration_bound_checked"] is False
     verdict=permitted["verdict"]
     assert verdict["decision"] == "UNKNOWN"
     assert verdict["intent_status"] == "signature_verified"
