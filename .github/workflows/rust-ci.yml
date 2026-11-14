@@ -7,21 +7,31 @@ permissions:
   contents: read
 jobs:
   rust:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Two distinct GitHub-hosted Ubuntu VMs (different kernels and AppArmor
+    # userns policy) so live isolation is not validated on one image only.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.100.0   # must match rust-toolchain.toml
           components: clippy, rustfmt
+      - name: Report runner kernel and sandbox policy (visible as annotations)
+        run: |
+          echo "::notice title=runner ${{ matrix.os }}::kernel=$(uname -r) bwrap=$(bwrap --version 2>&1 | head -1) apparmor_restrict_userns=$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo n/a) python=$(python3 -V)"
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Build workspace (no prebuilt artifacts)
-        run: cargo build --workspace
+        run: cargo build --workspace --locked
       - name: Test offline parser and signed intent
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
       - name: Lint implementation
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Verify Rust CLI help
         run: cargo run -p hguet -- --help
       - name: Assert VPS endpoint is a non-SSH default and Cloud remains disabled
@@ -171,6 +181,8 @@ jobs:
         run: |
           python scripts/check_signer_backend.py
           python scripts/check_no_signing_paths.py
+      - name: Prove HGUET_REQUIRE_LIVE turns skipped live tests into failures
+        run: python scripts/check_require_live.py
       - name: Live multi-UID admission test (single and split identity topologies)
         env:
           HGUET_REQUIRE_LIVE: "1"   # SKIP is not an acceptable result here
