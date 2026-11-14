@@ -61,7 +61,8 @@ with tempfile.TemporaryDirectory(prefix="hguet-protected-test-") as temp:
     policy=required_policy(binary,digest,ledger)
     # In test check only replay store correctness. A production launcher must
     # have a ROOT-owned, nonwritable install/manifest; tests cannot fake one.
-    with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(policy)):
+    with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(policy)), \
+         mock.patch.object(protected,"_verify_protected_binary_install"):
         assert protected.load_operator_policy("/etc/hguet/signer-policy.json")==policy
         for name,bad in [
             ("binary_sha256","0"*64),
@@ -70,17 +71,31 @@ with tempfile.TemporaryDirectory(prefix="hguet-protected-test-") as temp:
             ("schema_version",2),
         ]:
             altered=dict(policy,**{name:bad})
-            with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(altered)):
+            with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(altered)), \
+                 mock.patch.object(protected,"_verify_protected_binary_install"):
                 denied(lambda: protected.load_operator_policy("/etc/hguet/signer-policy.json"))
         for k in ["allow","rpc_url","trusted_time","wallet_key","policy_overrides"]:
             altered=dict(policy,**{k:True})
-            with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(altered)):
+            with mock.patch.object(protected,"_trusted_file",return_value=json_bytes(altered)), \
+                 mock.patch.object(protected,"_verify_protected_binary_install"):
                 denied(lambda: protected.load_operator_policy("/etc/hguet/signer-policy.json"),
                        "unexpected/missing")
         duplicate=json_bytes(policy)[:-1]+b',"network":"mainnet"}'
-        with mock.patch.object(protected,"_trusted_file",return_value=duplicate):
+        with mock.patch.object(protected,"_trusted_file",return_value=duplicate), \
+             mock.patch.object(protected,"_verify_protected_binary_install"):
             denied(lambda: protected.load_operator_policy("/etc/hguet/signer-policy.json"),
                    "duplicate JSON key")
+
+    # Root-owned ELF ancestry must be enforced independently of its SHA-256.
+    # This temporary fixture belongs to the runner user, not to root.
+    if os.geteuid()!=0:
+        with mock.patch.object(protected,"_secure_ancestors"):
+            denied(lambda: protected._verify_protected_binary_install(str(binary)),
+                   "root-owned")
+    with mock.patch.object(protected.os,"geteuid",return_value=0):
+        denied(lambda: protected.run(["--policy","/etc/hguet/signer-policy.json"],
+                                   stdin=io.BytesIO(json_bytes(REQUEST))),
+               "refusing root execution")
 
     correct_identity=protected._parse_replay_identity(json_bytes(REQUEST),policy)
     assert len(correct_identity)==64
