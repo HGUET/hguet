@@ -107,7 +107,13 @@ Simulation request should ordinarily specify:
 - A successful simulation from one RPC is **not consensus**, finality, definitive ordering or proof of future transaction effects.
 - Query balance/account deltas carefully; token transfers can affect source, destination, fees, rent and authority. An opaque instruction may cause side effects outside known decoders.
 
-## 4. Instruction coverage and token safety
+### Verified Spending Boundaries — block-only future signer interface
+
+The `hguet-rpc::assess_signing_boundary` report exposes an explicit `signing_gate="block"` and `automated_signing_permitted=false` on normal inspection/check CLI paths. It rechecks strictly decoded original-wire checked token mint/source declarations **only with an independently verified signed PaymentIntent**, distinguishes mint-cap coverage from source-cap coverage, records unresolved/dependent ALT identities and opaque direct token semantics, and flags arbitrary top-level program effects. Separate RPC aggregated CPI/net findings can add **advisory risk only**; they cannot remove an unknown or authorize spending.
+
+Irrespective of signed intent or transaction signature status, `signer_side_enforcement_integrated=false`, `execution_bank_authenticated=false`, `total_native_sol_spending_proven=false` and `total_gross_token_spending_proven=false`. A valid transaction Ed25519 signature proves signature consistency on bytes, not business permission or final execution. `block_reasons` is a deterministic audit trail; it is **not** an authorization certificate. Future signer integration must enforce exact-message identity, all token authority/account state, CPI/hooks and fees without trusting a single simulation provider or a stale snapshot. No wallet or broadcast code exists.
+
+
 
 Implement in audited increments with golden fixtures:
 
