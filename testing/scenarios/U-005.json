@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "evidence_gap",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_UNVERIFIED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-005",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "2a9ab11643afa9590b7826fd8a5fd7d2a686fe21c97ac3660ce7ac165563fc1d",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAECOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmU8NPYQOLaBUFIghonDlfvRifD0KGrWvJe2yQW6I8zCicnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQEBAAEB",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "Effects of an arbitrary program cannot be evaluated offline and nothing authorises it.",
+  "smoke": false,
+  "title": "Call to an unreviewed custom program, no authorisation",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

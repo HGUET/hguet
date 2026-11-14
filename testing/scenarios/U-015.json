@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "evidence_gap",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-015",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0wMTUiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiIyMTA1MmYwYjRjMGFlZjgxOTQzM2EzZGFjMjE0YzQzNDI4OGNlZWE0NzZlNTQ0MmM4ODcxNGE0NWQwY2E5Y2I1Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "2EDkUSqHU88oLAPmuM5fyA76rGbTozf3f9jK7Z59gHM93bhzR4YX1TaH6pPp6nHGbg7g9KcYpFCGX94hnYWwutJa",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "21052f0b4c0aef819433a3dac214c434288ceea476e5442c88714a45d0ca9cb5",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgABAziDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplGNYGazPH1j4joagb1p3bPMq0AHUXfNH+ndsrRNxTgfUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQICAAE0AAAAAICEHgAAAAAApQAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqQ==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "createAccount moves lamports that are not a plain top-level transfer; total spend is unprovable offline.",
+  "smoke": false,
+  "title": "System account creation funds an undeclared amount",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

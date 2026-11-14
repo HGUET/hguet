@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "policy",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_UNAPPROVED_PROGRAM"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-022",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "bedc385049a79ef2eeb3b5c9d904300796c05448507df442cdb3fe6e945c57e7",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nallowed_program_ids = [\"11111111111111111111111111111111\"]\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIEOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPDT2EDi2gVBSIIaJw5X70Ynw9Chq1ryXtskFuiPMwonJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwICAgABDAIAAAAKAAAAAAAAAAMBAAEB",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "Only System is allowed; a custom program is invoked.",
+  "smoke": false,
+  "title": "Program outside the operator allowlist",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

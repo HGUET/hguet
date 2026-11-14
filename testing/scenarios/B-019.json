@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "policy",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_SOL_TRANSFER_CAP"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-019",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "57cfa4efa55031b6827ddf154b9c37d777e275653c4edfbdf4657297c8f1990a",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nmax_declared_system_transfer_lamports = \"499\"\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQwCAAAA9AEAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "500 lamports against a hard cap of 499.",
+  "smoke": true,
+  "title": "SOL transfer above the local policy cap",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

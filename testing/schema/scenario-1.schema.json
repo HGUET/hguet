@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "hguet-bench-scenario/1",
+  "description": "One deterministic benchmark scenario. Ground truth (`truth`, `expect`, `rationale`) is authored from threat semantics BEFORE any tool run and is never derived from HGUET output. Changing a field's meaning requires a new format version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "id", "class", "title", "category", "smoke", "rationale", "build_spec", "input", "truth", "expect"],
+  "properties": {
+    "format": {"const": "hguet-bench-scenario/1"},
+    "id": {"type": "string", "pattern": "^[GBU]-[0-9]{3}$"},
+    "class": {"enum": ["GOOD", "BAD", "UNKNOWN"]},
+    "title": {"type": "string", "minLength": 8},
+    "category": {"type": "string", "minLength": 2},
+    "smoke": {"type": "boolean", "description": "member of the short CI set"},
+    "rationale": {"type": "string", "minLength": 20, "description": "why the label is correct, independent of any tool"},
+    "build_spec": {"type": "object"},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network", "transaction", "message_sha256_independent", "intent", "trusted_key", "policy_toml", "rpc"],
+      "properties": {
+        "network": {"enum": ["mainnet", "devnet", "testnet"]},
+        "transaction": {
+          "type": "object", "additionalProperties": false, "required": ["encoding", "data"],
+          "properties": {"encoding": {"enum": ["base64", "base58"]}, "data": {"type": "string"}}
+        },
+        "message_sha256_independent": {"type": ["string", "null"], "description": "SHA-256 of the message bytes computed by the builder, used to cross-check the tool's parser"},
+        "intent": {"type": ["object", "null"]},
+        "trusted_key": {"type": ["string", "null"]},
+        "policy_toml": {"type": ["string", "null"]},
+        "rpc": {
+          "type": "object", "required": ["mode"],
+          "properties": {"mode": {"enum": ["none", "mock"]}, "behavior": {"enum": ["closed_port", "non_tls_garbage", "hangup"]}}
+        }
+      }
+    },
+    "truth": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "acceptable_decisions", "evidence_level", "authored_independently_of_tool"],
+      "properties": {
+        "label": {"enum": ["GOOD", "BAD", "UNKNOWN"]},
+        "acceptable_decisions": {"type": "array", "minItems": 1, "items": {"enum": ["ALLOW", "WARN", "DENY", "UNKNOWN"]}},
+        "evidence_level": {"enum": ["offline_sufficient", "requires_rpc", "insufficient"]},
+        "authored_independently_of_tool": {"const": true}
+      }
+    },
+    "expect": {
+      "type": "object", "additionalProperties": false,
+      "required": ["findings_required", "findings_forbidden", "proven"],
+      "properties": {
+        "findings_required": {"type": "array", "description": "list of any-of groups of finding codes; every group must be satisfied", "items": {"type": "array", "minItems": 1, "items": {"type": "string"}}},
+        "findings_forbidden": {"type": "array", "items": {"type": "string"}},
+        "proven": {"type": "array", "description": "positive properties the tool must prove (dotted path + equals|contains)", "items": {"type": "object"}}
+      }
+    }
+  }
+}

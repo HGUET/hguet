@@ -1,0 +1,42 @@
+{
+  "build_spec": {},
+  "category": "alt",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_UNRESOLVED_PROGRAM",
+        "WIRE_TOKEN_DIRECT_ALT_UNRESOLVED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-009",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "d045db9669e659725a9c9b0be9bf5aaa024b0ae0d4eeda88b04bcab8b259061b",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nallowed_program_ids = [\"11111111111111111111111111111111\"]\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQAAATiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAQEAAQEBb3556FfWooGme6boL6RnZNzDYwVY3da4MDet3VhqDDIAAQA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The program identity itself is behind an unresolved lookup; an allowlist cannot be evaluated.",
+  "smoke": false,
+  "title": "Allowlist policy with a program resolved only through a lookup table",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

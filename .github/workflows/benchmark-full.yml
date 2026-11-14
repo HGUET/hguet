@@ -1,0 +1,53 @@
+name: Security benchmark (full, 60 scenarios)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "testing/**"
+      - "crates/**"
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0   # must match rust-toolchain.toml
+      - name: Build the real CLI
+        run: cargo build -p hguet --locked
+      - name: Framework self-tests and scenario drift check
+        run: |
+          python testing/tools/build_scenarios.py --check
+          python -m unittest discover -s testing/tests
+      - name: Run all 60 scenarios against the real CLI
+        run: python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset all --out testing/reports/full
+      - name: Publish summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          path = "testing/reports/full/report.json"
+          if os.path.exists(path):
+              r = json.load(open(path)); m = r["metrics"]["summary"]
+              lines = ["### HGUET security benchmark (commit %s)" % r["meta"]["commit"][:10],
+                       "PASS %(PASS)d / FAIL %(FAIL)d / XFAIL %(XFAIL)d / XPASS %(XPASS)d" % r["totals"], ""]
+              for k in ("false_block_rate", "bad_denied", "bad_not_denied_but_blocked_only", "bad_allowed_UNSAFE",
+                        "unknown_kept_unknown", "unknown_overclaimed_as_deny", "good_left_unknown",
+                        "signing_blocked_all_scenarios"):
+                  lines.append("- %s: %d/%d" % (k, m[k]["num"], m[k]["den"]))
+              open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(lines) + "\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-full-report
+          path: |
+            testing/reports/full/report.json
+            testing/reports/full/report.html
+          if-no-files-found: error

@@ -1,0 +1,61 @@
+{
+  "build_spec": {},
+  "category": "token_transfer",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-017",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0wMTciLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI1ZGE1YjQ2YTJmMmE5ODdmYzk4MjAxODc4ZjgyMTgwNWY3ZTQwY2ZjMjNhYzc0MzNjNDU4NjE5NTQ4NjI4YTA1Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjEwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiI1MDAifSx7Im1pbnQiOiJDR1FkNGtQSE0zTHJGcmtjQjNlNnpUclFXOEx3QUM4dDhkU212dHl1SmF1ZCIsIm1heF9kZWJpdF9yYXciOiI5MDAifV19",
+      "signature_b58": "5XrTfRPoyXvekA6LGNigqBrUcK57ZSW3KVMkhCQhk6DQ7dvfb1n7KxKhWfzGa1NcHixm5KuvZhRTR4zvYTTSFUvy",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "5da5b46a2f2a987fc98201878f821805f7e40cfc23ac7433c458619548628a05",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAMIOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLi2UCWnh4bgXH40VpAvrY3p6/jkcV7kHnZUjvsydTkmJh23JwnrTMjFr9rr4br9VJ6BSm5awNgrmi94qIGa5J7TFpb0KEhIuibzdS3qy4LF0xTlMNvu+bfxPMOJUUUBbIABt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKmnYvpC/e5ZFyqzO/YaFnnQ4gO6cWUeOzACxbTR2y+1uMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAgYEAQUCAAoMZAAAAAAAAAAGBgQDBwQACgyEAwAAAAAAAAY=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Independent caps per mint; neither is exceeded.",
+  "smoke": false,
+  "title": "Transfers of two approved mints, each under its cap",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

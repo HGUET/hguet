@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "policy",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_BLOCKED_PROGRAM"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-021",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "791644b10fd96357903b64d5f0622a923845b6f66737bb6c0e1d47802e7ee75b",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\ndenied_program_ids = [\"6a2PbCkkrCL4P2QDmNBGn3ktsY3vQ5JZwX91XMRZ9iwh\"]\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIEOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUsAsI5+rKLtVI/FTQhzy9aFgHq3kYWuNp5OapMSkMWjJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwICAgABDAIAAAAKAAAAAAAAAAMBAAEB",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "A known drainer program id is on the operator denylist.",
+  "smoke": false,
+  "title": "Call to a denylisted program",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

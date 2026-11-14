@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "alt",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "WIRE_TOKEN_DIRECT_ALT_UNRESOLVED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-003",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "8f8d73a4af5a3111781396908b755a6611462854e3a6090417657ed34df2e7ac",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwEBAgACDAIAAADoAwAAAAAAAAFJFsZNscSONBJCH369mHOF/WuOIQ2ILnjnJxf7YutaCAEAAA==",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The payee address is only an index into an Address Lookup Table that offline mode cannot resolve.",
+  "smoke": false,
+  "title": "v0 transfer whose destination lives in an unresolved lookup table",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

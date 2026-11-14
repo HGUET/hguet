@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "policy",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_BLOCKED_SOL_RECIPIENT"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-020",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "d1d87c59d638bc49124a5a0eee072c538c8045d611383bbc48fb0af35d39a578",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\ndenied_sol_recipients = [\"8FtuSTwnLBcqgsq276ykWyTYrz9Ks53XDunpRVYnf2KD\"]\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmVr0qDD3se8PmnttU76JxkFiBGT7tQAqlFlteq50JKZZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQwCAAAACgAAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "Eve is on the operator denylist.",
+  "smoke": false,
+  "title": "Transfer to a denylisted recipient",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

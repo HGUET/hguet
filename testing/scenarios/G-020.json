@@ -1,0 +1,65 @@
+{
+  "build_spec": {},
+  "category": "sol_transfer",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      },
+      {
+        "equals": "verified",
+        "path": "inspection.transaction_signature_status"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-020",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0wMjAiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI5MjdmOGQ1ZmMwNTk1NmZhZjQwODhmOTlhYWU1MzkzNTg4N2JkZTNmMTJkMjFjOTE5NTc4MmU1MTg2MmZjODY3Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJDb21wdXRlQnVkZ2V0MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwiTWVtb1NxNGdxQUJBWEtiOTZxbkg4VHlzTmNXeE15V0NxWGdETEdtZmNIciJdLCJtYXhfc3BlbmRfbGFtcG9ydHMiOiI1MDAwIn0=",
+      "signature_b58": "5e9ghiMtapYBWhLH6UtZQLV3rCUYCoPUrmX3hMNVLXASR2iG73MHVsS4ZS2AgZbYRxn43ZJCUMntWaUHRVFn5SKz",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "927f8d5fc05956faf4088f99aae53935887bde3f12d21c9195782e51862fc867",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AUXvpewBaQsDJJ1l+AbXNi9hssLiHYfyCoOFKhJJfVYOxoji7lkFdIFQWEHkZS2u4g3g4zdL+XABA5Xonm7buQEBAAMFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWqj3n7+k6EmZ6VyXHhZ7e1no9GF7t5dPw+4ySThplJlAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAABUpTWpkpIQZNJOhxYNo4fHw1td28kruB5B+oQEEFRI0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAwIABQLgkwQAAwEACG9yZGVyLTc3BAIAAQwCAAAA3AUAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "All programs allowlisted, value inside cap, valid signature.",
+  "smoke": false,
+  "title": "Realistic signed payment: compute budget, memo and transfer",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

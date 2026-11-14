@@ -157,6 +157,18 @@ jobs:
           python scripts/check_cli_smoke.py /tmp/hguet-inspect.json /tmp/hguet-v1.json \
             /tmp/hguet-direct-token.json /tmp/hguet-mint-cap-equal.json /tmp/hguet-mint-cap-over.json \
             /tmp/hguet-source-cap-equal.json /tmp/hguet-source-cap-over.json
+      - name: Security benchmark smoke set (real CLI, 13 deterministic scenarios)
+        run: |
+          python testing/tools/build_scenarios.py --check
+          python -m unittest discover -s testing/tests
+          python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke --out testing/reports/ci-smoke
+      - name: Upload benchmark smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-smoke-${{ matrix.os }}
+          path: testing/reports/ci-smoke/report.*
+          if-no-files-found: warn
       - name: Assert isolated signer process cannot accept agent trust, clock, RPC or signing commands
         run: |
           cargo build -p hguet-signer --bin hguet-signer-isolate
