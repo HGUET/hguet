@@ -77,3 +77,26 @@ the MSVC toolchain, which is not installed on the development machine; use the
 workflow.
 
 Not provided: publisher signatures, SBOM, provenance attestation, notarisation.
+
+## Observed GitHub CI results and what was done about them
+
+Real results read from the check-run annotations (not assumed):
+
+| Run | Job | Result | Cause |
+|-----|-----|--------|-------|
+| `95aac83` / `42e631b` | rust (ubuntu-22.04) | FAIL at live sandbox | bubblewrap **0.6.1**: `Unknown option --disable-userns` (option exists from 0.8.0) |
+| `95aac83` / `42e631b` | rust (ubuntu-24.04) | FAIL at live sandbox | kernel 7.0.0-1017-azure, `apparmor_restrict_unprivileged_userns=1`, bubblewrap 0.9.0: `loopback: Failed RTM_NEWADDR: Operation not permitted` |
+| `930d39d` | Reproducible build (windows-latest) | FAIL | `hguet.exe` differs between two build directories (`ef59db42...` vs `724f2534...`); the Linux build is identical |
+| `42e631b` | Security benchmark (full) | PASS | - |
+
+Responses (none weakens the sandbox):
+
+* **Ubuntu 22.04**: unsupported for live isolation. The launcher now checks `bwrap --version` and refuses below
+  **0.8.0** (exit 40, "no weaker sandbox is used"). CI marks 22.04 `live_sandbox: false` and runs
+  `check_signer_sandbox_unsupported.py`, which **asserts the refusal** instead of silently skipping.
+* **Ubuntu 24.04**: the runner step sets `kernel.apparmor_restrict_unprivileged_userns=0` (platform
+  prerequisite on the ephemeral VM) and `HGUET_REQUIRE_LIVE=1` stays on, so a skip still fails.
+* **Windows reproducibility**: MSVC `link.exe` embeds a build-time timestamp unless `/Brepro` is passed; the
+  build now adds `-Clink-arg=/Brepro` on Windows. This is a hypothesis taken from the differing hashes and
+  the known linker behaviour, **not yet confirmed**; the next Windows CI run is the evidence. If the hashes
+  still differ, the remaining candidates are embedded PDB paths and resource data.

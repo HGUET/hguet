@@ -48,6 +48,25 @@ Exit **20** requires a valid block-only signer-refusal result *from inside a suc
 
 See [Trusted Signer Isolation threat model](trusted-signer-isolation.md).
 
+## Minimum Bubblewrap version and supported platforms
+
+`--disable-userns` / `--assert-userns-disabled` (no nested user namespace inside the sandbox)
+need **Bubblewrap >= 0.8.0**. `run_signer_sandbox.py` runs `bwrap --version` and refuses to launch
+(exit 40, "unsupported Bubblewrap ... no weaker sandbox is used") below that. The flags are never
+dropped to suit an old host.
+
+| Platform | bubblewrap | Status |
+|----------|-----------|--------|
+| Ubuntu 24.04+, Debian 13 | 0.9+ / 0.11 | supported, live-tested |
+| Debian 12 | 0.8.0 | meets the minimum (not live-tested here) |
+| Ubuntu 22.04 | 0.6.1 | **unsupported**: launcher fails closed; CI asserts exactly that |
+
+On Ubuntu 24.04+ unprivileged user namespaces are restricted by AppArmor
+(`kernel.apparmor_restrict_unprivileged_userns=1`). Depending on the kernel, an unprivileged
+`bwrap` then fails with `loopback: Failed RTM_NEWADDR: Operation not permitted`. Operators must
+either grant `/usr/bin/bwrap` a userns profile or set the sysctl to 0; the CI runner does the latter.
+Neither changes the sandbox flags.
+
 ## Bubblewrap user namespace requirement
 
 `--unshare-all` only *tries* to create a user namespace (`--unshare-user-try`),

@@ -113,6 +113,34 @@ def verify_root_owned_bwrap():
         raise SandboxError("Bubblewrap is not executable")
 
 
+# --disable-userns / --assert-userns-disabled (no nested user namespaces inside the
+# sandbox) first appeared in Bubblewrap 0.8.0. Older versions (Ubuntu 22.04 ships
+# 0.6.1) cannot enforce that restriction, and the sandbox is never weakened to fit
+# them: the launcher refuses to run instead.
+MIN_BWRAP = (0, 8, 0)
+
+
+def bwrap_version_supported(version_text):
+    """True only for 'bubblewrap X.Y[.Z]' with X.Y.Z >= MIN_BWRAP."""
+    match = re.fullmatch(r"\s*bubblewrap\s+(\d+)\.(\d+)(?:\.(\d+))?\s*", version_text or "")
+    if not match:
+        return False
+    found = tuple(int(part or 0) for part in match.groups())
+    return found >= MIN_BWRAP
+
+
+def verify_bwrap_version():
+    try:
+        result = subprocess.run([BWRAP_PATH, "--version"], capture_output=True, text=True,
+                                timeout=5, check=False, env={})
+    except (OSError, subprocess.TimeoutExpired) as ex:
+        raise SandboxError("cannot determine Bubblewrap version; refused to launch") from ex
+    if result.returncode != 0 or not bwrap_version_supported(result.stdout):
+        raise SandboxError(
+            "unsupported Bubblewrap (need >= %d.%d.%d for --disable-userns, found %r); "
+            "no weaker sandbox is used" % (MIN_BWRAP + (result.stdout.strip()[:40],)))
+
+
 def open_pinned_executable(binary, digest):
     if not Path(binary).is_absolute() or not re.fullmatch(r"[0-9a-f]{64}", digest):
         raise SandboxError("signer path must be absolute and executable hash operator-pinned")
@@ -209,6 +237,7 @@ def checked_refusal(stdout, returncode):
 def run(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     verify_root_owned_bwrap()
+    verify_bwrap_version()
     exec_fd = open_pinned_executable(args.binary, args.binary_sha256)
     try:
         seccomp = seccomp_bytes()
