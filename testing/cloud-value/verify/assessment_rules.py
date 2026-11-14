@@ -140,7 +140,7 @@ def verify(signed, request, registry, *, now_iso, mode="strict", trust=None, all
     allowed = allowed_algorithms or frozenset({ALG_MLDSA, ALG_TEST_ED})
     result = {"accepted": False, "discard_reason": None, "findings_accepted": [], "findings_rejected": [],
               "unsupported_safety_claims": [], "supported_safety_claims": [], "trusted_unverified_safety_claims": [],
-              "evidence_used": [], "verified_evidence": [], "source_status": {}, "mode": mode, "signature": None}
+              "evidence_used": [], "verified_evidence": [], "source_status": {}, "evidence_digest_verified": False, "mode": mode, "signature": None}
 
     def discard(reason):
         result["accepted"] = False
@@ -174,11 +174,19 @@ def verify(signed, request, registry, *, now_iso, mode="strict", trust=None, all
     sources = {s["source_id"]: s for s in assessment["sources"]}
     for source_id, source in sources.items():
         record = registry.by_id.get(source_id)
-        ok = record is not None and _digest(record) == source["evidence_sha256"]
-        result["source_status"][source_id] = "digest_ok" if ok else "digest_mismatch_or_unknown"
-    # S7.1: evidence_digest is the digest of the union manifest of the cited records. It can only be recomputed
-    # from records this verifier holds, so a cited source it cannot reproduce makes the digest unverifiable.
-    if any(status != "digest_ok" for status in result["source_status"].values()) or             assessment["evidence_digest"] != evidence_digest([registry.by_id[sid] for sid in sources]):
+        if record is None:
+            # A source this verifier holds no independent record for (e.g. a real server's own observations): it can
+            # neither be confirmed nor refuted, so it supports nothing - no finding may rest on it.
+            result["source_status"][source_id] = "unverifiable_unknown_source"
+        else:
+            result["source_status"][source_id] = "digest_ok" if _digest(record) == source["evidence_sha256"] else "digest_mismatch"
+    if "digest_mismatch" in result["source_status"].values():
+        return discard("evidence_digest_mismatch")  # a known record whose digest the server misstated
+    # S7.1: evidence_digest is the digest of the union manifest of the cited records. It can only be recomputed when
+    # every cited record is held here; otherwise it stays unverified (and verified_evidence below stays empty for it).
+    result["evidence_digest_verified"] = all(s == "digest_ok" for s in result["source_status"].values())
+    if result["evidence_digest_verified"] and (
+            assessment["evidence_digest"] != evidence_digest([registry.by_id[sid] for sid in sources])):
         return discard("evidence_digest_mismatch")
     result["verified_evidence"] = sorted(
         sid for sid, status in result["source_status"].items()

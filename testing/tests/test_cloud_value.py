@@ -176,6 +176,29 @@ class Verifier(unittest.TestCase):
             body["sources"][0]["evidence_sha256"] = "0" * 64
         self.assertEqual(self.check(self.resign(hash_lie))["discard_reason"], "evidence_digest_mismatch")
 
+    def test_a_source_the_verifier_cannot_check_is_accepted_but_supports_nothing(self):
+        """A real server cites its own observations; the verifier holds no independent record for them."""
+        def foreign(body):
+            ghost = "solana-genesis-" + "0" * 40
+            body["sources"] = [dict(body["sources"][0], source_id=ghost, evidence_sha256="1" * 64)]
+            body["evidence_digest"] = "2" * 64
+            for finding in body["findings"]:
+                finding["evidence_refs"] = [ghost]
+                finding["enforcement"] = "hard_deny"
+        verification = self.check(self.resign(foreign))
+        self.assertTrue(verification["accepted"], verification["discard_reason"])
+        self.assertFalse(verification["evidence_digest_verified"])
+        self.assertEqual(verification["verified_evidence"], [])
+        self.assertEqual(verification["findings_accepted"], [], "no finding may rest on an unverifiable source")
+        self.assertEqual(verification["source_status"], {"solana-genesis-" + "0" * 40: "unverifiable_unknown_source"})
+        self.assertEqual(rules.combine("UNKNOWN", verification), "UNKNOWN")
+        self.assertEqual(rules.combine("WARN", verification), "WARN")
+
+    def test_a_known_record_with_a_misstated_digest_is_still_discarded(self):
+        def lie(body):
+            body["sources"][0]["evidence_sha256"] = "f" * 64
+        self.assertEqual(self.check(self.resign(lie))["discard_reason"], "evidence_digest_mismatch")
+
     def test_blind_trust_mode_shows_the_harm(self):
         inp = INPUTS[first("fp_stale_retracted")]
         naive = rs.ReferenceCloudServer(CV / "evidence", "naive").assess(inp["cloud_request"], NOW)
