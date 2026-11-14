@@ -11,6 +11,7 @@ pub mod proto_policy;
 pub mod quote;
 pub mod report;
 mod strict_json;
+pub mod transport;
 pub mod trust;
 pub mod wire;
 
