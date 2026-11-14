@@ -9,6 +9,7 @@ publish = false
 hguet-core = { path = "../hguet-core" }
 hguet-policy = { path = "../hguet-policy" }
 hguet-rpc = { path = "../hguet-rpc" }
+hguet-signer = { path = "../hguet-signer" }
 serde_json = "1"
 base64 = "0.22"
 bs58 = "0.5"
