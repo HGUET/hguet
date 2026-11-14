@@ -293,6 +293,23 @@ mod tests{
         assert!(!r.automated_signing_permitted);
     }
     #[test]
+    fn mint_only_and_source_only_caps_are_never_conflated(){
+        let p=tx();
+        let d=inspect_direct_tokens(&p,None).unwrap();
+        let mut i=intent(&p);
+        i.token_source_limits=None;
+        let mint_only=assess_signing_boundary(&p,Some(&i),Some(&d),None);
+        assert!(mint_only.direct_mint_declaration_bound_checked);
+        assert!(!mint_only.direct_source_declaration_bound_checked);
+        assert!(!mint_only.automated_signing_permitted);
+        i.token_source_limits=intent(&p).token_source_limits;
+        i.token_spend_limits=None;
+        let source_only=assess_signing_boundary(&p,Some(&i),Some(&d),None);
+        assert!(!source_only.direct_mint_declaration_bound_checked);
+        assert!(source_only.direct_source_declaration_bound_checked);
+        assert!(!source_only.automated_signing_permitted);
+    }
+    #[test]
     fn empty_signed_mint_cap_still_blocks_checked_token_transfer(){
         let p=tx();let direct=inspect_direct_tokens(&p,None).unwrap();
         let mut i=intent(&p);
