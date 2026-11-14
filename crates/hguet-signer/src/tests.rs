@@ -16,21 +16,11 @@ fn request<'a>(raw:&'a [u8],intent:Option<&'a SignedPaymentIntent>,
         network:"devnet",now_unix:1_700_000_000,
     }
 }
-#[derive(Default)]
-struct TrapSigner{calls:usize}
-impl SignerBackend for TrapSigner{
-    fn sign_transaction(&mut self,_:&[u8])->Result<Vec<u8>,String>{
-        self.calls+=1;
-        panic!("hardware signer port unexpectedly invoked");
-    }
-}
 #[test]
 fn verified_intent_and_both_caps_still_cannot_sign(){
     let (wire,intent)=payload();
-    let mut trap=TrapSigner::default();
-    let result=guarded_sign(&mut trap,request(&wire,Some(&intent),Some(PIN)))
+    let result=guarded_sign(request(&wire,Some(&intent),Some(PIN)))
         .unwrap_err();
-    assert_eq!(trap.calls,0);
     assert_eq!(result.signing_gate,"block");
     assert!(!result.signing_permitted);
     assert!(!result.signer_backend_invoked);
@@ -76,27 +66,25 @@ fn mutating_original_wire_invalidates_exact_message_intent(){
 }
 #[test]
 fn expired_intent_or_wrong_network_never_invokes_signer(){
-    let (wire,intent)=payload();let mut device=TrapSigner::default();
+    let (wire,intent)=payload();
     let mut expired=request(&wire,Some(&intent),Some(PIN));
     expired.now_unix=4_102_444_800;
-    assert_eq!(guarded_sign(&mut device,expired).unwrap_err().reason_code,
+    assert_eq!(guarded_sign(expired).unwrap_err().reason_code,
         "SIGNED_INTENT_VERIFICATION_FAILED");
     let mut wrong=request(&wire,Some(&intent),Some(PIN));
     wrong.network="mainnet";
-    assert_eq!(guarded_sign(&mut device,wrong).unwrap_err().reason_code,
+    assert_eq!(guarded_sign(wrong).unwrap_err().reason_code,
         "SIGNED_INTENT_VERIFICATION_FAILED");
-    assert_eq!(device.calls,0);
 }
 #[test]
 fn malformed_wire_or_missing_intent_never_reaches_backend(){
-    let (wire,intent)=payload();let mut device=TrapSigner::default();
+    let (wire,intent)=payload();
     let bad=[255u8;32];
-    let malformed=guarded_sign(&mut device,request(&bad,Some(&intent),Some(PIN))).unwrap_err();
+    let malformed=guarded_sign(request(&bad,Some(&intent),Some(PIN))).unwrap_err();
     assert_eq!(malformed.reason_code,"MALFORMED_OR_UNSUPPORTED_TRANSACTION");
     assert!(malformed.original_message_sha256.is_none());
-    let absent=guarded_sign(&mut device,request(&wire,None,Some(PIN))).unwrap_err();
+    let absent=guarded_sign(request(&wire,None,Some(PIN))).unwrap_err();
     assert_eq!(absent.reason_code,"SIGNED_INTENT_MISSING");
-    assert_eq!(device.calls,0);
 }
 #[test]
 fn nonzero_invalid_transaction_signature_is_rejected(){
