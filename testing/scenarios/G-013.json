@@ -1,0 +1,61 @@
+{
+  "build_spec": {},
+  "category": "token_transfer",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-013",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0wMTMiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJhNDU4ZDZhYmFjNWU1YjI4MzZkYmE3NjZkNDYwNDNjOTAwMzA0Y2RmZGYzYjgwZjQ2MTRhYjQxOGRmZTUzZWM3Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbnpRZEJOYkxxUDVWRWhka0FTNkVQRkxDMVBIbkJxQ1hFcFB4dUViIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjEwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiIxMDAwIn1dfQ==",
+      "signature_b58": "2QB5hzdexHYauzXyuAzj4QST2PQNjVwsBz3pHKfoHe3Aa6oUKKWpG53kWNQc2e4VDvoZfLTvEDJcg4EpZsXqwehF",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "a458d6abac5e5b2836dba766d46043c900304cdfdf3b80f4614ab418dfe53ec7",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh7nWP3hhCXbzkbM3athr8TYO5DSf+vfko2KGL/MnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQQEAQMCAAoMLAEAAAAAAAAG",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Token-2022 program with a plain TransferChecked of 300 under cap 1000.",
+  "smoke": false,
+  "title": "Token-2022 checked transfer below the signed cap",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

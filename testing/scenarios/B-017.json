@@ -1,0 +1,46 @@
+{
+  "build_spec": {},
+  "category": "token_source",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED",
+        "SIGNED_INTENT_SOURCE_SCOPE_INVALID"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-017",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0wMTciLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJhMmFlM2YwM2E0MmNjZTQ2MDMzNTFmNTNiNDBhZGI4MWMyYjNmNTQzMmM2Y2Q0M2RhOTZlYjkzM2NmMGNhMzY4Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjEwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwMCJ9XX0=",
+      "signature_b58": "4WtFU35Sgt1Yt4x15B9H3h74L9ANT1DLJDHKqVbReWkzzF6bdUYCMEBf2GdquLkVJGCgwY56yBFpTMsRTuWX4cf9",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "a2ae3f03a42cce4603351f53b40adb81c2b3f5432c6cd43da96eb933cf0ca368",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgECBjiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplAY+rveHO2gYDtOAmICkuQwu5u55B5aZBnz9lsUFw77ju2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQUEAgQDAQoMBQAAAAAAAAAG",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Source scope names the payer as authority; the instruction uses a different signer.",
+  "smoke": false,
+  "title": "Debit authority differs from the signed authority",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

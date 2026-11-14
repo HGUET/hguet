@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "evidence_gap",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_UNVERIFIED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-001",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQwCAAAA6AMAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "No intent and no pinned issuer key: nothing independent states what is allowed.",
+  "smoke": true,
+  "title": "Payment with no authorisation evidence",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

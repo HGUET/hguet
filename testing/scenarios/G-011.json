@@ -1,0 +1,61 @@
+{
+  "build_spec": {},
+  "category": "token_transfer",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-011",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0wMTEiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiIzZTg2Mjk3OWU3OGJmOTNhYTRkNmM5YmJmNTE4NjUxYWY3MWUzYzMwMjBlYzE4Y2I1ZmQ2ZDE3NTgxYjRhNGEyIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjEwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiIxMDAwIn1dfQ==",
+      "signature_b58": "2kgcpfrxenZ8WvmvcwXJw4yM1Rm3orScsksQhFFpNfS1TZSm23FTHKMWkK7BdUcbDAgWBukQDewCE6QGrTGc3bV3",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "3e862979e78bf93aa4d6c9bbf518651af71e3c3020ec18cb5fd6d17581b4a4a2",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQQEAQMCAAoM9AEAAAAAAAAG",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "500 <= 1000 signed cap.",
+  "smoke": false,
+  "title": "SPL transfer below the signed mint cap",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

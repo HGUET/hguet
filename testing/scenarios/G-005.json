@@ -1,0 +1,63 @@
+{
+  "build_spec": {
+    "cap": "5000"
+  },
+  "category": "sol_transfer",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-005",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0wMDUiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiIzODAyYmQyNmNiMDViNTRmMTQ3OTlhN2QxZWExMGUxYjY2MGIzZDIxMzUwNDQ0ZmU2ZWRkMjA0MmFhMzU2MjgyIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJNZW1vU3E0Z3FBQkFYS2I5NnFuSDhUeXNOY1d4TXlXQ3FYZ0RMR21mY0hyIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAifQ==",
+      "signature_b58": "57sTavGxCcjktWPEZbpuKKBr8wr6TzJiY4DUhLa1TJqXd1izt6ZNoK4R38mRWy91X6vsPuwrBDvV6LyF22uJrSee",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "3802bd26cb05b54f14799a7d1ea10e1b660b3d21350444fe6edd2042aa356282",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIEOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngVKU1qZKSEGTSTocWDaOHx8NbXdvJK7geQfqEBBBUSNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwICAQAMaW52b2ljZS00NzExAwIAAQwCAAAAhAMAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Memo program adds a reference string; no value movement; allowlisted.",
+  "smoke": false,
+  "title": "SOL payment with a memo",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

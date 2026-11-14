@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "alt",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-004",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0wMDQiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI4ZjhkNzNhNGFmNWEzMTExNzgxMzk2OTA4Yjc1NWE2NjExNDYyODU0ZTNhNjA5MDQxNzY1N2VkMzRkZjJlN2FjIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "2DmmCUUAXq1JZacAGLyMTMMQFEprbjkWHk57gNfHppc7Ta8bvWWL8rBXJK7nz2rAR7q9jUX1fNWCit19XF2TExss",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "8f8d73a4af5a3111781396908b755a6611462854e3a6090417657ed34df2e7ac",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABAjiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwEBAgACDAIAAADoAwAAAAAAAAFJFsZNscSONBJCH369mHOF/WuOIQ2ILnjnJxf7YutaCAEAAA==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The issuer authorised something, but who is paid is unresolved: neither safe nor provably bad. A tool that answers DENY here claims knowledge it does not have (UNKNOWN != DENY).",
+  "smoke": true,
+  "title": "v0 transfer with unresolved lookup table AND a valid intent",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}
