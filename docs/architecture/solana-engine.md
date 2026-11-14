@@ -128,6 +128,12 @@ Implement in audited increments with golden fixtures:
 
 For **every** debit or authority change, include the actual effected account, owner when known, mint and base units, plus source evidence. `transferChecked` mint/decimals help validation but are not substitutes for verified mint metadata. Do not treat displayed decimal amounts as authoritative integer amounts.
 
+### Local signer port integration — interface only, permanently blocked
+
+An isolated workspace crate, `hguet-signer`, offers `SignerRequest`, `SignerRefusal` and a placeholder `SignerBackend` trait. Its local preflight independently reparses original Solana transaction bytes, verifies an exact-message PaymentIntent signature with a separately pinned public key, and recomputes the block-only `SigningBoundary`. The sole gateway method `guarded_sign` returns `Result<Infallible,SignerRefusal>`: **no successful result exists and the backend is never called**. There is no key storage, wallet SDK, signing implementation or broadcast path.
+
+The CLI command `signer-preflight` requires `--offline`, `--intent` and `--trusted-key`, rejects `--rpc-url`, and returns a block-only refusal. The unreleased CLI-only `signer-refusal.schema.json` prohibits claims of approval, device invocation or transaction broadcast. This is not an enforced production signing perimeter: a consumer could call unrelated signer APIs outside HGUET, and execution-time spending enforcement remains unsolved.
+
 ## 5. What Transaction X-Ray must display
 
 ```text
