@@ -1,5 +1,6 @@
 name: "PQ interoperability (ML-DSA-87 known answers, protocol harness)"
 on:
+  pull_request:
   workflow_dispatch:
   push:
     branches: [main]
@@ -7,6 +8,9 @@ on:
       - "testing/cloud-value/**"
       - "testing/tests/**"
       - "protocol/**"
+      - "crates/hguet-cloud/**"
+      - ".github/workflows/pq-interop.yml"
+      - "Cargo.lock"
 permissions:
   contents: read
 jobs:
@@ -22,7 +26,7 @@ jobs:
       - name: Install tools
         run: |
           apt-get update -qq
-          apt-get install -y -qq python3 python3-jsonschema python3-yaml openssl git ca-certificates
+          apt-get install -y -qq python3 python3-jsonschema python3-yaml openssl git ca-certificates curl build-essential
           openssl version
           openssl list -signature-algorithms | grep -i ml-dsa-87
       - uses: actions/checkout@v4
@@ -32,3 +36,9 @@ jobs:
           python3 -m unittest discover -s testing/tests -v > /tmp/out.txt 2>&1 || { tail -80 /tmp/out.txt; exit 1; }
           tail -6 /tmp/out.txt
           if grep -q "skipped" /tmp/out.txt; then echo "::error::a test was skipped; ML-DSA coverage is unverified"; grep -E "skipped|SKIP" /tmp/out.txt | head; exit 1; fi
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+      - name: Rust signed payload and real TLS profile tests (backend mandatory)
+        run: cargo test -p hguet-cloud --locked --test transport_loopback --test paid_check_signed -- --ignored --nocapture

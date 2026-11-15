@@ -85,12 +85,16 @@ def run_local(hguet, inputs, outdir, rpc_url=None):
     commands = rb.build_commands(hguet, scenario, files, rpc_url)
     run = rb.execute(commands["check"])
     out = run["stdout_json"] if isinstance(run["stdout_json"], dict) else {}
-    verdict = out.get("verdict") or {}
-    decision = verdict.get("decision", "ERROR")
-    return {"decision": decision, "findings": [f.get("code") for f in verdict.get("findings", [])],
+    problems = rb.response_errors(run)
+    verdict = out.get("verdict") if isinstance(out.get("verdict"), dict) else {}
+    boundary = out.get("signing_boundary")
+    blocked = (isinstance(boundary, dict) and boundary.get("signing_gate") == "block"
+               and boundary.get("automated_signing_permitted") is False)
+    return {"decision": verdict.get("decision", "ERROR") if not problems else "ERROR",
+            "findings": [f["code"] for f in verdict.get("findings", [])] if not problems else [],
             "rc": run["rc"], "seconds": run["seconds"], "repro": rb.repro_command(commands["check"]),
-            "signing_blocked": run["rc"] != 0 and (out.get("signing_boundary") is None or
-                                                   out["signing_boundary"].get("automated_signing_permitted") is False)}
+            "errors": problems, "signing_blocked": blocked if boundary is not None else None}
+
 
 
 # ---------------------------------------------------------------- cloud config
@@ -324,6 +328,15 @@ def main():
         local[sid] = run_local(hguet, inp, out)
         with rpc_mock.MockRpc("closed_port") as mock:
             rpc_dec[sid] = run_local(hguet, inp, out / "rpc", mock.url)
+    measurement_errors = [{"source": source, "id": sid, "errors": row["errors"]}
+                          for source, rows in (("local", local), ("rpc", rpc_dec))
+                          for sid, row in rows.items() if row["errors"]]
+    if measurement_errors:
+        # A broken baseline cannot be used to claim Cloud uplift.
+        report = {"status": "invalid_measurement", "errors": measurement_errors}
+        (out / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print("ERROR: invalid CLI measurements; Cloud scoring was not performed")
+        return 1
     local_decisions = {sid: v["decision"] for sid, v in local.items()}
     configs, metrics = {}, {}
     for profile in MOCK_PROFILES:
@@ -374,7 +387,7 @@ def main():
         "independent_proof": proof_section,
         "categories": category_table(inputs, truths, local, configs),
         "labeling_quality": independent_labeler.run(),
-        "signing_blocked_all_local": all(v["signing_blocked"] for v in local.values()),
+        "signing_blocked_all_local": all(v["signing_blocked"] is True for v in local.values()),
         "scenarios": [{"id": sid, "category": truths[sid]["category"], "kind": truths[sid]["kind"],
                        "label": truths[sid]["label"], "local_decision": local[sid]["decision"],
                        "local_findings": local[sid]["findings"], "repro": local[sid]["repro"],
@@ -411,7 +424,8 @@ def main():
         report["labeling_quality"]["human_review_status"][:40]))
     print("  report: %s" % (out / "report.html"))
     any_allow = any(m["allow_created"]["num"] for m in metrics.values())
-    return 1 if (any_allow or not report["signing_blocked_all_local"]) else 0
+    return 1 if (any_allow or any(v["signing_blocked"] is False
+                               for rows in (local, rpc_dec) for v in rows.values())) else 0
 
 
 if __name__ == "__main__":

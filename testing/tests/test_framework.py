@@ -211,7 +211,9 @@ class RunnerIsNotVacuous(unittest.TestCase):
                      "    print(json.dumps({'signer_refusal':{'signing_gate':'block','signing_permitted':False,"
                      "'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False}}))\n"
                      "    sys.exit(20)\n"
-                     "print(json.dumps({'verdict':verdict('UNKNOWN')}))\n"
+                     "from pathlib import Path\n"
+                     "hashes=" + repr({x["id"]: x["input"]["message_sha256_independent"] for x in SCENARIOS}) + "\n"
+                     "print(json.dumps({'verdict':verdict('UNKNOWN'),'inspection':{'message_sha256':hashes[Path(sys.argv[2]).parent.name]}}))\n"
                      "sys.exit(30)\n")
 
             def run(known):
@@ -227,7 +229,8 @@ class RunnerIsNotVacuous(unittest.TestCase):
             failing = [r["id"] for r in report["results"] if r["outcome"] == "FAIL"]
             self.assertTrue(failing)
             self.assertEqual(code, 1)
-            code, report = run({sid: {"defect": "X"} for sid in failing})
+            code, report = run({r["id"]: {"defect": "X", "failure_type": r["failure_type"]}
+                                for r in report["results"] if r["outcome"] == "FAIL"})
             self.assertEqual(report["totals"]["FAIL"], 0)
             self.assertEqual(report["totals"]["XFAIL"], len(failing))
             # (exit status also reflects the Cloud reference rules, which a fake tool can violate)
@@ -335,7 +338,8 @@ class SchemaAndContract(unittest.TestCase):
         self.assertTrue(rb.schema_errors(dict(self.GOOD, schema_version=True), rb.VERDICT_SCHEMA))
 
     def test_malformed_findings_are_reported_without_crashing(self):
-        scenario = next(x for x in SCENARIOS if x["id"] == "U-004")
+        scenario = json.loads(json.dumps(next(x for x in SCENARIOS if x["id"] == "U-004")))
+        scenario["input"]["message_sha256_independent"] = None
         for value in (None, 1, "bad", [None], [{"code": []}]):
             result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {
                 "verdict": dict(self.GOOD, findings=value)}, "stderr": ""}, None)
@@ -353,7 +357,8 @@ class SchemaAndContract(unittest.TestCase):
             self.assertLessEqual(emitted, published, "%s values missing from the public schema" % field)
 
     def test_schema_violation_and_wrong_exit_code_fail_a_scenario(self):
-        scenario = next(x for x in SCENARIOS if x["id"] == "U-004")
+        scenario = json.loads(json.dumps(next(x for x in SCENARIOS if x["id"] == "U-004")))
+        scenario["input"]["message_sha256_independent"] = None
         verdict = dict(self.GOOD, intent_status="invented_status")
         result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {"verdict": verdict}, "stderr": ""}, None)
         self.assertEqual(result["failure_type"], "public_schema_violation")
@@ -377,6 +382,57 @@ class SchemaAndContract(unittest.TestCase):
                 command = rb.build_commands("hguet", scenario, files, None)["check"]
                 self.assertNotIn("--intent", command)
                 self.assertEqual(command[command.index("--encoding") + 1], encoding)
+
+
+class AuditRegressions(unittest.TestCase):
+    def test_warn_is_not_unknown_and_missing_hash_is_not_agreement(self):
+        scenario = next(x for x in SCENARIOS if x["id"] == "U-004")
+        for decision, rc, failure in (("WARN", 10, "unacceptable_decision"),
+                                      ("UNKNOWN", 30, "scenario_builder_error")):
+            result = rb.evaluate(scenario, {"rc": rc, "stdout_json": {
+                "verdict": dict(SchemaAndContract.GOOD, decision=decision)}, "stderr": ""}, None)
+            self.assertEqual(result["failure_type"], failure)
+            self.assertIsNone(result["invariants"]["gate_blocks"])
+
+    def test_bad_wrapper_objects_and_refusal_do_not_crash(self):
+        scenario = SCENARIOS[0]
+        for field in ("inspection", "signing_boundary"):
+            for value in ([1], True, "bad", 5):
+                result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {
+                    "verdict": SchemaAndContract.GOOD, field: value}, "stderr": ""}, None)
+                self.assertEqual(result["failure_type"], "public_schema_violation")
+        result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {
+            "verdict": SchemaAndContract.GOOD}, "stderr": ""}, {"rc": 20, "stdout_json": [1]})
+        self.assertFalse(result["invariants"]["signer_preflight_blocks"])
+
+    def test_malformed_inspection_produces_a_failed_report(self):
+        import tempfile
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            stub = make_stub(tmp, "print(json.dumps({'verdict':verdict('UNKNOWN'),'inspection':[1]}))\n"
+                                  "sys.exit(30)\n")
+            directory = Path(tmp) / "scenarios"
+            directory.mkdir()
+            scenario = json.loads(json.dumps(SCENARIOS[0]))
+            scenario["input"]["intent"] = None
+            (directory / "case.json").write_text(json.dumps(scenario))
+            out = Path(tmp) / "out"
+            done = subprocess.run([sys.executable, str(TESTING / "runner/run_benchmark.py"),
+                                   "--hguet", str(stub), "--scenarios", str(directory), "--out", str(out)],
+                                  capture_output=True, text=True)
+            self.assertEqual(done.returncode, 1, done.stderr)
+            report = json.loads((out / "report.json").read_text())
+            self.assertEqual(report["totals"]["FAIL"], 1)
+            self.assertEqual(report["results"][0]["failure_type"], "public_schema_violation")
+
+    def test_scenario_schema_and_empty_selection(self):
+        import tempfile
+        self.assertEqual(len(rb.load_scenarios([TESTING / "scenarios", TESTING / "scenarios-regression"], "all")),
+                         len(SCENARIOS) + len(REGRESSION))
+        with tempfile.TemporaryDirectory() as tmp:
+            for path in (Path(tmp), Path(tmp) / "missing"):
+                with self.assertRaises(ValueError):
+                    rb.load_scenarios([path], "all")
 
 
 if __name__ == "__main__":

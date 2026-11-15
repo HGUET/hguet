@@ -370,3 +370,37 @@ fn a_fully_verified_wallet_signature_is_reported_separately_from_owner_proof() {
     assert!(!review.token_account_owner_verified);
     assert!(!review.total_spending_proven);
 }
+
+#[test]
+fn coverage_gaps_never_hide_independent_signed_limit_violations() {
+    for amount in [100, 101] {
+        for opcode in [5, 17, 255] {
+            for reverse in [false, true] {
+                let mut ops = vec![
+                    (false, checked(12, amount), vec![1, 3, 2, 0]),
+                    (false, vec![opcode], vec![1, 0]),
+                ];
+                if reverse {
+                    ops.reverse();
+                }
+                let tx = wire(&ops);
+                // The mint cap allows both amounts, while the independent source cap does not.
+                let mut intent = payload(&tx, Some(vec![capped(4, "1000")]));
+                intent.token_source_limits = Some(vec![TokenSourceLimit {
+                    mint: key(4),
+                    source_token_account: key(2),
+                    authority: key(1),
+                    max_debit_raw: "100".into(),
+                }]);
+                let (signed, pin) = sign(&intent);
+                let failure =
+                    verify_intent_detailed(&signed, &pin, "devnet", &tx, 101).unwrap_err();
+                assert_eq!(
+                    matches!(failure, IntentFailure::Violation { .. }),
+                    amount > 100,
+                    "amount={amount}, opcode={opcode}, reverse={reverse}: {failure:?}"
+                );
+            }
+        }
+    }
+}

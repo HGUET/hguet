@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-147",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xNDciLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJkOWI5NWU5NTI2YTlhZWE1ODM1N2QxNjZmYmY0Mzg1YTAwMGNlYWJhMTBkMjFmODkxMWE4NDQzYmYwNDgxZjJhIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwIn1dfQ==",
+      "signature_b58": "2aNbKud5VLseD3QWLsjzRb93kaZWhraARNRkZSFByfbTYA2pE5eskLAGwckRJLmPHb4V9JYj7LShYY2z6pwEc2MM",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "d9b95e9526a9aea58357d166fbf4385a000ceaba10d21f8911a8443bf0481f2a",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAgQEAQMCAAoMZQAAAAAAAAAGBAIBAAEF",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Known debit 101 exceeds cap 100 despite a coverage gap; debit 100 proves no violation. Instruction order cannot erase an already visible overage.",
+  "smoke": false,
+  "title": "source cap with gap opcode 5, reversed=False, amount=101",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

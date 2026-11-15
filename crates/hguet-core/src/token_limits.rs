@@ -53,8 +53,9 @@ fn canonical_raw(s: &str) -> Option<u64> {
 pub(crate) struct CheckedDirectDebit {
     pub token_program: String,
     pub mint: String,
-    pub source_token_account: String,
-    pub authority: String,
+    pub source_token_account: Option<String>,
+    pub authority: Option<String>,
+    pub authority_is_required_signer: bool,
     pub amount_raw: u64,
     pub account_count: usize,
     pub exact_single_authority_count: usize,
@@ -67,9 +68,10 @@ pub(crate) struct CheckedDirectDebit {
 pub(crate) fn checked_direct_debits(
     parsed: &ParsedTransaction,
     defer_account_control: bool,
-) -> Result<Vec<CheckedDirectDebit>, ReviewFailure> {
+) -> Result<(Vec<CheckedDirectDebit>, Option<ReviewFailure>), ReviewFailure> {
+    let mut gap = None;
     if parsed.unresolved_lookup_addresses > 0 {
-        return Err(ReviewFailure::coverage(
+        gap = Some(ReviewFailure::coverage(
             "ALT_UNRESOLVED",
             "unresolved ALT addresses cannot establish signed token debit coverage",
         ));
@@ -85,15 +87,18 @@ pub(crate) fn checked_direct_debits(
     let mut result = Vec::new();
     for (i, ix) in parsed.compiled_top_level_instructions.iter().enumerate() {
         if ix.instruction_index != i
-            || ix.program_index >= parsed.static_account_keys.len()
+            || ix.program_index >= parsed.total_address_count
             || ix
                 .account_indices
                 .iter()
-                .any(|&n| n >= parsed.static_account_keys.len())
+                .any(|&n| n >= parsed.total_address_count)
         {
             return Err(ReviewFailure::violation(
                 "original token instruction references an invalid account",
             ));
+        }
+        if ix.program_index >= parsed.static_account_keys.len() {
+            continue; // The ALT gap was recorded above; other instructions remain inspectable.
         }
         let program = &parsed.static_account_keys[ix.program_index];
         if parsed.program_ids[i] != *program {
@@ -105,19 +110,25 @@ pub(crate) fn checked_direct_debits(
             continue;
         }
         if ix.data_base58.len() > 1024 {
-            return Err(ReviewFailure::coverage(
-                "UNSUPPORTED_TOKEN_INSTRUCTION",
-                "direct token instruction data exceeds signed cap decoder bound",
-            ));
+            gap.get_or_insert_with(|| {
+                ReviewFailure::coverage(
+                    "UNSUPPORTED_TOKEN_INSTRUCTION",
+                    "direct token instruction data exceeds signed cap decoder bound",
+                )
+            });
+            continue;
         }
         let bytes = bs58::decode(&ix.data_base58).into_vec().map_err(|_| {
             ReviewFailure::violation("invalid direct token instruction Base58 data")
         })?;
         if bytes.len() > MAX_INSTRUCTION_BYTES {
-            return Err(ReviewFailure::coverage(
-                "UNSUPPORTED_TOKEN_INSTRUCTION",
-                "direct token instruction data exceeds signed cap decoder bound",
-            ));
+            gap.get_or_insert_with(|| {
+                ReviewFailure::coverage(
+                    "UNSUPPORTED_TOKEN_INSTRUCTION",
+                    "direct token instruction data exceeds signed cap decoder bound",
+                )
+            });
+            continue;
         }
         // SetAuthority (6) and CloseAccount (9) are account-CONTROL operations, not
         // debits: crate::intent_scope::review_account_control judges them against the
@@ -148,33 +159,40 @@ pub(crate) fn checked_direct_debits(
                     .map_err(|_|ReviewFailure::violation("invalid Token-2022 fee transfer amount"))?);
                 (1,3,raw,4)
             },
-            _=>return Err(match classify_unbounded(bytes.first().copied()) {
-                Unbounded::OutOfScope => ReviewFailure::violation(
-                    "direct token instruction cannot be bounded by signed mint debit limits (unchecked, authority, opaque or malformed operation)"),
-                Unbounded::Coverage(reason) => ReviewFailure::coverage(reason,
-                    "direct token instruction is administrative, unsupported or opaque and is not covered by signed token limits; no violation is proven"),
-            }),
+            _ => match classify_unbounded(bytes.first().copied()) {
+                Unbounded::OutOfScope => return Err(ReviewFailure::violation(
+                    "direct token instruction cannot be bounded by signed mint debit limits (unchecked, authority, opaque or malformed operation)")),
+                Unbounded::Coverage(reason) => {
+                    gap.get_or_insert_with(|| ReviewFailure::coverage(reason,
+                        "direct token instruction is administrative, unsupported or opaque and is not covered by signed token limits; no violation is proven"));
+                    continue;
+                }
+            },
         };
+        // Mint-wide amounts remain known even if source/destination/authority use ALT.
+        // Keep unresolved roles explicit for the independent source review.
         let key = |role: usize| {
             parsed
                 .static_account_keys
                 .get(ix.account_indices[role])
-                .ok_or_else(|| {
-                    ReviewFailure::violation("direct token account index outside message")
-                })
                 .cloned()
+        };
+        let Some(mint) = key(mint_role) else {
+            continue;
         };
         result.push(CheckedDirectDebit {
             token_program: program.clone(),
-            mint: key(mint_role)?,
-            source_token_account: key(0)?,
-            authority: key(auth_role)?,
+            mint,
+            source_token_account: key(0),
+            authority: key(auth_role),
+            authority_is_required_signer: ix.account_indices[auth_role]
+                < parsed.required_signatures,
             amount_raw: amount,
             account_count: ix.account_indices.len(),
             exact_single_authority_count: expected_count,
         });
     }
-    Ok(result)
+    Ok((result, gap))
 }
 
 pub fn review_declared_token_limits(
@@ -214,7 +232,7 @@ fn review_token_limits_impl(
         }
         caps.insert(cap.mint.clone(), limit);
     }
-    let debits = checked_direct_debits(parsed, defer_account_control)?;
+    let (debits, gap) = checked_direct_debits(parsed, defer_account_control)?;
     let mut totals = BTreeMap::<String, u128>::new();
     for debit in &debits {
         let cap = caps
@@ -230,6 +248,9 @@ fn review_token_limits_impl(
             return Err("declared direct token debits exceed signed per-mint max_debit_raw".into());
         }
         totals.insert(debit.mint.clone(), new);
+    }
+    if let Some(gap) = gap {
+        return Err(gap);
     }
     Ok(TokenSpendLimitReview{
         debits:totals.into_iter().map(|(mint,amount)|DeclaredMintDebit{

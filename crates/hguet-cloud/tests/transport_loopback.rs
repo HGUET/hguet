@@ -1,5 +1,5 @@
 //! The strict transport against real `openssl s_server` peers on loopback (OpenSSL >= 3.5, ML-DSA-87 certificate).
-//! Skipped when OpenSSL cannot do ML-DSA-87 unless HGUET_REQUIRE_PQ_TLS is set. No external host is contacted.
+//! Explicitly ignored in default runs; mandatory with --ignored in PQ CI. No external host is contacted.
 
 use hguet_cloud::transport::{exchange, TlsProfile};
 use hguet_cloud::wire::{encode_frame, envelope_with, v1};
@@ -34,10 +34,6 @@ fn make_identity(dir: &Path, name: &str) -> Option<(PathBuf, PathBuf)> {
         .output();
     match generated {
         Ok(output) if output.status.success() => {}
-        _ if std::env::var_os("HGUET_REQUIRE_PQ_TLS").is_none() => {
-            eprintln!("ML-DSA-87 unavailable; transport loopback tests skipped");
-            return None;
-        }
         _ => panic!("ML-DSA-87 is required but unavailable"),
     }
     #[cfg(unix)]
@@ -136,6 +132,7 @@ fn finish(mut peer: Child) {
 }
 
 #[test]
+#[ignore = "requires OpenSSL ML-DSA-87; mandatory in the PQ interoperability job"]
 fn the_profile_is_met_and_every_deviation_is_refused() {
     let dir = Dir(std::env::temp_dir().join(format!("hguet-transport-{}", std::process::id())));
     std::fs::create_dir_all(&dir.0).unwrap();

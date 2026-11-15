@@ -10,7 +10,7 @@ python -m pip install -r testing/requirements.txt
 python testing/tools/build_scenarios.py --check        # committed scenarios == generator output
 python -m unittest discover -s testing/tests            # framework self-tests
 python testing/runner/run_benchmark.py --hguet target/debug/hguet                 # the 60 main scenarios
-python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all     # 60 main + 64 regression/coverage
+python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all     # 60 main + 111 regression/coverage
 python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke  # 13, used in CI
 # open testing/reports/latest/report.html   (report.json has every scenario, finding and command)
 ```
@@ -20,7 +20,7 @@ python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke
 | Path | Purpose |
 |------|---------|
 | `scenarios/*.json` | 60 versioned scenarios (`hguet-bench-scenario/1`, schema in `schema/`). 20 GOOD, 25 BAD, 15 UNKNOWN |
-| `scenarios-regression/*.json` | 64 further scenarios: paired regression cases for fixed defects and the coverage extension (v1 wire format, binary/Base58 input, mainnet/testnet, malformed wire structure, partial signatures) |
+| `scenarios-regression/*.json` | 111 further scenarios: paired regression cases for fixed defects and the coverage extension (v1 wire format, binary/Base58 input, mainnet/testnet, malformed wire structure, partial signatures) |
 | `tools/build_scenarios.py` | deterministic generator; **never runs HGUET**; `--check` forbids hand edits |
 | `lib/crypto_tx.py` | dependency-free Solana wire builder (legacy, v0, v1) + RFC 8032 Ed25519 + Base58, written from the public specs |
 | `runner/run_benchmark.py` | runs `hguet check` (and `signer-preflight`), scores, writes JSON + HTML |
@@ -65,7 +65,7 @@ Scenarios are hand-picked inputs. Three Rust test groups state properties for *a
 
 | Where | What it asserts |
 |-------|-----------------|
-| `crates/hguet-core/src/property_tests.rs` | 70,000 random and mutated byte strings never panic and every accepted transaction is self-consistent; a declared amount never shrinks when an instruction is padded; the SOL total equals the sum of the movements built; a signed mint or source cap is accepted exactly when the debits fit; no single-bit change to an intent, its signature or the bound message verifies; cap and validity-window boundaries are exact |
+| `crates/hguet-core/src/property_tests.rs` | 70,000 random and mutated byte strings never panic and every accepted transaction is self-consistent; a declared amount never shrinks when an instruction is padded; the SOL total equals the sum of the movements built; a signed mint or source cap is accepted exactly when the debits fit; sampled single-bit changes to an intent, its signature or the bound message fail verification; cap and validity-window boundaries are exact |
 | `crates/hguet-cli/src/pipeline_tests.rs` | the real `check` pipeline with an injected RPC transport: successful and failed simulation, wrong cluster, lookup-table resolution with a signed intent, hard DENY decided before the provider is contacted, a provider that claims approval, all three input encodings |
 | `crates/hguet-rpc/tests/hostile_provider.rs` | 6,000 mutated provider answers cannot crash the client or produce a permission field; 20,000 arbitrary token instructions are each either recognized or opaque and the signing boundary always blocks |
 
@@ -96,7 +96,7 @@ scenarios are counted and printed. CI runs the 13-scenario smoke set on every pu
 ## Known limits
 
 * ALLOW is structurally unreachable (GOOD scores as UNKNOWN at best; `good_left_unknown` reports it).
-* 124 scenarios still give wide error bars, and every one was written by the same author as the tool's
+* 171 scenarios still give wide error bars, and every one was written by the same author as the tool's
   fixes. Ground truth is not independently reviewed; one label (U-015) has already been found wrong.
 * The v1 builder could not be cross-checked against a validator. Agreement between builder and parser
   proves they match each other, not the network.
@@ -104,3 +104,27 @@ scenarios are counted and printed. CI runs the 13-scenario smoke set on every pu
   on-chain; those appear only as "unknown" or as injected responses.
 * Whether the on-chain programs ignore trailing instruction bytes (the reason padded instructions are
   decoded) was not confirmed against a validator.
+
+
+## Audit regressions (2026-11-15)
+
+The suite now contains 171 scenarios (60 original + 111 regression). New pairs combine
+known token overages with Revoke, SyncNative, opaque instructions and ALT, including an
+ALT destination whose debit roles remain static. Both instruction orders and mint/source
+caps are covered. Known violations must win over coverage gaps.
+
+The runner validates scenario schemas, rejects empty selections and unacceptable decisions,
+and reports missing parser hashes as failures when the builder supplies a digest. An absent
+signing boundary is `null` (unobserved), not a passed gate check. Therefore the explicit
+signing-block evidence count can be lower than the scenario count: early refusals without
+a boundary/preflight are not presented as observed signing-gate evidence. This does not
+change the CLI's BLOCK-only behavior. Reports include raw parsed outputs, binary/scenario
+SHA-256 hashes, dirty-tree state and the full invocation. A known-defect entry must specify
+the exact `failure_type`; infrastructure, schema, digest and signing invariant failures
+cannot be waived.
+
+Cloud Value Benchmark aborts before scoring if any local or RPC CLI measurement violates
+the verdict/exit contract. A broken baseline cannot inflate modeled Cloud uplift.
+Rust PQ integration tests are explicitly ignored in ordinary runs. The PQ workflow runs
+both with `--ignored` in its OpenSSL-capable container; unavailable cryptography then fails
+instead of turning into a reported pass. A successful remote run is still required.

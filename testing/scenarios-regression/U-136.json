@@ -1,0 +1,59 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [
+      [
+        "INTENT_COVERAGE_INCOMPLETE"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-136",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMzYiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI3Y2NmZjU4Nzg0NGViNTZjNzcyNDNhMDY3ZGM3OTRiNWZiMmE5ZjZhZmNlMWY3MzEwZTYwMzdkNjNkNTE3MWRiIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiIxMDAifV19",
+      "signature_b58": "28iweCxYKXyHCB5oc7tYEqEb8vJE2nz4HeuWpBGeCW5B8HUBaj34mgYksYf6b8iFnjB2HPMFL6WeSU3Y2JCqbwxB",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "7ccff587844eb56c77243a067dc794b5fb2a9f6afce1f7310e6037d63d5171db",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBDiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplr/FD7npoojWiIseCynhWTQUgiMhsXD4VQ8SDsZq8EuJaW9ChISLom83Ut6suCxdMU5TDb7vm38TzDiVFFAWyAAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAwQEAgEACgxkAAAAAAAAAAYBAoDUZFtHK6CYpgv9JrDx/6GDzPN/4XWPMEVh8O9ihHUBAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The mint and amount are static: a missing source identity cannot hide a known mint overage.",
+  "smoke": false,
+  "title": "Static mint cap with an ALT source, amount=100",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "UNKNOWN"
+  }
+}

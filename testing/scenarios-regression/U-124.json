@@ -1,0 +1,59 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [
+      [
+        "INTENT_COVERAGE_INCOMPLETE"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-124",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMjQiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiIwNzU2OGEwMDc2MGEzOGM2MGI4OGEwZjllOTMxYTE2MTAwMDBkYzAyZDM0NjA1ODczM2VkNTA1YTQxNWNhZDRiIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwIn1dfQ==",
+      "signature_b58": "4enFXp1UsdrdifckqpLawGX3BN3PD3C5f7CQQ39j98xWee55U9hZzFkL4N3VESMVB6v2ohpdSsB7kpY9vYmjnUXB",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "07568a00760a38c60b88a0f9e931a1610000dc02d346058733ed505a415cad4b",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAgQEAQMCAAoMZAAAAAAAAAAGBAEBAf8=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Known debit 101 exceeds cap 100 despite a coverage gap; debit 100 proves no violation. Instruction order cannot erase an already visible overage.",
+  "smoke": false,
+  "title": "source cap with gap opcode 255, reversed=False, amount=100",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "UNKNOWN"
+  }
+}

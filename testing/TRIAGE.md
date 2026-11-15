@@ -167,3 +167,31 @@ The v1 validator cross-check, Linux runtime checks, first mutation workflow run
 and two independent human reviewers remain outstanding. The new verdict enum
 value is documented as drift from older strict validators, not certified server
 compatibility.
+
+
+## Deep audit fixes (2026-11-15)
+
+Confirmed and fixed: a 101-unit checked token debit under a signed 100-unit cap became
+UNKNOWN after adding Revoke or an unused ALT. Debit collection now retains coverage gaps
+while checking known amounts; independent mint/source reviews and account-control review
+run before returning an ALT gap. An unresolved destination does not hide static debit roles.
+Added 47 paired/adversarial scenarios and a signed-intent unit test where a mint coverage
+gap must not mask an independently violated source cap.
+
+Harness fixes: enforce acceptable_decisions; reject empty/missing suites; validate every
+scenario against its schema (including binary encoding); handle malformed wrapper/refusal
+objects; distinguish absent gate evidence; do not count missing expected hashes as matches.
+Cloud benchmark rejects invalid baseline measurements before running its models. PQ Rust
+tests now report ignored locally and run explicitly in PQ CI. These changes supersede the
+previous claim that the entire Rust pass count represented executed PQ checks.
+
+Independent v1 validator conformance, human review, first mutation run and remote Linux/PQ
+job results are not established by these local changes.
+
+Final local verification (2026-11-16): rebuilt CLI, 171/171 PASS; BAD DENY 89/89,
+UNKNOWN 51/51, false DENY 0/31. Explicit gate/preflight block evidence 154/171;
+17 early responses do not expose that evidence and are no longer counted as observed
+signing gates. Workspace Rust: 257 passed, 2 explicitly ignored PQ integration tests.
+Formatting, clippy with denied warnings, scenario drift and both public schema scripts pass.
+The 100-case real-CLI Cloud report was generated locally; its real-server section remains
+unavailable. No private server, live validator or signing endpoint was used.

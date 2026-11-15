@@ -118,7 +118,7 @@ fn review_source_limits_impl(
             (cap.authority.clone(), limit),
         );
     }
-    let debits = checked_direct_debits(parsed, defer_account_control)?;
+    let (debits, gap) = checked_direct_debits(parsed, defer_account_control)?;
     let mut totals = BTreeMap::<(String, String), u128>::new();
     let mut programs = BTreeMap::<(String, String), String>::new();
     // Multisig-style extra accounts cannot be validated offline. That is missing
@@ -130,10 +130,13 @@ fn review_source_limits_impl(
         let multisig = debit.account_count != debit.exact_single_authority_count;
         if multisig {
             multisig_gap = true;
-        } else if !signers.iter().any(|signer| signer == &debit.authority) {
+        } else if !debit.authority_is_required_signer {
             return Err("direct token instruction authority is not a required signer".into());
         }
-        let key = (debit.mint.clone(), debit.source_token_account.clone());
+        let Some(source) = &debit.source_token_account else {
+            continue;
+        };
+        let key = (debit.mint.clone(), source.clone());
         if let Some(previous) = programs.insert(key.clone(), debit.token_program.clone()) {
             if previous != debit.token_program {
                 return Err("same signed source has incompatible token program identities".into());
@@ -142,7 +145,7 @@ fn review_source_limits_impl(
         let (authority, limit) = signed.get(&key).ok_or(
             "direct token debit source or mint is missing from signed token_source_limits",
         )?;
-        if !multisig && authority != &debit.authority {
+        if !multisig && Some(authority) != debit.authority.as_ref() {
             return Err(
                 "direct token instruction authority disagrees with signed source cap".into(),
             );
@@ -157,6 +160,9 @@ fn review_source_limits_impl(
             return Err("declared direct token debits exceed signed source max_debit_raw".into());
         }
         totals.insert(key, total);
+    }
+    if let Some(gap) = gap {
+        return Err(gap);
     }
     if multisig_gap {
         return Err(ReviewFailure::coverage(

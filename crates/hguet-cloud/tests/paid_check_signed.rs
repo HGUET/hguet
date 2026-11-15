@@ -1,5 +1,5 @@
 //! A whole paid check with real ML-DSA-87 signatures (OpenSSL >= 3.5): receipt + assessment signed by a server key, verified
-//! against a pinned key. Skipped when OpenSSL cannot do ML-DSA-87 unless HGUET_REQUIRE_PQ_SIGNING is set.
+//! against a pinned key. Explicitly ignored in default runs; mandatory with --ignored in PQ CI.
 
 use hguet_cloud::jcs::canonicalize_signed_payload;
 use hguet_cloud::quote::QuoteBindings;
@@ -50,16 +50,13 @@ fn sign(private: &PathBuf, domain: Domain, payload: &[u8], label: &str) -> Vec<u
 }
 
 #[test]
+#[ignore = "requires OpenSSL ML-DSA-87; mandatory in the PQ interoperability job"]
 fn a_signed_receipt_and_assessment_verify_and_every_substitution_is_refused() {
     let generated = Command::new("openssl")
         .args(["genpkey", "-algorithm", "ML-DSA-87"])
         .output();
     let generated = match generated {
         Ok(output) if output.status.success() => output,
-        _ if std::env::var_os("HGUET_REQUIRE_PQ_SIGNING").is_none() => {
-            eprintln!("ML-DSA-87 unavailable; paid-check signing test skipped");
-            return;
-        }
         _ => panic!("ML-DSA-87 is required but unavailable"),
     };
     let private = temp("key.pem", &generated.stdout);

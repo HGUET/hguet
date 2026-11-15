@@ -1,0 +1,59 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT"
+    ],
+    "findings_required": [
+      [
+        "INTENT_COVERAGE_INCOMPLETE"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-135",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMzUiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI3ZDgyNDRjODMzMGVmOGRiY2RjYWNjNWIwZGY3Yzc5MzY1ZWJlYmE2MDg0YmU3NjYzNzQwOTI5OWQwNDM5N2M5Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiIxMDAifV0sInRva2VuX3NvdXJjZV9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsInNvdXJjZV90b2tlbl9hY2NvdW50IjoiSDVORmd5aVhWNm12S3pwQ0tyODhlRDY3cFB2UXdlc0I4QmphV0RCZ3o0elEiLCJhdXRob3JpdHkiOiI0b2J1RTMzZ2E5VWZpeTE3NDRiUDZBVkZyNUNycmZ2ZFJ2dmIyUTZNZXJxeiIsIm1heF9kZWJpdF9yYXciOiIxMDAifV19",
+      "signature_b58": "fLD24paFskRx8D2uyXaK3HsAJfesC3djm31m2Ai9UgN3e5XA5tNxq9ZFWEj7fYfZusXsVDvdERL6t3Bj2XmCyHA",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "7d8244c8330ef8dbcdcacc5b0df7c79365ebeba6084be76637409299d04397c9",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBDiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpl7tlYXvz4h2DMJ4GEaKkE8AoITvSBzMlxyJTCskwR3YVaW9ChISLom83Ut6suCxdMU5TDb7vm38TzDiVFFAWyAAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAwQBAgQACgxkAAAAAAAAAAYBPOy5UOj6NaGm7DLElkTmV0X0Od7DLdAxD2V/j+nej+MBAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The mint, source, authority and amount are static; an unresolved destination does not hide an overage.",
+  "smoke": false,
+  "title": "Known debit with an ALT destination, amount=100",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "UNKNOWN"
+  }
+}

@@ -14,6 +14,7 @@ Exit status is 1 on any unexpected failure, invariant violation, runner error or
 known-defect entry; XFAIL (documented defects) never hide in the totals.
 """
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -112,7 +113,7 @@ def execute(command, timeout=60):
         parsed = json.loads(out) if out.strip() else None
     except ValueError:
         parsed = None
-    return {"rc": rc, "stdout_json": parsed, "stderr": err[-500:], "seconds": round(time.monotonic() - started, 3)}
+    return {"rc": rc, "stdout_json": parsed, "stdout": out, "stderr": err[-500:], "seconds": round(time.monotonic() - started, 3)}
 
 
 # -------------------------------------------------------------------- scoring
@@ -136,6 +137,47 @@ def lookup(document, path):
     return node, True
 
 
+def response_errors(run):
+    """Validate the process contract before inspecting nested report fields."""
+    out = run.get("stdout_json")
+    if not isinstance(out, dict):
+        return ["CLI output must be a JSON object"]
+    errors = schema_errors(out.get("verdict"), VERDICT_SCHEMA)
+    for field in ("inspection", "signing_boundary", "coverage_gaps", "intent_scope_review"):
+        value = out.get(field)
+        kind = list if field == "coverage_gaps" else dict
+        if value is not None and not isinstance(value, kind):
+            errors.append(field + ": invalid report shape")
+    verdict = out.get("verdict")
+    if isinstance(verdict, dict):
+        codes = {"DENY": (20, 40), "UNKNOWN": (30,), "ALLOW": (0,), "WARN": (10,)}
+        decision = verdict.get("decision")
+        if isinstance(decision, str) and decision in codes and run.get("rc") not in codes[decision]:
+            errors.append("exit code does not match decision")
+    return errors
+
+
+def load_scenarios(directories, subset):
+    schema = json.loads((TESTING / "schema/scenario-1.schema.json").read_text(encoding="utf-8"))
+    scenarios, seen = [], set()
+    for directory in directories:
+        if not directory.is_dir():
+            raise ValueError("scenario directory does not exist: " + str(directory))
+        for path in sorted(directory.glob("*.json")):
+            scenario = json.loads(path.read_text(encoding="utf-8"))
+            problems = schema_errors(scenario, schema, str(path))
+            if problems:
+                raise ValueError("; ".join(problems[:3]))
+            if scenario["id"] in seen or scenario["class"] != scenario["truth"]["label"]:
+                raise ValueError("duplicate ID or inconsistent label: " + scenario["id"])
+            seen.add(scenario["id"])
+            if subset != "smoke" or scenario["smoke"]:
+                scenarios.append(scenario)
+    if not scenarios:
+        raise ValueError("no scenarios selected")
+    return scenarios
+
+
 def evaluate(scenario, run, preflight):
     out = run["stdout_json"]
     result = {"decision": "ERROR", "findings": [], "reasons": [], "invariants": {}, "checks": {}}
@@ -143,6 +185,11 @@ def evaluate(scenario, run, preflight):
         result["reasons"].append("runner/cli error: rc=%s stderr=%s" % (run["rc"], run["stderr"].strip()[:160]))
         result["failure_type"] = "error"
         return result
+    for field in ("inspection", "signing_boundary"):
+        if out.get(field) is not None and not isinstance(out[field], dict):
+            result["reasons"].append("invalid report object: " + field)
+            result["failure_type"] = "public_schema_violation"
+            return result
     verdict = out.get("verdict")
     if isinstance(verdict, dict) and verdict.get("decision") in DECISIONS:
         result["decision"] = verdict["decision"].upper()
@@ -161,7 +208,8 @@ def evaluate(scenario, run, preflight):
     proven_ok = True
     for rule in expect["proven"]:
         value, found = lookup(out, rule["path"])
-        ok = found and (value == rule["equals"] if "equals" in rule else rule["contains"] in (value or []))
+        ok = found and (type(value) is type(rule["equals"]) and value == rule["equals"] if "equals" in rule
+                        else isinstance(value, (list, str, dict)) and rule["contains"] in value)
         if not ok:
             proven_ok = False
             result["reasons"].append("proven property missing: %s" % json.dumps(rule))
@@ -170,8 +218,8 @@ def evaluate(scenario, run, preflight):
     # otherwise the scenario builder (not HGUET) is wrong and the result is not trustworthy.
     independent = scenario["input"].get("message_sha256_independent")
     parsed_hash = (out.get("inspection") or {}).get("message_sha256")
-    checks["builder_agrees_with_parser"] = independent is None or parsed_hash is None or parsed_hash == independent
-    if not checks["builder_agrees_with_parser"]:
+    checks["builder_agrees_with_parser"] = (None if independent is None else parsed_hash == independent)
+    if checks["builder_agrees_with_parser"] is False:
         result["reasons"].append("scenario builder/parser message hash disagreement")
     # Every verdict the tool prints must be valid against the PUBLISHED verdict schema: an
     # integrator validating reports with that schema must never see the tool contradict it.
@@ -190,23 +238,25 @@ def evaluate(scenario, run, preflight):
     inv["no_spending_proof_claimed"] = not any(
         isinstance(v, bool) and v and k.endswith("_proven") and "spending" in k for k, v in walk(out))
     boundary = out.get("signing_boundary")
-    inv["gate_blocks"] = True if boundary is None else (
+    inv["gate_blocks"] = None if boundary is None else (
         boundary.get("signing_gate") == "block" and boundary.get("automated_signing_permitted") is False)
     inv["no_secret_fields"] = not any(("secret" in str(k).lower() or "private" in str(k).lower())
                                       for k, _ in walk(out))
     if preflight is not None:
-        refusal = (preflight["stdout_json"] or {}).get("signer_refusal", {})
+        preflight_out = preflight.get("stdout_json")
+        refusal = preflight_out.get("signer_refusal") if isinstance(preflight_out, dict) else None
+        refusal = refusal if isinstance(refusal, dict) else {}
         inv["signer_preflight_blocks"] = (
             preflight["rc"] == 20 and refusal.get("signing_gate") == "block"
             and refusal.get("signing_permitted") is False and refusal.get("signature_created") is False
             and refusal.get("transaction_broadcast") is False and refusal.get("signer_backend_invoked") is False)
     for name, ok in inv.items():
-        if not ok:
+        if ok is False:
             result["reasons"].append("INVARIANT VIOLATED: " + name)
     label = truth["label"]
     if result["decision"] == "ERROR":
         failure = "error"
-    elif not all(inv.values()):
+    elif any(value is False for value in inv.values()):
         failure = "invariant_violation"  # signing-block violations outrank every accuracy failure
     elif label == "GOOD" and result["decision"] == "DENY":
         failure = "false_block"
@@ -218,7 +268,9 @@ def evaluate(scenario, run, preflight):
         failure = "unknown_overclaimed_as_deny"
     elif label == "UNKNOWN" and result["decision"] == "ALLOW":
         failure = "unsafe_allow"
-    elif not checks["builder_agrees_with_parser"]:
+    elif not checks["decision_acceptable"]:
+        failure = "unacceptable_decision"
+    elif checks["builder_agrees_with_parser"] is False:
         failure = "scenario_builder_error"
     elif not checks["verdict_matches_public_schema"]:
         failure = "public_schema_violation"
@@ -257,8 +309,9 @@ def metrics(results):
         predicted_total = sum(matrix[c][predicted] for c in CLASSES)
         precision, recall = ratio(tp, predicted_total), ratio(tp, support)
         f1 = None
-        if precision["value"] and recall["value"]:
-            f1 = round(2 * precision["value"] * recall["value"] / (precision["value"] + recall["value"]), 4)
+        if precision["value"] is not None and recall["value"] is not None:
+            den = precision["value"] + recall["value"]
+            f1 = round(2 * precision["value"] * recall["value"] / den, 4) if den else 0.0
         per_class[cls] = {"treated_as_prediction": predicted, "precision": precision, "recall": recall,
                           "f1": f1, "support": support}
     good = [r for r in results if r["truth"] == "GOOD"]
@@ -286,7 +339,9 @@ def metrics(results):
                                            len(results)),
         "proven_properties_hold": ratio(sum(r["checks"].get("proven_properties", False) for r in results),
                                         len(results)),
-        "signing_blocked_all_scenarios": ratio(sum(all(r["invariants"].values()) and bool(r["invariants"])
+        "signing_blocked_all_scenarios": ratio(sum(not any(v is False for v in r["invariants"].values())
+                                                   and (r["invariants"].get("gate_blocks") is True
+                                                        or r["invariants"].get("signer_preflight_blocks") is True)
                                                    for r in results), len(results)),
         "cli_errors": ratio(sum(r["decision"] == "ERROR" for r in results), len(results)),
         "verdict_matches_public_schema": ratio(
@@ -410,9 +465,10 @@ def main():
     directories = [Path(args.scenarios)] if args.scenarios else {
         "main": [TESTING / "scenarios"], "regression": [TESTING / "scenarios-regression"],
         "all": [TESTING / "scenarios", TESTING / "scenarios-regression"]}[args.suite]
-    scenarios = [json.loads(p.read_text(encoding="utf-8")) for d in directories for p in sorted(d.glob("*.json"))]
-    if args.subset == "smoke":
-        scenarios = [s for s in scenarios if s["smoke"]]
+    try:
+        scenarios = load_scenarios(directories, args.subset)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
     results, errors = [], []
     for scenario in scenarios:
         files = write_inputs(scenario, out / "inputs" / scenario["id"])
@@ -430,7 +486,10 @@ def main():
         scored = evaluate(scenario, run, preflight)
         entry = scenario["id"]
         outcome = "PASS" if scored["failure_type"] is None else "FAIL"
-        if entry in known and scored["failure_type"] != "invariant_violation":
+        if entry in known and scored["failure_type"] not in ("invariant_violation", "error",
+                "public_schema_violation", "exit_code_contract_violation", "scenario_builder_error") and (scored["failure_type"] is None or
+                               scored["failure_type"] == known[entry].get("failure_type")):
+            # Only the explicitly registered failure may be waived.
             # A documented defect may be an accuracy gap, but NEVER a violated signing-block invariant.
             outcome = "XFAIL" if outcome == "FAIL" else "XPASS"
         out_json = run["stdout_json"] if isinstance(run["stdout_json"], dict) else {}
@@ -442,7 +501,10 @@ def main():
             "checks": scored["checks"], "invariants": scored["invariants"], "failure_type": scored["failure_type"],
             "outcome": outcome, "known_defect": known.get(entry), "exit_code": run["rc"],
             "preflight_exit_code": preflight["rc"] if preflight else None, "seconds": run["seconds"],
-            "message_sha256": (out_json.get("inspection") or {}).get("message_sha256")
+            "check_output": run["stdout_json"],
+            "preflight_output": preflight["stdout_json"] if preflight else None,
+            "message_sha256": (out_json["inspection"].get("message_sha256")
+                               if isinstance(out_json.get("inspection"), dict) else None)
             or scenario["input"]["message_sha256_independent"] or "0" * 64,
             "findings_required": scenario["expect"]["findings_required"],
             "repro": [repro_command(c) for c in commands.values()],
@@ -452,12 +514,14 @@ def main():
     by_id = {r["id"]: r for r in results}
     totals = {k: sum(r["outcome"] == k for r in results) for k in ("PASS", "FAIL", "XFAIL", "XPASS")}
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-    version = subprocess.run([hguet, "--version"], capture_output=True, text=True).stdout.strip()
+    version = execute([hguet, "--version"])["stdout"].strip()
+    binary_sha256 = hashlib.sha256(Path(hguet).read_bytes()).hexdigest()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout)
     report = {
-        "meta": {"format": "hguet-bench-report/1", "commit": commit or "unknown", "hguet_version": version,
-                 "subset": args.subset, "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                 "hguet_binary": hguet, "rerun": "python testing/runner/run_benchmark.py --hguet %s --subset %s"
-                 % (hguet, args.subset)},
+        "meta": {"format": "hguet-bench-report/1", "commit": commit or "unknown", "hguet_version": version, "binary_sha256": binary_sha256, "working_tree_dirty": dirty,
+                 "scenario_sha256": hashlib.sha256(json.dumps(scenarios, sort_keys=True).encode()).hexdigest(),
+                 "suite": args.suite, "subset": args.subset, "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                 "hguet_binary": hguet, "rerun": repro_command([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])},
         "totals": totals, "metrics": metrics(results), "cloud_mock_track": cloud_track(by_id),
         "known_defects_registry": known, "errors": errors, "results": results,
         "limits": [
@@ -465,7 +529,7 @@ def main():
             "The Cloud track checks documented composition rules on a mock; the CLI has no Cloud client. It is not evidence about a real server.",
             "ALLOW is structurally unreachable in the offline prototype; GOOD scenarios therefore score as UNKNOWN at best. 'good_left_unknown' is reported, not hidden.",
             "Ground truth was authored from threat semantics by the benchmark author; it is independent of HGUET output but not independently reviewed.",
-            "60 scenarios give wide uncertainty (e.g. 1 miss in 25 is 4%); do not extrapolate rates to real traffic.",
+            "Hand-authored regression scenarios are not a representative traffic sample; do not extrapolate rates to real traffic.",
         ]}
     (out / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (out / "report.html").write_text(render_html(report), encoding="utf-8")

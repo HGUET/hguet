@@ -290,16 +290,12 @@ class BlindReview(unittest.TestCase):
             self.assertTrue(report["status"].startswith("PENDING"))
 
 
-@unittest.skipIf(sys.platform == "win32", "needs an executable stub")
 class RunnerWithStub(unittest.TestCase):
     def test_report_keeps_sources_separate_and_real_server_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
-            stub = Path(tmp) / "hguet"
-            nl = chr(92) + "n"
-            stub.write_text("#!%s%simport json,sys%s"
-                            "print(json.dumps({'verdict':{'decision':'UNKNOWN','findings':[]}}))%ssys.exit(30)%s"
-                            % (sys.executable, nl, nl, nl, nl))
-            stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
+            from test_framework import make_stub
+            stub = make_stub(tmp, "print(json.dumps({'verdict':verdict('UNKNOWN')}))\n"
+                                  "sys.exit(30)\n")
             out = Path(tmp) / "out"
             done = subprocess.run([sys.executable, str(CV / "runner/run_cloud_value.py"), "--hguet", str(stub), "--out", str(out)],
                                   capture_output=True, text=True)
@@ -324,6 +320,23 @@ class RunnerWithStub(unittest.TestCase):
             html = (out / "report.html").read_text()
             for needle in ("MEASURED - Local", "MODEL - Reference Mock", "Real HGUET Server: UNAVAILABLE", "synthetic"):
                 self.assertIn(needle, html)
+
+
+class MeasurementFailures(unittest.TestCase):
+    def test_all_cli_errors_invalidate_measurement_before_cloud_scoring(self):
+        sys.path.insert(0, str(CV / "runner"))
+        import run_cloud_value as runner
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = {"rc": 40, "stdout_json": {"code": "BAD_INPUT"}, "stderr": "", "seconds": 0}
+            with mock.patch.object(runner.rb, "execute", return_value=bad), \
+                 mock.patch.object(sys, "argv", ["runner", "--out", tmp]), \
+                 mock.patch.object(runner, "run_cloud_config") as cloud:
+                self.assertEqual(runner.main(), 1)
+                cloud.assert_not_called()
+            report = json.loads((Path(tmp) / "report.json").read_text())
+            self.assertEqual(report["status"], "invalid_measurement")
+            self.assertEqual(len(report["errors"]), 200)
+            self.assertNotIn("reference_mock", report)
 
 
 if __name__ == "__main__":

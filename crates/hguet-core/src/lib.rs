@@ -329,13 +329,6 @@ pub fn verify_intent_detailed(
             "declared System transfers exceed signed intent max_spend_lamports",
         ));
     }
-    if parsed.unresolved_lookup_addresses > 0 {
-        return Err(IntentFailure::Coverage {
-            reason: "ALT_UNRESOLVED",
-            message: "unresolved ALT addresses: program identities and accounts behind the lookup table cannot be checked against the intent allowlist; no violation is proven".into(),
-            intent: Some(Box::new(intent)),
-        });
-    }
     // Account-control operations (SetAuthority / CloseAccount) judged in context.
     let scope = review_account_control(parsed, &intent.intent_id);
     if let Some(first) = scope.iter().find(|f| f.violation) {
@@ -344,13 +337,35 @@ pub fn verify_intent_detailed(
             findings: scope,
         });
     }
-    // Signed mint caps are one-sided direct-wire lower-bound checks only:
-    // unknown direct token instructions must NOT be marked cap-covered.
+    // Review every independent signed constraint before returning any coverage gap.
+    // A missing view cannot erase a violation already visible in another view.
+    let mut gap = None;
+    let mut collect = |result: Result<(), ReviewFailure>| -> Result<(), IntentFailure> {
+        if let Err(failure) = result {
+            if failure.coverage_reason.is_none() {
+                return Err(failure.into());
+            }
+            gap.get_or_insert(failure);
+        }
+        Ok(())
+    };
     if let Some(ref limits) = intent.token_spend_limits {
-        token_limits::review_declared_token_limits_detailed(parsed, limits)?;
+        collect(token_limits::review_declared_token_limits_detailed(parsed, limits).map(|_| ()))?;
     }
     if let Some(ref sources) = intent.token_source_limits {
-        source_limits::review_declared_source_limits_detailed(parsed, sources)?;
+        collect(
+            source_limits::review_declared_source_limits_detailed(parsed, sources).map(|_| ()),
+        )?;
+    }
+    if parsed.unresolved_lookup_addresses > 0 {
+        return Err(IntentFailure::Coverage {
+            reason: "ALT_UNRESOLVED",
+            message: "unresolved ALT addresses: program identities and accounts behind the lookup table cannot be checked against the intent allowlist; no violation is proven".into(),
+            intent: Some(Box::new(intent)),
+        });
+    }
+    if let Some(gap) = gap {
+        return Err(gap.into());
     }
     // Verified intent is NOT proof of total spending, fees or execution success.
     Ok(VerifiedIntent {

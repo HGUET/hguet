@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-163",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xNjMiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJjZDRlMTZiZDg3MTU2YzM5MzNkZjcwZjVhZTU2OGE0YjA4NTU4MjE4MzU4MjdlNTk3NmZlMTZmODc5N2MxZjJhIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zcGVuZF9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsIm1heF9kZWJpdF9yYXciOiIxMDAifV0sInRva2VuX3NvdXJjZV9saW1pdHMiOlt7Im1pbnQiOiI3NWl0c29uUlF1UzNiRFhLSmlRaHZWNEVGSk5aR2hHZHhTc1E1blhCS0RibSIsInNvdXJjZV90b2tlbl9hY2NvdW50IjoiSDVORmd5aVhWNm12S3pwQ0tyODhlRDY3cFB2UXdlc0I4QmphV0RCZ3o0elEiLCJhdXRob3JpdHkiOiI0b2J1RTMzZ2E5VWZpeTE3NDRiUDZBVkZyNUNycmZ2ZFJ2dmIyUTZNZXJxeiIsIm1heF9kZWJpdF9yYXciOiIxMDAifV19",
+      "signature_b58": "5xAH3yGZNcXLkRJWJPcQs39CBHxXPAC8rk4QbBb87ziEg2q3QepKx32aEuEYF7XDh6DpuCKpn1rGvfoR74j1bF4D",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "cd4e16bd87156c3933df70f5ae568a4b0855821835827e5976fe16f8797c1f2a",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBDiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpl7tlYXvz4h2DMJ4GEaKkE8AoITvSBzMlxyJTCskwR3YVaW9ChISLom83Ut6suCxdMU5TDb7vm38TzDiVFFAWyAAbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAwQBAgQACgxlAAAAAAAAAAYBPOy5UOj6NaGm7DLElkTmV0X0Od7DLdAxD2V/j+nej+MBAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The mint, source, authority and amount are static; an unresolved destination does not hide an overage.",
+  "smoke": false,
+  "title": "Known debit with an ALT destination, amount=101",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

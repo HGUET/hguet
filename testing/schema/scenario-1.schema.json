@@ -22,7 +22,7 @@
         "network": {"enum": ["mainnet", "devnet", "testnet"]},
         "transaction": {
           "type": "object", "additionalProperties": false, "required": ["encoding", "data"],
-          "properties": {"encoding": {"enum": ["base64", "base58"]}, "data": {"type": "string"}}
+          "properties": {"encoding": {"enum": ["base64", "base58", "binary"]}, "data": {"type": "string"}}
         },
         "message_sha256_independent": {"type": ["string", "null"], "description": "SHA-256 of the message bytes computed by the builder, used to cross-check the tool's parser"},
         "intent": {"type": ["object", "null"]},

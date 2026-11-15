@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-160",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xNjAiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiIwYWRiOGE4NGY1NTA3M2RmMWZkNmFkZWI0YjhkZTUxNGI3NzMwY2RlMDc1NmE5MzVhMWNjNTRlYzU5ODg1MTUzIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwIn1dfQ==",
+      "signature_b58": "5pFvfyzVX1zGb56aJfneYaf67AaA2o8Mgok3iftjyoA4Dm74MU2mRqupZm6yC329vNbJFxcvwVkkBh4zxSjphqqr",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "0adb8a84f55073df1fd6adeb4b8de514b7730cde0756a935a1cc54ec59885153",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQACBTiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpl7tlYXvz4h2DMJ4GEaKkE8AoITvSBzMlxyJTCskwR3YWv8UPuemiiNaIix4LKeFZNBSCIyGxcPhVDxIOxmrwS4lpb0KEhIuibzdS3qy4LF0xTlMNvu+bfxPMOJUUUBbIABt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKnJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwEEBAEDAgAKDGUAAAAAAAAABgFlSTe8KaU+YzMmjpTYHbuzpuSoBPf7vBw7LOotBeUWCAEAAA==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Every debit role is static; an unused lookup cannot hide a known overage. Inside the cap, the unresolved lookup still prevents a complete review.",
+  "smoke": false,
+  "title": "source cap beside an unused ALT, amount=101",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

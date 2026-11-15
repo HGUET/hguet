@@ -603,6 +603,69 @@ def regression():
         "The operator caps declared native movements at 499 lamports; createAccount declares 2,000,000.",
         raw, msg, intent=None, trusted=None, policy=policy(max_declared_system_transfer_lamports="499"),
         required=[["POLICY_SOL_TRANSFER_CAP"]])
+    # A coverage gap must not erase a statically proven violation, in either order.
+    bad_id, unknown_id = 141, 114
+    gaps = [ct.ix_token_revoke(T, SRC_A, PAYER), ct.ix_token_sync_native(T, SRC_A),
+            ct.Instruction(T, [(SRC_A, False, True)], bytes([255]))]
+    for scope in ("mint", "source", "both"):
+        for gap in gaps:
+            for reverse in (False, True):
+                for amount in (100, 101):
+                    debit = ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, amount)
+                    instructions = [gap, debit] if reverse else [debit, gap]
+                    bad = amount > 100
+                    sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+                    bad_id += bad
+                    unknown_id += not bad
+                    reg(sid, "BAD" if bad else "UNKNOWN",
+                        "%s cap with gap opcode %d, reversed=%s, amount=%d" % (scope, gap.data[0], reverse, amount),
+                        "Known debit 101 exceeds cap 100 despite a coverage gap; debit 100 proves no violation. "
+                        "Instruction order cannot erase an already visible overage.", instructions,
+                        caps=[(MINT_A, "100")] if scope != "source" else None,
+                        sources=[(MINT_A, SRC_A, PAYER, "100")] if scope != "mint" else None,
+                        req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
+                        forbid=[] if bad else FORBIDDEN_FOR_GOOD)
+    for scope in ("mint", "source", "both"):
+        for amount in (100, 101):
+            bad = amount > 100
+            sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+            bad_id += bad
+            unknown_id += not bad
+            reg(sid, "BAD" if bad else "UNKNOWN", "%s cap beside an unused ALT, amount=%d" % (scope, amount),
+                "Every debit role is static; an unused lookup cannot hide a known overage. "
+                "Inside the cap, the unresolved lookup still prevents a complete review.",
+                [ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, amount)],
+                v0=[("gap-table", [0], [])],
+                caps=[(MINT_A, "100")] if scope != "source" else None,
+                sources=[(MINT_A, SRC_A, PAYER, "100")] if scope != "mint" else None,
+                req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
+                forbid=[] if bad else FORBIDDEN_FOR_GOOD)
+    reg("B-%03d" % bad_id, "BAD", "Static authority transfer beside an unused ALT",
+        "A static SetAuthority to a third party is out of scope even when an unrelated lookup is unresolved.",
+        [ct.ix_token_set_authority(T, SRC_A, PAYER, EVE)], v0=[("gap-table", [0], [])], req=F_SCOPE_AUTH)
+
+    bad_id += 1
+    for amount in (100, 101):
+        bad = amount > 100
+        sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+        reg(sid, "BAD" if bad else "UNKNOWN", "Known debit with an ALT destination, amount=%d" % amount,
+            "The mint, source, authority and amount are static; an unresolved destination does not hide an overage.",
+            [ct.ix_token_transfer_checked(T, SRC_A, MINT_A, "alt:0", PAYER, amount)],
+            v0=[("destination-table", [0], [])], caps=[(MINT_A, "100")],
+            sources=[(MINT_A, SRC_A, PAYER, "100")],
+            req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
+            forbid=[] if bad else FORBIDDEN_FOR_GOOD)
+    bad_id += 1
+    unknown_id += 1
+    for amount in (100, 101):
+        bad = amount > 100
+        sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+        reg(sid, "BAD" if bad else "UNKNOWN", "Static mint cap with an ALT source, amount=%d" % amount,
+            "The mint and amount are static: a missing source identity cannot hide a known mint overage.",
+            [ct.ix_token_transfer_checked(T, "alt:0", MINT_A, DST_A, PAYER, amount)],
+            v0=[("source-table", [0], [])], caps=[(MINT_A, "100")],
+            req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
+            forbid=[] if bad else FORBIDDEN_FOR_GOOD)
     coverage()
     SINK[0] = SCENARIOS
 
@@ -779,6 +842,7 @@ def coverage():
     case("B-140", "BAD", "Signed intent with an empty program allowlist",
          "The issuer allowed no program at all, so even a plain System transfer is outside the intent.",
          raw, msg, req=F_INTENT, intent_kw=dict(max_spend="5000", allowed_programs=[]))
+
 
 
 def write_suite(scenarios, directory, check, drift):
