@@ -137,11 +137,11 @@ Two repositories, one product:
 | **[HGUET/hguet](https://github.com/HGUET/hguet)** | Public | Rust CLI, local checks, public protocol, tests, integrations |
 | **HGUET/server** | Private | Threat intelligence, network monitoring, SOL payment verification and advanced risk analysis |
 
-The planned commercial transport is authenticated post-quantum-capable TLS 1.3, built from maintained cryptographic libraries, **not a custom cipher or VPN**. Exact algorithms and mutual authentication must pass implementation and interoperability tests before any security claims.
+The planned commercial transport is **server-authenticated** post-quantum-capable TLS 1.3, built from maintained cryptographic libraries, **not a custom cipher or VPN**. Client mTLS is not mandatory for one-shot claims. The exact PQ profile, server identity/pins and cross-platform client/server interoperability must pass tests before any security claims.
 
 ### Unified CLI ↔ Cloud contract
 
-**[Interoperability contract](docs/architecture/interoperability.md)** · [Public draft Protobuf wire schema](protocol/v1/hguet.proto) · [Signed CloudAssessment JSON schema](protocol/v1/cloud-assessment.schema.json) · [Conformance cases](protocol/v1/contract-cases.json)
+**[Interoperability contract](docs/architecture/interoperability.md)** · [Server compatibility snapshot](docs/architecture/server-compatibility.md) · [Public draft Protobuf wire schema](protocol/v1/hguet.proto) · [Signed CloudAssessment JSON schema](protocol/v1/cloud-assessment.schema.json) · [Conformance cases](protocol/v1/contract-cases.json)
 
 **Trust boundary:** Cloud signs only its own assessment and billing receipt; the CLI independently verifies them and composes the final SecurityVerdict. Server-side intelligence cannot override a local hard DENY. Public protocol files are a **draft**, not released endpoints.
 
