@@ -1,6 +1,6 @@
 # HGUET CLI ↔ Server — Unified interoperability contract
 
-**Status: Unreleased architecture draft. No HGUET product releases exist.** The proposed `protocol/v1` directory is a wire-format draft, not a v1.0 product release. Private `HGUET/server` consumes a pinned commit of this public contract.
+**Status: Unreleased architecture draft. No HGUET product releases exist.** `protocol/v1` is a wire-format draft, not a v1.0 product release. The private Rust `HGUET/server` currently pins public commit `b60c4d5e403946070b3f189dec3bf56ad18efd56` for its reviewed contract; do not mistake the public `main` HEAD for the pinned server version. See [current server compatibility](server-compatibility.md).
 
 ## Responsibility
 
@@ -52,7 +52,7 @@ A paid transfer and offchain computation are **not atomic**. If service is unava
 - Mainnet: real native SOL, production receiver and independent secrets/state.
 - Devnet/Testnet: valueless test SOL, sandbox receivers, isolated claims/results. Always verify `getGenesisHash` and quote environment binding.
 - Signed quote binds a **SHA-256 commitment** of a randomly generated **256-bit private claim**. The public Solana payment signature **does not** authorize report retrieval.
-- TLS 1.3 with required tested `SecP384r1MLKEM1024` and ML-DSA-87 server identity; no mandatory client mTLS. Real cryptographic interop is **not yet proven**.
+- TLS 1.3 with required `SecP384r1MLKEM1024` and ML-DSA-87 server identity; no mandatory client mTLS. Private loopback/OpenSSL PQ TLS tests exist, but **public CLI-to-server cross-platform cryptographic interoperability is not yet proven**.
 - No custom cryptography, implicit Cloud fallback, server access to customer wallet private keys, or inference that a hash-only Cloud check independently decoded the transaction.
 - The protocol is publicly documented; server authorization cannot be based on secret binary or “official CLI only”.
 
@@ -60,4 +60,4 @@ A paid transfer and offchain computation are **not atomic**. If service is unava
 
 The canonical wire/schema source is the **public** [protocol draft](../../protocol/v1/README.md), together with the [payment specification](payment-per-request.md) and [pricing policy](pricing-policy.md). The private server pins the exact commit and runs the same [planned scenarios](../../protocol/v1/contract-cases.json).
 
-**No product version has been assigned or released.** Numeric schema identifiers are internal placeholders; any first product version is set only by an actual release. Public schema checks are **not** successful Rust client/server payment or PQ TLS integration tests.
+**No product version has been assigned or released.** Numeric schema identifiers are internal placeholders; any first product version is set only by an actual release. Public schema checks and private isolated Rust integration tests are **not** a demonstrated full CLI-to-server paid request or production PQ TLS deployment.
