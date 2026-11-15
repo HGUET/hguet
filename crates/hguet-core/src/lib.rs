@@ -65,6 +65,8 @@ impl SecurityVerdict {
 }
 
 pub mod intent_scope;
+#[cfg(test)]
+mod property_tests;
 pub mod solana_engine;
 mod source_limits;
 #[cfg(test)]

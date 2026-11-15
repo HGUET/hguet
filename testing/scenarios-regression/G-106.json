@@ -1,0 +1,68 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT",
+      "INTENT_REJECTED",
+      "INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "INTENT_SCOPE_CLOSE_DESTINATION"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      },
+      {
+        "equals": "v1",
+        "path": "inspection.wire_format"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-106",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0xMDYiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJlZDMzYWM4MzRiNTRlZTdjM2QwNGI1YjkzM2JmZGJkOTcwZGRjN2I5Yjc0YjgyODVkODljZDlkOTE3NGRlYjc2Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "21GjEYCHPrRW7ccCtwoXDDZNmeVLpfMTXmjRKyARPmCxQKH2L4jjGP8ddbiXgkmc1n2uVotYVDpewbg9z6canpCp",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "ed33ac834b54ee7c3d04b5b933bfdbd970ddc7b9b74b8285d89cd9d9174deb76",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "gQEAAQwAAABoC6hWF++Vnj2BRlnOeakn1A4SsDG70hzil/L+PjLfbQEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQA0DAAAAAQACAgwAAAECAAAA6AMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The same authorised payment in the v1 wire format must verify exactly like legacy.",
+  "smoke": false,
+  "title": "v1 transaction: SOL payment inside the signed cap",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

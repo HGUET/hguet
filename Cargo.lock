@@ -317,6 +317,7 @@ version = "0.0.0"
 dependencies = [
  "base64",
  "bs58",
+ "ed25519-dalek",
  "hguet-core",
  "hguet-policy",
  "hguet-rpc",

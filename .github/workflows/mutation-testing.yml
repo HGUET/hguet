@@ -1,0 +1,42 @@
+name: "Mutation testing (hguet-core, hguet-policy; manual)"
+# Measures whether the tests would notice a changed line: cargo-mutants rewrites the
+# code (flips a comparison, replaces a return value) and reports every mutant that
+# the test suite still passes. Manual only: it rebuilds once per mutant and is slow.
+# This workflow was added without a completed run to confirm it; treat its first
+# result as a check of the workflow itself.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mutants:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0   # must match rust-toolchain.toml
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants --locked
+      - name: Mutate the enforcing crates (parser, intent, limits, policy)
+        run: cargo mutants --package hguet-core --package hguet-policy --no-shuffle --jobs 2 --timeout 300
+      - name: Summarize surviving mutants
+        if: always()
+        run: |
+          for name in caught missed timeout unviable; do
+            file="mutants.out/$name.txt"
+            count=0
+            [ -f "$file" ] && count="$(wc -l < "$file")"
+            echo "- $name: $count" >> "$GITHUB_STEP_SUMMARY"
+          done
+          if [ -s mutants.out/missed.txt ]; then
+            echo "### Mutants the tests did not catch" >> "$GITHUB_STEP_SUMMARY"
+            head -100 mutants.out/missed.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-report
+          path: mutants.out/
+          if-no-files-found: error

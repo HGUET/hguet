@@ -1,0 +1,64 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT",
+      "INTENT_REJECTED",
+      "INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "INTENT_SCOPE_CLOSE_DESTINATION"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-110",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0xMTAiLCJuZXR3b3JrIjoidGVzdG5ldCIsIm1lc3NhZ2Vfc2hhMjU2IjoiZjY4OWY5NmI5YTE5NDAzN2QzNGNhMmRkNWIxZmMzMmZmOWM4NzZhMWQ3YzViNzhjY2U1MTRjYjNjZThkMDgwNCIsIm5vdF9iZWZvcmVfdW5peCI6MSwiZXhwaXJlc19hdF91bml4Ijo0MTAyNDQ0ODAwLCJhbGxvd2VkX3Byb2dyYW1faWRzIjpbIjExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwiVG9rZW5rZWdRZmVaeWlOd0FKYk5iR0tQRlhDV3VCdmY5U3M2MjNWUTVEQSJdLCJtYXhfc3BlbmRfbGFtcG9ydHMiOiIxMDAwIiwidG9rZW5fc291cmNlX2xpbWl0cyI6W3sibWludCI6Ijc1aXRzb25SUXVTM2JEWEtKaVFodlY0RUZKTlpHaEdkeFNzUTVuWEJLRGJtIiwic291cmNlX3Rva2VuX2FjY291bnQiOiJINU5GZ3lpWFY2bXZLenBDS3I4OGVENjdwUHZRd2VzQjhCamFXREJnejR6USIsImF1dGhvcml0eSI6IjRvYnVFMzNnYTlVZml5MTc0NGJQNkFWRnI1Q3JyZnZkUnZ2YjJRNk1lcnF6IiwibWF4X2RlYml0X3JhdyI6IjEwMDAifV19",
+      "signature_b58": "4yMJzEcwpkVGLdsAiDd8wBncbRnhJ7ETosF5ryGQNh1Vp8J2UQLinrZFBJaGvi8JJEKpV9JM8Mme2zatbrZ992Nf",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "f689f96b9a194037d34ca2dd5b1fc32ff9c876a1d7c5b78cce514cb3ce8d0804",
+    "network": "testnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQQEAQMCAAoMvAIAAAAAAAAG",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "A testnet-bound, source-scoped intent; the debit is within scope.",
+  "smoke": false,
+  "title": "Testnet: source-scoped token transfer inside the cap",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

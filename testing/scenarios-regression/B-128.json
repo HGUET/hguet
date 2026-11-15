@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-128",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xMjgiLCJuZXR3b3JrIjoibWFpbm5ldCIsIm1lc3NhZ2Vfc2hhMjU2IjoiOWVkNDQyN2I0ZTg2YWU1NGIxZGQyMjhlNTFjMzE3NmRiZWQwZGNiYTM4MDNlNWY5OTU3ZDk2NWZhNGE3OTNkNiIsIm5vdF9iZWZvcmVfdW5peCI6MSwiZXhwaXJlc19hdF91bml4Ijo0MTAyNDQ0ODAwLCJhbGxvd2VkX3Byb2dyYW1faWRzIjpbIjExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAifQ==",
+      "signature_b58": "2K26Ljy9v8g2nd8BMCZSc6iBryHtkmCpyg7jB4imDJbBarDW5SxxmanstJscMcHWrCDJBUXn3qbJaTfFJ3k5QmEi",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+    "network": "testnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQwCAAAA6AMAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "The intent is bound to mainnet; using it on testnet is cross-network replay.",
+  "smoke": false,
+  "title": "Mainnet intent presented for a testnet check",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

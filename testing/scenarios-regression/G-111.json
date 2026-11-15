@@ -1,0 +1,72 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "GOOD",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED",
+      "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "POLICY_SOL_TRANSFER_CAP",
+      "POLICY_BLOCKED_SOL_RECIPIENT",
+      "POLICY_BLOCKED_PROGRAM",
+      "POLICY_UNAPPROVED_PROGRAM",
+      "POLICY_UNAPPROVED_SOL_RECIPIENT",
+      "POLICY_WRONG_NETWORK",
+      "INVALID_TRANSACTION_SIGNATURE",
+      "MALFORMED_TRANSACTION",
+      "BAD_INPUT",
+      "BAD_SIGNED_INTENT",
+      "INTENT_REJECTED",
+      "INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "INTENT_SCOPE_CLOSE_DESTINATION"
+    ],
+    "findings_required": [],
+    "proven": [
+      {
+        "contains": "independently_pinned_intent_signature",
+        "path": "verdict.coverage"
+      },
+      {
+        "equals": "verified",
+        "path": "inspection.transaction_signature_status"
+      },
+      {
+        "equals": 2,
+        "path": "inspection.required_signatures"
+      }
+    ]
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "G-111",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtRy0xMTEiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiI0OGM2NTk3YzE1ZTM0MTUxNGQ2MmEyYjczN2Y3MDczNzJkOWM3NDJjMWNjNjFiN2Y2Y2QzMDJkNWI0OWJjMDQwIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJNZW1vU3E0Z3FBQkFYS2I5NnFuSDhUeXNOY1d4TXlXQ3FYZ0RMR21mY0hyIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAifQ==",
+      "signature_b58": "3oWhqFQQvNwy5KKFF5VPozgbKrVgaUQqR8rtYe3PxYvdoCikYH2QSVMykEuyR26hNzgwf9bcvaisTAbd3txuTHFp",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "48c6597c15e341514d62a2b737f707372d9c742c1cc61b7f6cd302d5b49bc040",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "ApTqSxnUtLhvt6zTuuf7F+igQvJzG3vTcGLSn/QmHoFF8SJxJ1hAF1a6iO9txnssNoyEjwb0iscMBJmKPpHN8wbvOuIJbqVA8+Zgp9U0QyoG+Xm4YyIopNGT5uFeisE2a1C5nUv7kLqjdu5cMWQP9Rr36/Ju5wUpjvQ1T4B6vEsOAgECBTiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpl3Mx2yn3guq0/wuCUoRuTwvx/LByMXN0OPOG9uBZoZAKOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUpTWpkpIQZNJOhxYNo4fHw1td28kruB5B+oQEEFRI3J4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwIDAgACDAIAAADoAwAAAAAAAAQBAQZjb3NpZ24=",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Every required signature verifies; the payment is inside the cap.",
+  "smoke": false,
+  "title": "Two-signer transaction with both signatures valid",
+  "truth": {
+    "acceptable_decisions": [
+      "ALLOW",
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "GOOD"
+  }
+}

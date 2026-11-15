@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "MALFORMED_TRANSACTION"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-131",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": null,
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAGDADiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpljkyq+EmIKSIv7+uooZqy+DHquUwSE5PN4lMCvqI0LJ4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQICAAEMAgAAAOgDAAAAAAAA",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The account count 3 is encoded as two bytes (0x83 0x00). The runtime accepts only the shortest encoding, so these bytes are not a valid transaction.",
+  "smoke": false,
+  "title": "Non-canonical compact-u16 account count",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

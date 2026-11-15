@@ -26,8 +26,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 TESTING = ROOT / "testing"
 sys.path.insert(0, str(TESTING / "mocks"))
+sys.path.insert(0, str(TESTING / "lib"))
 import cloud_mock  # noqa: E402
+import crypto_tx  # noqa: E402
 import rpc_mock  # noqa: E402
+
+VERDICT_SCHEMA = json.loads((ROOT / "protocol/v1/security-verdict.schema.json").read_text(encoding="utf-8"))
 
 DECISIONS = ["ALLOW", "WARN", "DENY", "UNKNOWN", "ERROR"]
 CLASSES = ["GOOD", "BAD", "UNKNOWN"]
@@ -35,11 +39,32 @@ CLASS_PREDICTED_AS = {"GOOD": "ALLOW", "BAD": "DENY", "UNKNOWN": "UNKNOWN"}
 
 
 # ------------------------------------------------------------------ execution
+def schema_errors(value, schema, path="verdict"):
+    """Validate the complete public contract, including oneOf and JSON types."""
+    from jsonschema import Draft202012Validator
+    return ["%s%s: %s" % (
+        path, "".join("[%s]" % key if isinstance(key, int) else "." + key
+                      for key in error.absolute_path), error.message)
+        for error in Draft202012Validator(schema).iter_errors(value)]
+
+
 def write_inputs(scenario, directory):
+    import base64
     directory.mkdir(parents=True, exist_ok=True)
     data = scenario["input"]
-    files = {"tx": directory / "tx.b64"}
-    files["tx"].write_text(data["transaction"]["data"] + "\n", encoding="ascii", newline="\n")
+    # Scenario files always store the transaction as Base64; the INPUT FILE handed to the tool
+    # is written in the scenario's declared encoding so all three CLI decoders are exercised.
+    raw = base64.b64decode(data["transaction"]["data"])
+    encoding = data["transaction"]["encoding"]
+    if encoding == "binary":
+        files = {"tx": directory / "tx.bin"}
+        files["tx"].write_bytes(raw)
+    elif encoding == "base58":
+        files = {"tx": directory / "tx.b58"}
+        files["tx"].write_text(crypto_tx.b58encode(raw) + "\n", encoding="ascii", newline="\n")
+    else:
+        files = {"tx": directory / "tx.b64"}
+        files["tx"].write_text(data["transaction"]["data"] + "\n", encoding="ascii", newline="\n")
     if data["intent"] is not None:
         files["intent"] = directory / "intent.json"
         files["intent"].write_text(json.dumps(data["intent"], indent=2, sort_keys=True) + "\n", encoding="utf-8",
@@ -58,9 +83,9 @@ def build_commands(hguet, scenario, files, rpc_url):
         base.append("--offline")
     else:
         base += ["--rpc-url", rpc_url]
-    # `check` requires an --intent argument even when none exists (the repository CI passes a
-    # nonexistent path for the same reason); an absent file means "no intent supplied".
-    base += ["--intent", str(files["intent"] if "intent" in files else files["tx"].with_name("absent-intent.json"))]
+    # `check` accepts a missing --intent: "no intent supplied" is passed as exactly that.
+    if "intent" in files:
+        base += ["--intent", str(files["intent"])]
     if data["trusted_key"] and "intent" in files:
         base += ["--trusted-key", data["trusted_key"]]
     if "policy" in files:
@@ -121,7 +146,9 @@ def evaluate(scenario, run, preflight):
     verdict = out.get("verdict")
     if isinstance(verdict, dict) and verdict.get("decision") in DECISIONS:
         result["decision"] = verdict["decision"].upper()
-        result["findings"] = [f.get("code") for f in verdict.get("findings", [])]
+        result["findings"] = ([f.get("code") for f in verdict.get("findings", [])
+                              if isinstance(f, dict) and isinstance(f.get("code"), str)]
+                              if isinstance(verdict.get("findings", []), list) else [])
     elif out.get("code") in ("BAD_INPUT", "BAD_POLICY", "BAD_SIGNED_INTENT"):
         result["findings"] = [out.get("code")]
         result["reasons"].append("tool rejected the input: %s %s" % (out.get("code"), str(out.get("error"))[:120]))
@@ -146,6 +173,17 @@ def evaluate(scenario, run, preflight):
     checks["builder_agrees_with_parser"] = independent is None or parsed_hash is None or parsed_hash == independent
     if not checks["builder_agrees_with_parser"]:
         result["reasons"].append("scenario builder/parser message hash disagreement")
+    # Every verdict the tool prints must be valid against the PUBLISHED verdict schema: an
+    # integrator validating reports with that schema must never see the tool contradict it.
+    problems = schema_errors(verdict, VERDICT_SCHEMA)
+    checks["verdict_matches_public_schema"] = not problems
+    for problem in problems[:5]:
+        result["reasons"].append("public schema violation: " + problem)
+    # The exit status is part of the contract automation relies on.
+    expected_rc = {"DENY": (20, 40), "UNKNOWN": (30,), "ALLOW": (0,), "WARN": (10,)}.get(result["decision"])
+    checks["exit_code_matches_decision"] = expected_rc is None or run["rc"] in expected_rc
+    if not checks["exit_code_matches_decision"]:
+        result["reasons"].append("exit code %s does not match decision %s" % (run["rc"], result["decision"]))
     # ---- final signing block invariants (never feeds detection metrics)
     inv = result["invariants"]
     inv["exit_code_nonzero"] = run["rc"] != 0
@@ -182,6 +220,10 @@ def evaluate(scenario, run, preflight):
         failure = "unsafe_allow"
     elif not checks["builder_agrees_with_parser"]:
         failure = "scenario_builder_error"
+    elif not checks["verdict_matches_public_schema"]:
+        failure = "public_schema_violation"
+    elif not checks["exit_code_matches_decision"]:
+        failure = "exit_code_contract_violation"
     elif not checks["required_findings"]:
         failure = "wrong_or_missing_reason"
     elif not checks["forbidden_findings_absent"]:
@@ -247,6 +289,10 @@ def metrics(results):
         "signing_blocked_all_scenarios": ratio(sum(all(r["invariants"].values()) and bool(r["invariants"])
                                                    for r in results), len(results)),
         "cli_errors": ratio(sum(r["decision"] == "ERROR" for r in results), len(results)),
+        "verdict_matches_public_schema": ratio(
+            sum(r["checks"].get("verdict_matches_public_schema", False) for r in results), len(results)),
+        "exit_code_matches_decision": ratio(
+            sum(r["checks"].get("exit_code_matches_decision", False) for r in results), len(results)),
     }
     return {"confusion_matrix": matrix, "per_class": per_class, "summary": summary,
             "note": "BLOCK-only is reported in signing_blocked_all_scenarios and is not counted as detection."}

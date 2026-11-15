@@ -66,6 +66,7 @@
       "enum": [
         "not_checked",
         "signature_verified",
+        "signature_verified_scope_incomplete",
         "rejected",
         "unverified_no_independent_trust_key"
       ]

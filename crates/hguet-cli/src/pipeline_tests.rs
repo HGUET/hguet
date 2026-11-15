@@ -1,0 +1,523 @@
+//! End-to-end tests of the `check` pipeline with an injected RPC transport.
+//!
+//! The Python benchmark cannot reach the successful-RPC paths: the CLI only talks to HTTPS
+//! endpoints validated against public roots, and the benchmark will not weaken TLS to fake one.
+//! These tests drive the real `execute_with` (file reading, parsing, policy, intent, RPC
+//! correlation, signing boundary) and replace only the network hop.
+use super::{execute_with, Args};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use ed25519_dalek::{Signer, SigningKey};
+use hguet_rpc::{JsonRpcTransport, RpcError};
+use serde_json::{json, Value};
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+const DEVNET_GENESIS: &str = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
+const MAINNET_GENESIS: &str = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
+const SYSTEM: &str = "11111111111111111111111111111111";
+const ALT_PROGRAM: &str = "AddressLookupTab1e1111111111111111111111111";
+
+/// Answers by JSON-RPC method and records every request it was sent.
+struct FakeRpc {
+    genesis: &'static str,
+    simulation: Value,
+    lookup_address: [u8; 32],
+    requests: RefCell<Vec<Value>>,
+}
+impl FakeRpc {
+    fn new(simulation: Value) -> Self {
+        Self {
+            genesis: DEVNET_GENESIS,
+            simulation,
+            lookup_address: [55u8; 32],
+            requests: RefCell::new(Vec::new()),
+        }
+    }
+    fn methods(&self) -> Vec<String> {
+        self.requests
+            .borrow()
+            .iter()
+            .map(|r| r["method"].as_str().unwrap_or("?").to_owned())
+            .collect()
+    }
+}
+impl JsonRpcTransport for FakeRpc {
+    fn post_json(&self, _endpoint: &str, request: &Value) -> Result<Value, RpcError> {
+        self.requests.borrow_mut().push(request.clone());
+        let id = request["id"].clone();
+        let result = match request["method"].as_str() {
+            Some("getGenesisHash") => json!(self.genesis),
+            Some("simulateTransaction") => self.simulation.clone(),
+            Some("getMultipleAccounts") => {
+                // One active lookup table holding a single address.
+                let mut data = vec![0u8; 56];
+                data[0..4].copy_from_slice(&1u32.to_le_bytes());
+                data[4..12].copy_from_slice(&u64::MAX.to_le_bytes());
+                data[12..20].copy_from_slice(&100u64.to_le_bytes());
+                data[20] = 1;
+                data.extend_from_slice(&self.lookup_address);
+                json!({"context":{"slot":500},"value":[{
+                    "owner":ALT_PROGRAM,"executable":false,
+                    "data":[STANDARD.encode(data),"base64"]}]})
+            }
+            _ => return Err(RpcError::InvalidResponse),
+        };
+        Ok(json!({"jsonrpc":"2.0","id":id,"result":result}))
+    }
+}
+
+/// A transport that must never be reached.
+struct Unreachable;
+impl JsonRpcTransport for Unreachable {
+    fn post_json(&self, _endpoint: &str, _request: &Value) -> Result<Value, RpcError> {
+        panic!("the RPC provider was contacted on a path that must stay offline");
+    }
+}
+
+fn temp_file(name: &str, contents: &[u8]) -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let mut path: PathBuf = std::env::temp_dir();
+    path.push(format!(
+        "hguet-pipeline-{}-{}-{name}",
+        std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::write(&path, contents).expect("write temporary test input");
+    path.to_string_lossy().into_owned()
+}
+
+fn payer() -> [u8; 32] {
+    [7u8; 32]
+}
+fn b58(key: &[u8; 32]) -> String {
+    bs58::encode(key).into_string()
+}
+
+/// Unsigned legacy transfer of `lamports` from the payer to [2;32].
+fn legacy_transfer(lamports: u64) -> Vec<u8> {
+    let mut wire = vec![1];
+    wire.extend([0u8; 64]);
+    wire.extend([1, 0, 1, 3]);
+    wire.extend(payer());
+    wire.extend([2u8; 32]);
+    wire.extend([0u8; 32]);
+    wire.extend([3u8; 32]);
+    wire.extend([1, 2, 2, 0, 1, 12]);
+    wire.extend(2u32.to_le_bytes());
+    wire.extend(lamports.to_le_bytes());
+    wire
+}
+
+/// The same transfer as a v0 message whose RECIPIENT is index 0 of a lookup table.
+fn v0_transfer_to_lookup(lamports: u64) -> Vec<u8> {
+    let mut wire = vec![1];
+    wire.extend([0u8; 64]);
+    wire.push(0x80);
+    wire.extend([1, 0, 1, 2]);
+    wire.extend(payer());
+    wire.extend([0u8; 32]);
+    wire.extend([3u8; 32]);
+    wire.extend([1, 1, 2, 0, 2, 12]);
+    wire.extend(2u32.to_le_bytes());
+    wire.extend(lamports.to_le_bytes());
+    wire.push(1);
+    wire.extend([9u8; 32]);
+    wire.extend([1, 0, 0]);
+    wire
+}
+
+fn issuer() -> SigningKey {
+    SigningKey::from_bytes(&[42u8; 32])
+}
+fn issuer_key() -> String {
+    bs58::encode(issuer().verifying_key().to_bytes()).into_string()
+}
+
+/// A signed intent bound to `wire`, valid now, System program only.
+fn intent_file(wire: &[u8], max_spend: &str) -> String {
+    let parsed = hguet_core::parse_transaction(wire).expect("test transaction parses");
+    let payload = json!({
+        "schema_version":1,"kind":"hguet_payment_intent","intent_id":"pipeline-test",
+        "network":"devnet","message_sha256":parsed.message_sha256,
+        "not_before_unix":1,"expires_at_unix":4102444800u64,
+        "allowed_program_ids":[SYSTEM],"max_spend_lamports":max_spend
+    });
+    let bytes = serde_json::to_vec(&payload).unwrap();
+    let mut message = b"HGUET-PAYMENT-INTENT\0".to_vec();
+    message.extend(&bytes);
+    let envelope = json!({
+        "payload_b64":STANDARD.encode(&bytes),
+        "signer_pubkey_b58":issuer_key(),
+        "signature_b58":bs58::encode(issuer().sign(&message).to_bytes()).into_string()
+    });
+    temp_file("intent.json", &serde_json::to_vec(&envelope).unwrap())
+}
+
+fn args(wire: &[u8], rpc: bool) -> Args {
+    Args {
+        command: "check".into(),
+        file: temp_file("tx.bin", wire),
+        network: "devnet".into(),
+        encoding: "binary".into(),
+        intent: None,
+        trusted_key: None,
+        policy: None,
+        rpc_url: rpc.then(|| "https://rpc.invalid".to_owned()),
+        mode: "local".into(),
+        offline: !rpc,
+    }
+}
+
+fn simulation(slot: u64, err: Value, pre: &[u64], post: &[u64]) -> Value {
+    json!({"context":{"slot":slot},"value":{
+        "err":err,"logs":[],"innerInstructions":[],"unitsConsumed":150,
+        "preBalances":pre,"postBalances":post,"fee":5000,
+        "loadedAddresses":{"writable":[],"readonly":[]}
+    }})
+}
+
+fn codes(report: &Value) -> Vec<String> {
+    report["verdict"]["findings"]
+        .as_array()
+        .expect("findings")
+        .iter()
+        .map(|f| f["code"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+/// Invariants every report must satisfy, whatever the inputs and the provider say.
+fn assert_never_permits(report: &Value, exit: i32) {
+    let decision = report["verdict"]["decision"].as_str().unwrap();
+    assert!(
+        decision == "DENY" || decision == "UNKNOWN",
+        "decision {decision}"
+    );
+    assert!(exit == 20 || exit == 30, "exit {exit}");
+    assert_eq!(exit == 20, decision == "DENY");
+    if let Some(boundary) = report.get("signing_boundary").filter(|b| !b.is_null()) {
+        assert_eq!(boundary["signing_gate"], "block");
+        assert_eq!(boundary["automated_signing_permitted"], false);
+        assert_eq!(boundary["total_native_sol_spending_proven"], false);
+        assert_eq!(boundary["total_gross_token_spending_proven"], false);
+    }
+}
+
+#[test]
+fn successful_simulation_is_reported_but_never_permits_signing() {
+    let wire = legacy_transfer(75);
+    let rpc = FakeRpc::new(simulation(
+        900,
+        Value::Null,
+        &[10_000, 0, 1],
+        &[4_925, 75, 1],
+    ));
+    let (report, exit) = execute_with(args(&wire, true), &rpc);
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30);
+    assert_eq!(report["verdict"]["simulation_status"], "rpc_succeeded");
+    let found = codes(&report);
+    assert!(
+        found.contains(&"RPC_SIMULATION_ONLY".to_owned()),
+        "{found:?}"
+    );
+    assert!(found.contains(&"INTENT_UNVERIFIED".to_owned()), "{found:?}");
+    let coverage = report["verdict"]["coverage"].to_string();
+    for needed in [
+        "solana_rpc_genesis_verified",
+        "rpc_paired_native_balance_snapshots",
+        "block_only_signing_boundary",
+    ] {
+        assert!(coverage.contains(needed), "missing coverage {needed}");
+    }
+    assert_eq!(rpc.methods(), ["getGenesisHash", "simulateTransaction"]);
+    // The original bytes are what was simulated, without signature verification by the node.
+    let request = rpc.requests.borrow()[1].clone();
+    assert_eq!(request["params"][0], STANDARD.encode(&wire));
+    assert_eq!(request["params"][1]["sigVerify"], false);
+}
+
+#[test]
+fn failed_simulation_and_wrong_cluster_are_unknown_not_safe() {
+    let wire = legacy_transfer(75);
+    let failed = FakeRpc::new(simulation(
+        900,
+        json!({"InstructionError":[0,"Custom"]}),
+        &[10_000, 0, 1],
+        &[10_000, 0, 1],
+    ));
+    let (report, exit) = execute_with(args(&wire, true), &failed);
+    assert_never_permits(&report, exit);
+    assert_eq!(report["verdict"]["simulation_status"], "rpc_failed");
+    assert!(codes(&report).contains(&"RPC_SIMULATION_FAILED".to_owned()));
+
+    let mut wrong = FakeRpc::new(simulation(900, Value::Null, &[1, 1, 1], &[1, 1, 1]));
+    wrong.genesis = MAINNET_GENESIS;
+    let (report, exit) = execute_with(args(&wire, true), &wrong);
+    assert_never_permits(&report, exit);
+    assert_eq!(report["verdict"]["simulation_status"], "rpc_unavailable");
+    assert!(codes(&report).contains(&"RPC_GENESIS_MISMATCH".to_owned()));
+    // The transaction is never sent to a provider on the wrong cluster.
+    assert_eq!(wrong.methods(), ["getGenesisHash"]);
+}
+
+#[test]
+fn a_local_hard_deny_is_decided_before_the_provider_sees_the_transaction() {
+    let wire = legacy_transfer(75);
+    let policy = temp_file(
+        "policy.toml",
+        b"version = 1\nnetwork = \"devnet\"\nmax_declared_system_transfer_lamports = \"74\"\n",
+    );
+    let mut request = args(&wire, true);
+    request.policy = Some(policy);
+    let (report, exit) = execute_with(request, &Unreachable);
+    assert_eq!(exit, 20);
+    assert_eq!(report["verdict"]["decision"], "DENY");
+    assert!(codes(&report).contains(&"POLICY_SOL_TRANSFER_CAP".to_owned()));
+
+    // A rejected intent and an invalid transaction signature stop before the RPC as well.
+    let mut over_cap = args(&wire, true);
+    over_cap.intent = Some(intent_file(&wire, "74"));
+    over_cap.trusted_key = Some(issuer_key());
+    let (report, exit) = execute_with(over_cap, &Unreachable);
+    assert_eq!(exit, 20);
+    assert!(codes(&report).contains(&"INTENT_REJECTED".to_owned()));
+
+    let mut forged = wire.clone();
+    forged[1..65].fill(9);
+    let (report, exit) = execute_with(args(&forged, true), &Unreachable);
+    assert_eq!(exit, 20);
+    assert!(codes(&report).contains(&"INVALID_TRANSACTION_SIGNATURE".to_owned()));
+}
+
+#[test]
+fn verified_intent_is_compared_with_simulated_payer_outflow() {
+    let wire = legacy_transfer(75);
+    let mut request = args(&wire, true);
+    request.intent = Some(intent_file(&wire, "100"));
+    request.trusted_key = Some(issuer_key());
+    // The declared transfer (75) fits the cap (100); the simulated payer loss (5075) does not.
+    let rpc = FakeRpc::new(simulation(
+        900,
+        Value::Null,
+        &[10_000, 0, 1],
+        &[4_925, 75, 1],
+    ));
+    let (report, exit) = execute_with(request, &rpc);
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30, "an advisory RPC observation never becomes a DENY");
+    assert_eq!(report["verdict"]["intent_status"], "signature_verified");
+    assert!(codes(&report).contains(&"RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP".to_owned()));
+    assert_eq!(
+        report["signing_boundary"]["independent_intent_verified_by_caller"],
+        true
+    );
+
+    // Inside the cap: no outflow finding.
+    let mut request = args(&wire, true);
+    request.intent = Some(intent_file(&wire, "100"));
+    request.trusted_key = Some(issuer_key());
+    let rpc = FakeRpc::new(simulation(
+        900,
+        Value::Null,
+        &[10_000, 0, 1],
+        &[9_925, 75, 1],
+    ));
+    let (report, _) = execute_with(request, &rpc);
+    assert!(!codes(&report).contains(&"RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP".to_owned()));
+}
+
+#[test]
+fn lookup_table_with_a_signed_intent_reaches_the_rpc_and_stays_advisory() {
+    let wire = v0_transfer_to_lookup(75);
+    let mut request = args(&wire, true);
+    request.intent = Some(intent_file(&wire, "100"));
+    request.trusted_key = Some(issuer_key());
+    // Accounts: payer, System program, then the looked-up recipient.
+    let mut response = simulation(501, Value::Null, &[10_000, 1, 0], &[4_925, 1, 75]);
+    // The provider's own view of the loaded addresses must agree with the table it served.
+    response["value"]["loadedAddresses"] = json!({"writable":[b58(&[55u8; 32])],"readonly":[]});
+    let rpc = FakeRpc::new(response);
+    let (report, exit) = execute_with(request, &rpc);
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30);
+    assert_eq!(
+        rpc.methods(),
+        [
+            "getGenesisHash",
+            "getMultipleAccounts",
+            "simulateTransaction"
+        ],
+        "the lookup table must be resolved and the transaction simulated"
+    );
+    assert_eq!(report["verdict"]["simulation_status"], "rpc_succeeded");
+    assert_eq!(
+        report["verdict"]["intent_status"],
+        "signature_verified_scope_incomplete"
+    );
+    let found = codes(&report);
+    for needed in [
+        "INTENT_COVERAGE_INCOMPLETE",
+        "INTENT_SCOPE_ADVISORY_ONLY",
+        "RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP",
+    ] {
+        assert!(
+            found.contains(&needed.to_owned()),
+            "missing {needed}: {found:?}"
+        );
+    }
+    assert_eq!(report["coverage_gaps"][0]["reason"], "ALT_UNRESOLVED");
+    assert_eq!(report["coverage_gaps"][0]["violation_proven"], false);
+    // The intent is NOT treated as verified for the signing boundary.
+    assert_eq!(
+        report["signing_boundary"]["independent_intent_verified_by_caller"],
+        false
+    );
+    assert_eq!(
+        report["rpc_analysis"]["lookup_resolution"]["resolved_writable_accounts"][0],
+        b58(&[55u8; 32])
+    );
+
+    // A provider whose simulation contradicts the lookup table it just served is not believed.
+    let mut contradicting = args(&wire, true);
+    contradicting.intent = Some(intent_file(&wire, "100"));
+    contradicting.trusted_key = Some(issuer_key());
+    let mut response = simulation(501, Value::Null, &[10_000, 1, 0], &[4_925, 1, 75]);
+    response["value"]["loadedAddresses"] = json!({"writable":[b58(&[66u8; 32])],"readonly":[]});
+    let (report, exit) = execute_with(contradicting, &FakeRpc::new(response));
+    assert_never_permits(&report, exit);
+    assert_eq!(report["verdict"]["simulation_status"], "rpc_unavailable");
+
+    // Without --rpc-url the same input stops at the coverage gap and contacts nobody.
+    let mut offline = args(&wire, false);
+    offline.intent = Some(intent_file(&wire, "100"));
+    offline.trusted_key = Some(issuer_key());
+    let (report, exit) = execute_with(offline, &Unreachable);
+    assert_eq!(exit, 30);
+    assert_eq!(report["verdict"]["simulation_status"], "not_performed");
+    assert!(codes(&report).contains(&"INTENT_COVERAGE_INCOMPLETE".to_owned()));
+}
+
+#[test]
+fn a_static_violation_is_denied_even_when_a_lookup_table_is_unresolved() {
+    // 75 lamports to a looked-up recipient against a signed cap of 74.
+    let wire = v0_transfer_to_lookup(75);
+    let mut request = args(&wire, true);
+    request.intent = Some(intent_file(&wire, "74"));
+    request.trusted_key = Some(issuer_key());
+    let (report, exit) = execute_with(request, &Unreachable);
+    assert_eq!(exit, 20);
+    assert!(codes(&report).contains(&"INTENT_REJECTED".to_owned()));
+}
+
+#[test]
+fn a_provider_that_claims_approval_or_lies_cannot_produce_allow() {
+    let wire = legacy_transfer(75);
+    let hostile = [
+        // Extra fields claiming permission.
+        json!({"context":{"slot":900},"value":{"err":null,"logs":[],"innerInstructions":[],
+            "decision":"ALLOW","signing_gate":"allow","automated_signing_permitted":true,
+            "preBalances":[1,1,1],"postBalances":[1,1,1]}}),
+        // No evidence at all.
+        json!({"context":{"slot":900},"value":{"err":null}}),
+        // Balances that do not match the account list.
+        json!({"context":{"slot":900},"value":{"err":null,"preBalances":[1],"postBalances":[1,2,3]}}),
+        // Slot zero, wrong shapes, missing value.
+        json!({"context":{"slot":0},"value":{"err":null}}),
+        json!({"context":{"slot":900},"value":"ok"}),
+        json!({"context":{"slot":900}}),
+        json!("ALLOW"),
+        Value::Null,
+    ];
+    for simulation in hostile {
+        let rpc = FakeRpc::new(simulation.clone());
+        let (report, exit) = execute_with(args(&wire, true), &rpc);
+        assert_never_permits(&report, exit);
+        assert_eq!(exit, 30, "provider response {simulation}");
+        let text = report.to_string();
+        assert!(
+            !text.contains("\"ALLOW\""),
+            "ALLOW leaked from {simulation}"
+        );
+        assert!(!text.contains("\"signing_gate\":\"allow\""));
+    }
+}
+
+#[test]
+fn check_without_an_intent_and_offline_inspection_stay_local() {
+    let wire = legacy_transfer(75);
+    let (report, exit) = execute_with(args(&wire, false), &Unreachable);
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30);
+    assert_eq!(
+        report["verdict"]["intent_status"],
+        "unverified_no_independent_trust_key"
+    );
+    assert!(codes(&report).contains(&"NO_SIMULATION".to_owned()));
+
+    // A pinned key without an intent is reported, with a schema-valid status.
+    let mut keyed = args(&wire, false);
+    keyed.trusted_key = Some(issuer_key());
+    let (report, _) = execute_with(keyed, &Unreachable);
+    assert_eq!(report["verdict"]["intent_status"], "not_checked");
+    assert!(codes(&report).contains(&"INTENT_UNVERIFIED".to_owned()));
+
+    let mut inspect = args(&wire, false);
+    inspect.command = "inspect".into();
+    let (report, exit) = execute_with(inspect, &Unreachable);
+    assert_eq!(exit, 0);
+    assert_eq!(report["verdict"]["decision"], "UNKNOWN");
+}
+
+#[test]
+fn every_input_encoding_yields_the_same_inspection() {
+    let wire = legacy_transfer(75);
+    let mut reports = Vec::new();
+    for (encoding, contents) in [
+        ("binary", wire.clone()),
+        (
+            "base64",
+            format!("{}\n", STANDARD.encode(&wire)).into_bytes(),
+        ),
+        (
+            "base58",
+            format!("{}\n", bs58::encode(&wire).into_string()).into_bytes(),
+        ),
+    ] {
+        let mut request = args(&wire, false);
+        request.file = temp_file("tx.enc", &contents);
+        request.encoding = encoding.into();
+        let (report, exit) = execute_with(request, &Unreachable);
+        assert_eq!(exit, 30, "{encoding}");
+        reports.push(report["inspection"].clone());
+    }
+    assert_eq!(reports[0], reports[1]);
+    assert_eq!(reports[0], reports[2]);
+    assert_eq!(reports[0]["declared_system_transfer_lamports"], "75");
+}
+
+#[test]
+fn unreadable_oversized_and_malformed_inputs_are_errors_not_verdicts_of_safety() {
+    let mut missing = args(&legacy_transfer(1), false);
+    missing.file = "this-file-does-not-exist.bin".into();
+    let (report, exit) = execute_with(missing, &Unreachable);
+    assert_eq!((exit, report["code"].as_str()), (40, Some("BAD_INPUT")));
+
+    let (report, exit) = execute_with(args(&vec![0u8; 16_385], false), &Unreachable);
+    assert_eq!((exit, report["code"].as_str()), (40, Some("BAD_INPUT")));
+
+    let mut truncated = legacy_transfer(75);
+    truncated.truncate(100);
+    let (report, exit) = execute_with(args(&truncated, false), &Unreachable);
+    assert_eq!(exit, 40);
+    assert_eq!(report["verdict"]["decision"], "DENY");
+    assert!(codes(&report).contains(&"MALFORMED_TRANSACTION".to_owned()));
+
+    let mut bad_policy = args(&legacy_transfer(75), false);
+    bad_policy.policy = Some(temp_file(
+        "policy.toml",
+        b"version = 1\nnetwork = \"devnet\"\nsurprise = true\n",
+    ));
+    let (report, exit) = execute_with(bad_policy, &Unreachable);
+    assert_eq!((exit, report["code"].as_str()), (40, Some("BAD_POLICY")));
+}

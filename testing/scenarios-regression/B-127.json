@@ -1,0 +1,46 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED",
+        "SIGNED_INTENT_TOKEN_CAP_INVALID"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-127",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xMjciLCJuZXR3b3JrIjoibWFpbm5ldCIsIm1lc3NhZ2Vfc2hhMjU2IjoiMWFjMTc3ZGIwNGFkOWQ4MjBkYTZlMDMxODg3YWE2MzUwNzkyNjUxOWI3NzBjMWM3NWFjOTNkNGMyOTMwMzNjYSIsIm5vdF9iZWZvcmVfdW5peCI6MSwiZXhwaXJlc19hdF91bml4Ijo0MTAyNDQ0ODAwLCJhbGxvd2VkX3Byb2dyYW1faWRzIjpbIjExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwiVG9rZW5rZWdRZmVaeWlOd0FKYk5iR0tQRlhDV3VCdmY5U3M2MjNWUTVEQSJdLCJtYXhfc3BlbmRfbGFtcG9ydHMiOiIxMDAwIiwidG9rZW5fc3BlbmRfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJtYXhfZGViaXRfcmF3IjoiMTAwMCJ9XX0=",
+      "signature_b58": "3N97PTLQJM3YuTRGFv2inTX6tgPan6UnokvVCe7q3RdvPJd2DkecZUwzeU7T9Bo5jJSkTfvc7rGMpdnKpvR9LReN",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "1ac177db04ad9d820da6e031887aa63507926519b770c1c75ac93d4c293033ca",
+    "network": "mainnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAIFOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmXu2Vhe/PiHYMwngYRoqQTwCghO9IHMyXHIlMKyTBHdha/xQ+56aKI1oiLHgsp4Vk0FIIjIbFw+FUPEg7GavBLiWlvQoSEi6JvN1LerLgsXTFOUw2+75t/E8w4lRRQFsgAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQQEAQMCAAoM3AUAAAAAAAAG",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "A mainnet-bound intent with a cap of 1000 and a transfer of 1500.",
+  "smoke": false,
+  "title": "Mainnet: token transfer above the signed per-mint cap",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

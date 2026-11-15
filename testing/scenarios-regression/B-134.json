@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "MALFORMED_TRANSACTION"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-134",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": null,
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAyAwCAAAA6AMAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The transfer names account index 200 in a three-account message.",
+  "smoke": false,
+  "title": "Instruction referencing an account index outside the message",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

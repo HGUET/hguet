@@ -11,6 +11,17 @@
 - **Drift requiring review before repin:** `protocol/v1/payment-intent.schema.json` (locked `c80d17757ec6b63dccac91bd5c760b336d159c5c`, public HEAD `3a0c3ddb8e5e46a61ed6b29ecf67fef7f0b378f0`), and `scripts/validate_json_contracts.py` (locked `2a7641a555fdb1b8da68e1d3c93f2c2f06f70969`, public HEAD `8d54cbfe3262ab4f23c7c51780c45a6fef24b6b4`). **Semantic review:** the current PaymentIntent schema adds optional `token_spend_limits` and `token_source_limits` (signed local user intent, not Cloud payment currency); older SOL-only intent stays syntactically valid. The validator expands tests for those optional fields and BLOCK-only signer/report schemas. There is **no change to the pinned Cloud Protobuf or quote/assessment/receipt blobs**. This is not evidence of a Cloud wire break, but exact-byte signed intent semantics and pin/update CI still require executable tests before re-pin.
 - The private pin remains deliberately unchanged. A newer public source tree and a server pinned to an earlier commit can both be correct, but **must never be described as fully synchronized**.
 
+## Subsequent local verdict-schema drift (2026-11-15)
+
+The testing extension adds `signature_verified_scope_incomplete` to the public
+`SecurityVerdict.intent_status` enum to describe an independently verified intent whose
+instruction scope cannot be fully checked. The CLI already emitted this value. It does
+not authorize signing or imply complete spending enforcement. Older strict validators
+reject the new value, so consumers need an explicit schema update; this is not a claim
+of compatibility with the private server's pinned schema. The snapshot and blob counts
+above refer to their stated historical commit, not this working tree. Cloud Protobuf,
+quote, assessment and receipt definitions are unchanged by this extension.
+
 ## Current implementation versus intended public protocol
 
 | Contract | Public CLI / protocol | Private server on `main` | Cross-repo status |

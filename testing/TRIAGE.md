@@ -118,3 +118,52 @@ is then advisory only and no limit is reported as enforced).
 
 Current: 60 main + 36 regression = **96/96 PASS**, BAD denied 45/45, false blocks 0/25,
 UNKNOWN overclaimed as DENY 0/26.
+
+---
+
+## Framework extension: what the benchmark could not see before
+
+The scenario set was extended and three property/mutation test groups were added (see `README.md`).
+Gaps closed, and what each new check found on its first run:
+
+| Gap | Added | Found on first run |
+|-----|-------|--------------------|
+| No verdict was ever compared with the public schema | runner validates every verdict against `security-verdict.schema.json` | **9 scenarios failed**: the CLI emits `intent_status = "signature_verified_scope_incomplete"`, which the schema did not list. The value is deliberate (HG-BENCH-002), so it was added to the schema enum; this is a change to the public draft contract and needs the server side to agree |
+| Exit codes were only checked for "non-zero" | exit code must match the decision (DENY 20 or 40, UNKNOWN 30) | nothing |
+| v1 wire format: 0 scenarios | `build_v1_transaction` + G-106, G-107, B-121..B-124, U-112 | nothing |
+| Input encodings: 100% Base64 | runner writes the input file in the declared encoding; G-108, G-109, B-125, B-126 | nothing |
+| Networks: 93/96 devnet | B-127, B-128, B-129, G-110 | nothing |
+| Malformed structure: truncation only | B-130..B-134 (trailing byte, non-canonical compact-u16, duplicate key, oversize, index out of range) | nothing |
+| Partial signatures, two signers | U-113, G-111 | nothing |
+| BAD forms with only a GOOD pair | B-135..B-140 | nothing |
+| Successful RPC path untested end to end | `pipeline_tests.rs` (injected transport) | nothing in the tool; it confirmed the lookup-table + signed-intent path that could not be exercised before |
+| No test of a hostile provider | `hostile_provider.rs` | nothing |
+| No property tests of the parser | `property_tests.rs` | nothing |
+| Runner self-tests skipped on Windows and broken by any stricter check | stubs are portable and print schema-valid verdicts | the two "runner is not vacuous" tests had never run on Windows |
+
+"Nothing" means the tool already behaved correctly for that input, not that the area is proven
+correct: the new scenarios were written by the same author, after reading the code.
+
+Current: 60 main + 64 regression = **124/124 PASS**, BAD denied 65/65, false blocks 0/31,
+UNKNOWN overclaimed as DENY 0/28, verdicts valid against the public schema 124/124.
+
+
+## Follow-up review (2026-11-15)
+
+The first contract checker silently ignored `oneOf`, so invalid message/transaction
+hashes passed. It also used Python equality (`True == 1`) for JSON constants and
+could crash while extracting malformed findings. Replaced it with Draft 2020-12
+`jsonschema` validation and added regression tests for invalid hashes, boolean
+schema versions and malformed findings. Install `testing/requirements.txt`; both
+benchmark CI workflows now install these validators. The mutation job no longer
+hides a non-zero tool exit, and a missing artifact is an error.
+
+Verified locally on Windows: workspace Rust tests, fmt and clippy with warnings
+forbidden; 124/124 benchmark scenarios with the full schema validator; both public
+contract scripts; deterministic scenario generation; 90 Python tests with 16 skips
+(15 unavailable ML-DSA backend tests and one Windows executable-stub test).
+Loopback mock tests needed execution outside the restricted network sandbox.
+The v1 validator cross-check, Linux runtime checks, first mutation workflow run
+and two independent human reviewers remain outstanding. The new verdict enum
+value is documented as drift from older strict validators, not certified server
+compatibility.

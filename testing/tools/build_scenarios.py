@@ -603,7 +603,182 @@ def regression():
         "The operator caps declared native movements at 499 lamports; createAccount declares 2,000,000.",
         raw, msg, intent=None, trusted=None, policy=policy(max_declared_system_transfer_lamports="499"),
         required=[["POLICY_SOL_TRANSFER_CAP"]])
+    coverage()
     SINK[0] = SCENARIOS
+
+
+# ================================ COVERAGE EXTENSION (regression suite, never the main 60)
+# Dimensions the original scenarios did not exercise at all: the v1 wire format, the binary and
+# Base58 input encodings, mainnet/testnet token cases, malformed wire structure beyond truncation,
+# partially signed transactions and several BAD forms that had only a GOOD counterpart.
+def coverage():
+    tc = [(MINT_A, "1000")]
+    srcs = [(MINT_A, SRC_A, PAYER, "1000")]
+    QUIET = FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY
+
+    def case(sid, cls, title, why, raw, msg, *, req=None, forbid=None, network="devnet", intent_kw=None,
+             trusted=TRUSTED, policy_toml=None, encoding="base64", evidence="offline_sufficient", proven=None):
+        intent = None
+        if intent_kw is not None:
+            intent = intent_for(msg, intent_id="bench-" + sid, network=intent_kw.pop("network", network),
+                                **intent_kw)
+        add(sid, cls, title, "coverage", why, raw, msg, network=network, intent=intent,
+            trusted=trusted if intent is not None else None, policy=policy_toml,
+            required=[req] if req else [], forbidden=forbid if forbid is not None else [],
+            evidence=evidence, proven=proven, tx_encoding=encoding)
+
+    sol_intent = lambda cap="5000", **kw: dict(max_spend=cap, allowed_programs=[SYS], **kw)  # noqa: E731
+
+    # --- v1 wire format (0x81): signatures follow the message; resource limits are in the header.
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 1000)], PAYER)
+    case("G-106", "GOOD", "v1 transaction: SOL payment inside the signed cap",
+         "The same authorised payment in the v1 wire format must verify exactly like legacy.",
+         raw, msg, intent_kw=sol_intent(), forbid=QUIET, proven=PROVEN_INTENT + [
+             {"path": "inspection.wire_format", "equals": "v1"}])
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 2500)], PAYER, (PAYER_LABEL,), "valid", priority_fee=7000)
+    case("G-107", "GOOD", "v1 transaction: fully signed payment carrying a priority fee",
+         "The v1 signature covers the message that starts at the 0x81 byte; the priority fee is a header field, "
+         "not a transfer.", raw, msg, intent_kw=sol_intent(), forbid=QUIET, proven=PROVEN_INTENT + [
+             {"path": "inspection.transaction_signature_status", "equals": "verified"},
+             {"path": "inspection.resource_config.priority_fee_lamports", "equals": 7000}])
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 6000)], PAYER)
+    case("B-121", "BAD", "v1 transaction: SOL transfer above the signed cap",
+         "6000 lamports against a signed cap of 5000; the wire format does not change the limit.",
+         raw, msg, req=F_INTENT, intent_kw=sol_intent())
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 1000)], PAYER, (PAYER_LABEL,), "invalid")
+    case("B-122", "BAD", "v1 transaction with a forged signature",
+         "Non-zero signature bytes that do not verify over the v1 message.",
+         raw, msg, req=["INVALID_TRANSACTION_SIGNATURE"], intent_kw=sol_intent())
+    raw, msg = ct.build_v1_transaction([ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 1500)], PAYER)
+    case("B-123", "BAD", "v1 transaction: token transfer above the signed per-mint cap",
+         "1500 of mint A against a signed cap of 1000, carried in a v1 message.",
+         raw, msg, req=F_TOKEN_INTENT, intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], token_caps=tc))
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 1000)], PAYER)
+    case("B-124", "BAD", "v1 transaction with bytes appended after the signatures",
+         "A v1 transaction ends with its signatures; trailing bytes mean the input is not the transaction that "
+         "would be signed.", raw + b"\x00", None, req=["MALFORMED_TRANSACTION"])
+    raw, msg = ct.build_v1_transaction([pay(ALICE, 1000)], PAYER, compute_unit_limit=None,
+                                       loaded_accounts_data_size=None)
+    case("U-112", "UNKNOWN", "v1 transaction without the mandatory resource limits",
+         "The payment is inside the cap, but a v1 transaction that omits its compute and loaded-data limits "
+         "cannot execute as written: nothing is violated and nothing is proven.",
+         raw, msg, intent_kw=sol_intent(), forbid=["INTENT_REJECTED"], evidence="insufficient")
+
+    # --- Input encodings: the CLI has three decoders; every earlier scenario used Base64.
+    raw, msg = tx_b64([pay(ALICE, 1000)])
+    case("G-108", "GOOD", "Raw binary input file: SOL payment inside the cap",
+         "Identical transaction supplied as raw bytes; the decision must not depend on the file encoding.",
+         raw, msg, intent_kw=sol_intent(), forbid=QUIET, encoding="binary", proven=PROVEN_INTENT)
+    raw, msg = tx_b64([pay(ALICE, 6000)])
+    case("B-125", "BAD", "Raw binary input file: SOL transfer above the cap",
+         "The over-cap transfer of B-001 supplied as raw bytes.", raw, msg, req=F_INTENT, intent_kw=sol_intent(),
+         encoding="binary")
+    raw, msg = tx_b64([pay(ALICE, 1000)])
+    case("G-109", "GOOD", "Base58 input file: SOL payment inside the cap",
+         "Identical transaction supplied as Base58 text.", raw, msg, intent_kw=sol_intent(), forbid=QUIET,
+         encoding="base58", proven=PROVEN_INTENT)
+    raw, msg = tx_b64([ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 1500)])
+    case("B-126", "BAD", "Base58 input file: token transfer above the per-mint cap",
+         "The over-cap token transfer of B-009 supplied as Base58 text.", raw, msg, req=F_TOKEN_INTENT,
+         intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], token_caps=tc), encoding="base58")
+
+    # --- Networks: token and policy cases had only ever run on devnet.
+    raw, msg = tx_b64([ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 1500)])
+    case("B-127", "BAD", "Mainnet: token transfer above the signed per-mint cap",
+         "A mainnet-bound intent with a cap of 1000 and a transfer of 1500.", raw, msg, req=F_TOKEN_INTENT,
+         network="mainnet", intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], token_caps=tc))
+    raw, msg = tx_b64([ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 700)])
+    case("G-110", "GOOD", "Testnet: source-scoped token transfer inside the cap",
+         "A testnet-bound, source-scoped intent; the debit is within scope.", raw, msg, network="testnet",
+         intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], source_caps=srcs), forbid=QUIET,
+         proven=PROVEN_INTENT)
+    raw, msg = tx_b64([pay(ALICE, 1000)])
+    case("B-128", "BAD", "Mainnet intent presented for a testnet check",
+         "The intent is bound to mainnet; using it on testnet is cross-network replay.", raw, msg, req=F_INTENT,
+         network="testnet", intent_kw=sol_intent(network="mainnet"))
+    case("B-129", "BAD", "Local policy written for another network",
+         "The operator policy is for mainnet; the transaction is being checked on devnet.", raw, msg,
+         req=["POLICY_WRONG_NETWORK"], policy_toml=policy(network="mainnet"))
+
+    # --- Malformed wire structure other than truncation.
+    raw, msg = tx_b64([pay(ALICE, 1000)])
+    case("B-130", "BAD", "Legacy transaction with one byte appended",
+         "A transaction with trailing bytes is not the byte string a signer would sign.",
+         raw + b"\x00", None, req=["MALFORMED_TRANSACTION"])
+    # Offset of the account-count byte: signature count (1) + signature (64) + header (3).
+    count_at = 1 + 64 + 3
+    assert raw[count_at] == 3
+    case("B-131", "BAD", "Non-canonical compact-u16 account count",
+         "The account count 3 is encoded as two bytes (0x83 0x00). The runtime accepts only the shortest "
+         "encoding, so these bytes are not a valid transaction.",
+         raw[:count_at] + b"\x83\x00" + raw[count_at + 1:], None, req=["MALFORMED_TRANSACTION"])
+    dup = bytearray(raw)
+    first_key = 1 + 64 + 3 + 1
+    dup[first_key + 32:first_key + 64] = dup[first_key:first_key + 32]
+    case("B-132", "BAD", "Message that lists the same account key twice",
+         "The second account key is a copy of the first. The runtime refuses a message that loads an account "
+         "twice, and one account must not play two roles in the checks.", bytes(dup), None,
+         req=["MALFORMED_TRANSACTION"])
+    filler = [ct.Instruction(MEMO, [(PAYER, True, False)], bytes([65]) * 120) for _ in range(11)]
+    raw, msg = tx_b64(filler + [pay(ALICE, 1000)])
+    assert len(raw) > 1232
+    case("B-133", "BAD", "Legacy transaction larger than one network packet",
+         "A legacy transaction above 1232 bytes cannot be transmitted; it is not a valid transaction.",
+         raw, None, req=["MALFORMED_TRANSACTION"])
+    raw, msg = tx_b64([pay(ALICE, 1000)])
+    out_of_range = bytearray(raw)
+    out_of_range[len(raw) - 14] = 200
+    case("B-134", "BAD", "Instruction referencing an account index outside the message",
+         "The transfer names account index 200 in a three-account message.", bytes(out_of_range), None,
+         req=["MALFORMED_TRANSACTION"])
+
+    # --- Signatures.
+    raw, msg = tx_b64([pay(ALICE, 1000), ct.Instruction(MEMO, [(COSIGNER, True, False)], b"cosign")],
+                      (PAYER_LABEL,), "partial")
+    case("U-113", "UNKNOWN", "Partially signed transaction inside the cap",
+         "The fee payer signed, the co-signer has not: a normal multi-party state before signing completes. "
+         "Not a violation, and not a fully signed transaction either.", raw, msg,
+         intent_kw=dict(max_spend="5000", allowed_programs=[SYS, MEMO]), forbid=["INVALID_TRANSACTION_SIGNATURE",
+                                                                                   "INTENT_REJECTED"],
+         evidence="insufficient", proven=[{"path": "inspection.transaction_signature_status",
+                                           "equals": "partially_signed"}])
+    raw, msg = tx_b64([pay(ALICE, 1000), ct.Instruction(MEMO, [(COSIGNER, True, False)], b"cosign")],
+                      (PAYER_LABEL, COSIGNER_LABEL), "valid")
+    case("G-111", "GOOD", "Two-signer transaction with both signatures valid",
+         "Every required signature verifies; the payment is inside the cap.", raw, msg,
+         intent_kw=dict(max_spend="5000", allowed_programs=[SYS, MEMO]), forbid=QUIET, proven=PROVEN_INTENT + [
+             {"path": "inspection.transaction_signature_status", "equals": "verified"},
+             {"path": "inspection.required_signatures", "equals": 2}])
+
+    # --- BAD forms that previously existed only as a GOOD or UNKNOWN case.
+    raw, msg = tx_b64([ct.ix_token_burn_checked(T, SRC_A, MINT_A, PAYER, 1500)])
+    case("B-135", "BAD", "Checked token burn above the signed per-mint cap",
+         "BurnChecked destroys 1500 against a cap of 1000 (G-014 is the in-cap pair).", raw, msg,
+         req=F_TOKEN_INTENT, intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], token_caps=tc))
+    fee_xfer = ct.Instruction(T22, [(SRC_A, False, True), (MINT_A, False, False), (DST_A, False, True),
+                                    (PAYER, True, False)],
+                              bytes([26, 1]) + (1500).to_bytes(8, "little") + bytes([6]) + (50).to_bytes(8, "little"))
+    raw, msg = tx_b64([fee_xfer])
+    case("B-136", "BAD", "Token-2022 fee-bearing transfer above the signed per-mint cap",
+         "TransferCheckedWithFee declares 1500 against a cap of 1000 (U-014 is the in-cap pair).", raw, msg,
+         req=F_TOKEN_INTENT, intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T22], token_caps=tc))
+    raw, msg = tx_b64([ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 600),
+                       ct.ix_token_transfer_checked(T, SRC_A, MINT_A, DST_A, PAYER, 600)])
+    case("B-137", "BAD", "Split debits exceeding a signed source cap in aggregate",
+         "600 + 600 = 1200 from one source account against a source cap of 1000.", raw, msg,
+         req=F_SOURCE_INTENT, intent_kw=dict(max_spend="1000", allowed_programs=[SYS, T], source_caps=srcs))
+    raw, msg = tx_b64([pay(ALICE, 3000), pay(BOB, 2001)])
+    case("B-138", "BAD", "Two SOL payments whose sum exceeds the signed cap by one lamport",
+         "3000 + 2001 = 5001 against a cap of 5000 (G-003 is the in-cap pair).", raw, msg, req=F_INTENT,
+         intent_kw=sol_intent())
+    raw, msg = tx_b64([pay(ALICE, 300), pay(BOB, 200)])
+    case("B-139", "BAD", "Two SOL payments exceeding the local policy cap in aggregate",
+         "300 + 200 = 500 against an operator cap of 499.", raw, msg, req=["POLICY_SOL_TRANSFER_CAP"],
+         policy_toml=policy(max_declared_system_transfer_lamports="499"))
+    raw, msg = tx_b64([pay(ALICE, 400)])
+    case("B-140", "BAD", "Signed intent with an empty program allowlist",
+         "The issuer allowed no program at all, so even a plain System transfer is outside the intent.",
+         raw, msg, req=F_INTENT, intent_kw=dict(max_spend="5000", allowed_programs=[]))
 
 
 def write_suite(scenarios, directory, check, drift):
@@ -626,6 +801,9 @@ def main():
     parser.add_argument("--check", action="store_true", help="fail if committed scenarios differ")
     args = parser.parse_args()
     good(); bad(); unknown(); regression()
+    covered = {s["id"]: s for s in REGRESSION if s["category"] == "coverage"}
+    assert {s["input"]["transaction"]["encoding"] for s in covered.values()} == {"base64", "binary", "base58"}
+    assert {s["input"]["network"] for s in covered.values()} == {"devnet", "mainnet", "testnet"}
     classes = [s["class"] for s in SCENARIOS]
     assert len(SCENARIOS) == 60 and (classes.count("GOOD"), classes.count("BAD"), classes.count("UNKNOWN")) == (20, 25, 15), \
         "main suite must stay 20/25/15"

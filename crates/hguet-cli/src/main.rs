@@ -6,7 +6,7 @@ use hguet_core::{
     TransactionSignatureStatus,
 };
 use hguet_policy::LocalPolicy;
-use hguet_rpc::{simulate_with, validate_endpoint, HttpsTransport};
+use hguet_rpc::{simulate_with, validate_endpoint, HttpsTransport, JsonRpcTransport};
 use serde_json::json;
 use std::{env, fs, io::Read, process};
 
@@ -1161,6 +1161,12 @@ fn scope_review_json(intent_id: &str, findings: &[ScopeFinding]) -> serde_json::
 }
 
 fn execute(v: Args) -> (serde_json::Value, i32) {
+    execute_with(v, &HttpsTransport::default())
+}
+
+/// The whole `inspect` / `check` pipeline with the RPC transport injected, so the
+/// successful-RPC paths can be tested end to end without a network.
+fn execute_with<T: JsonRpcTransport>(v: Args, transport: &T) -> (serde_json::Value, i32) {
     let mut verdict = SecurityVerdict::unknown(&v.network);
     let data = match read_transaction(&v.file, &v.encoding) {
         Ok(data) => data,
@@ -1414,7 +1420,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
     if let Some(endpoint) = &v.rpc_url {
         // Explicit opt-in ONLY; never forward anything to HGUET Cloud. The
         // user-selected Solana RPC provider receives the raw transaction.
-        match simulate_with(&HttpsTransport::default(), endpoint, &v.network, &data) {
+        match simulate_with(transport, endpoint, &v.network, &data) {
             Ok(evidence) => {
                 verdict.simulation_status = evidence.status.clone();
                 verdict.coverage.push("solana_rpc_genesis_verified".into());
@@ -1501,7 +1507,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                         // sources not already present in the earlier balance-
                         // based snapshot. No reads for unverified/absent intent.
                         match hguet_rpc::fetch_missing_signed_sources(
-                            &HttpsTransport::default(),
+                            transport,
                             endpoint,
                             evidence.context_slot,
                             review,
@@ -1552,7 +1558,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                 let mut cpi_source_coverage = None;
                 if evidence.status == "rpc_succeeded" {
                     match hguet_rpc::fetch_missing_cpi_sources(
-                        &HttpsTransport::default(),
+                        transport,
                         endpoint,
                         evidence.context_slot,
                         &evidence.effect_analysis,
@@ -1853,6 +1859,9 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod pipeline_tests;
 
 #[cfg(test)]
 mod aggregate_token_reporting_tests {

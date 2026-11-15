@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_SOL_TRANSFER_CAP"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-139",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "71af868d4560eee38d9718296b41dbe97075c51eb09c86c23b6dbfb4a6f4ea03",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nmax_declared_system_transfer_lamports = \"499\"\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEEOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWOTKr4SYgpIi/v66ihmrL4Meq5TBITk83iUwK+ojQsnqqPefv6ToSZnpXJceFnt7Wej0YXu3l0/D7jJJOGmUmUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADJ4xu+Eg1O5C2K17FoAUeNU3LG1Tc35+jfOQ1R2T1PDwIDAgABDAIAAAAsAQAAAAAAAAMCAAIMAgAAAMgAAAAAAAAA",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "300 + 200 = 500 against an operator cap of 499.",
+  "smoke": false,
+  "title": "Two SOL payments exceeding the local policy cap in aggregate",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

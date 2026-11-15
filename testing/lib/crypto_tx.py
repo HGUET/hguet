@@ -300,6 +300,59 @@ def build_transaction(instructions, fee_payer, signers=(), v0_lookups=None, bloc
     return _shortvec(n_sig) + b"".join(sigs) + message, message
 
 
+def build_v1_transaction(instructions, fee_payer, signers=(), signature_mode="unsigned", *,
+                         priority_fee=None, compute_unit_limit=200_000, loaded_accounts_data_size=65_536,
+                         heap_size=None, blockhash_label="blockhash"):
+    """Solana v1 transaction (first byte 0x81). Returns (wire, message).
+
+    Layout: 0x81 | num_required_signatures, num_readonly_signed, num_readonly_unsigned |
+    config mask (u32 LE) | recent blockhash | instruction count (u8) | address count (u8) |
+    addresses | config values in mask-bit order (priority fee u64 for bits 0+1, compute-unit limit
+    u32 for bit 2, loaded-accounts-data size u32 for bit 3, heap size u32 for bit 4) |
+    per-instruction headers (program index u8, account count u8, data length u16 LE) |
+    per-instruction payloads (account indexes, data) | signatures. Unlike legacy/v0 the
+    signatures FOLLOW the message, and the signed message starts at the 0x81 byte.
+
+    NOTE on independence: no validator was available to cross-check this builder. It follows the
+    published v1 layout as the author read it; the runner's message-hash comparison only proves
+    that builder and parser agree with each other, not that both match the network.
+    """
+    keys, (n_sig, n_ro_signed, n_ro_unsigned) = _classify(instructions, fee_payer)
+    index = {k: n for n, k in enumerate(keys)}
+    mask, values = 0, b""
+    if priority_fee is not None:
+        mask |= 0b11
+        values += priority_fee.to_bytes(8, "little")
+    if compute_unit_limit is not None:
+        mask |= 0b100
+        values += compute_unit_limit.to_bytes(4, "little")
+    if loaded_accounts_data_size is not None:
+        mask |= 0b1000
+        values += loaded_accounts_data_size.to_bytes(4, "little")
+    if heap_size is not None:
+        mask |= 0b10000
+        values += heap_size.to_bytes(4, "little")
+    message = bytes([0x81, n_sig, n_ro_signed, n_ro_unsigned]) + mask.to_bytes(4, "little")
+    message += hashlib.sha256(("hguet-bench-blockhash:" + blockhash_label).encode()).digest()
+    message += bytes([len(instructions), len(keys)]) + b"".join(b58decode(k) for k in keys) + values
+    payloads = b""
+    for ins in instructions:
+        ids = bytes(index[key] for key, _, _ in ins.accounts)
+        message += bytes([index[ins.program], len(ids)]) + len(ins.data).to_bytes(2, "little")
+        payloads += ids + ins.data
+    message += payloads
+    sigs = []
+    for position in range(n_sig):
+        label = next((s for s in signers if signer_pubkey(s) == keys[position]), None)
+        if signature_mode == "valid" and label:
+            sigs.append(ed25519_sign(seed_for(label), message))
+        elif signature_mode == "invalid" and position == 0:
+            sigs.append(bytes([7]) * 64)
+        else:
+            sigs.append(bytes(64))
+    return message + b"".join(sigs), message
+
+
 # ----------------------------------------------------------- Intents
 INTENT_DOMAIN = b"HGUET-PAYMENT-INTENT\0"
 

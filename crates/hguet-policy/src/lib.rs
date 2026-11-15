@@ -252,6 +252,139 @@ mod tests {
             .iter()
             .any(|f| f.code == "POLICY_BLOCKED_SOL_RECIPIENT"));
     }
+    fn codes(policy: &str, tx: &ParsedTransaction) -> Vec<String> {
+        LocalPolicy::parse_and_validate(policy)
+            .unwrap()
+            .evaluate("devnet", tx)
+            .hard_denies
+            .into_iter()
+            .map(|f| f.code)
+            .collect()
+    }
+    #[test]
+    fn recipient_and_program_allowlists_deny_everything_not_listed() {
+        let recipient = bs58::encode([8u8; 32]).into_string();
+        let other = bs58::encode([77u8; 32]).into_string();
+        let system = "11111111111111111111111111111111";
+        let base = "version=1\nnetwork='devnet'\n";
+        assert!(codes(
+            &format!("{base}allowed_sol_recipients=['{recipient}']"),
+            &parsed()
+        )
+        .is_empty());
+        assert_eq!(
+            codes(
+                &format!("{base}allowed_sol_recipients=['{other}']"),
+                &parsed()
+            ),
+            ["POLICY_UNAPPROVED_SOL_RECIPIENT"]
+        );
+        // An EMPTY allowlist allows nobody; it is not the same as no allowlist.
+        assert_eq!(
+            codes(&format!("{base}allowed_sol_recipients=[]"), &parsed()),
+            ["POLICY_UNAPPROVED_SOL_RECIPIENT"]
+        );
+        assert!(codes(
+            &format!("{base}allowed_program_ids=['{system}']"),
+            &parsed()
+        )
+        .is_empty());
+        assert_eq!(
+            codes(&format!("{base}allowed_program_ids=['{other}']"), &parsed()),
+            ["POLICY_UNAPPROVED_PROGRAM"]
+        );
+        assert_eq!(
+            codes(&format!("{base}denied_program_ids=['{system}']"), &parsed()),
+            ["POLICY_BLOCKED_PROGRAM"]
+        );
+        // A deny entry wins over an allow entry for the same key.
+        assert_eq!(
+            codes(
+                &format!("{base}denied_program_ids=['{system}']\nallowed_program_ids=['{system}']"),
+                &parsed()
+            ),
+            ["POLICY_BLOCKED_PROGRAM"]
+        );
+    }
+    #[test]
+    fn every_lamport_movement_kind_is_subject_to_the_cap_and_recipient_lists() {
+        let other = bs58::encode([77u8; 32]).into_string();
+        for kind in [
+            "create_account",
+            "create_account_with_seed",
+            "withdraw_nonce_account",
+            "transfer_with_seed",
+        ] {
+            let mut tx = parsed();
+            tx.system_transfers[0].kind = kind;
+            assert_eq!(
+                codes(
+                    "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='499'",
+                    &tx
+                ),
+                ["POLICY_SOL_TRANSFER_CAP"],
+                "{kind}"
+            );
+            assert_eq!(
+                codes(
+                    &format!("version=1\nnetwork='devnet'\nallowed_sol_recipients=['{other}']"),
+                    &tx
+                ),
+                ["POLICY_UNAPPROVED_SOL_RECIPIENT"],
+                "{kind}"
+            );
+        }
+    }
+    #[test]
+    fn caps_compare_exactly_and_never_wrap() {
+        let mut tx = parsed();
+        tx.declared_system_transfer_lamports = "18446744073709551616".into(); // 2^64
+        assert_eq!(
+            codes(
+                "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='18446744073709551615'",
+                &tx
+            ),
+            ["POLICY_SOL_TRANSFER_CAP"]
+        );
+        assert!(codes(
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='18446744073709551616'",
+            &tx
+        )
+        .is_empty());
+        // An unparsable declared total is treated as over every cap, never as zero.
+        tx.declared_system_transfer_lamports = "not-a-number".into();
+        assert_eq!(
+            codes(
+                "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='1'",
+                &tx
+            ),
+            ["POLICY_SOL_TRANSFER_CAP"]
+        );
+    }
+    #[test]
+    fn malformed_policies_are_refused_rather_than_loosely_interpreted() {
+        let key = bs58::encode([8u8; 32]).into_string();
+        for bad in [
+            "network='devnet'".to_string(),
+            "version=1".to_string(),
+            "version=1\nnetwork='localnet'".to_string(),
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports=500".to_string(),
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='+5'".to_string(),
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='05'".to_string(),
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports='1e3'".to_string(),
+            "version=1\nnetwork='devnet'\nmax_declared_system_transfer_lamports=''".to_string(),
+            format!("version=1\nnetwork='devnet'\ndenied_sol_recipients=['{key}','{key}']"),
+            format!("version=1\nnetwork='devnet'\nallowed_program_ids='{key}'"),
+            "version=1\nnetwork='devnet'\nallowed_sol_recipients=['short']".to_string(),
+            "x".repeat(65_537),
+        ] {
+            assert!(
+                LocalPolicy::parse_and_validate(&bad).is_err(),
+                "accepted: {}",
+                &bad[..bad.len().min(80)]
+            );
+        }
+    }
     #[test]
     fn unresolvable_address_stays_unknown_not_implicitly_allowed() {
         let policy = LocalPolicy::parse_and_validate("version=1\nnetwork='devnet'").unwrap();

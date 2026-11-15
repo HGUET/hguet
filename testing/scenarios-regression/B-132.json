@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "coverage",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "MALFORMED_TRANSACTION"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-132",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": null,
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmU4gz1y6qptJuu/4aDEcA7tHwwqZODG5pO8Dn6qwgsaZQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQwCAAAA6AMAAAAAAAA=",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The second account key is a copy of the first. The runtime refuses a message that loads an account twice, and one account must not play two roles in the checks.",
+  "smoke": false,
+  "title": "Message that lists the same account key twice",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

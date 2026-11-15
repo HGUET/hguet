@@ -155,7 +155,27 @@ class Mocks(unittest.TestCase):
             rpc_mock.MockRpc("real_server")
 
 
-@unittest.skipIf(sys.platform == "win32", "needs an executable stub")
+def make_stub(directory, body):
+    """A fake `hguet` executable for this platform that runs `body` as Python."""
+    import stat
+    script = Path(directory) / "stub_tool.py"
+    script.write_text("import json,sys\n"
+                      "def verdict(decision):\n"
+                      "    return {'schema_version':1,'kind':'security_verdict','decision':decision,"
+                      "'network':'devnet','message_sha256':None,'transaction_sha256':None,"
+                      "'intent_status':'not_checked','simulation_status':'not_performed',"
+                      "'coverage':[],'findings':[],'limitations':[]}\n"
+                      "if '--version' in sys.argv: print('stub'); sys.exit(0)\n" + body, encoding="utf-8")
+    if sys.platform == "win32":
+        stub = Path(directory) / "hguet.cmd"
+        stub.write_text('@"%s" "%s" %%*\r\n' % (sys.executable, script), encoding="ascii")
+    else:
+        stub = Path(directory) / "hguet"
+        stub.write_text('#!/bin/sh\nexec "%s" "%s" "$@"\n' % (sys.executable, script), encoding="ascii")
+        stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
+    return stub
+
+
 class RunnerIsNotVacuous(unittest.TestCase):
     """A tool that approves everything must make the benchmark fail loudly."""
 
@@ -165,13 +185,9 @@ class RunnerIsNotVacuous(unittest.TestCase):
         import subprocess
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
-            stub = Path(tmp) / "hguet"
-            stub.write_text("#!%s\nimport json,sys\n"
-                            "if '--version' in sys.argv: print('stub'); sys.exit(0)\n"
-                            "print(json.dumps({'verdict':{'decision':'ALLOW','findings':[]},"
-                            "'signing_boundary':{'signing_gate':'allow','automated_signing_permitted':True}}))\n"
-                            "sys.exit(0)\n" % sys.executable)
-            stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
+            stub = make_stub(tmp, "print(json.dumps({'verdict':verdict('ALLOW'),"
+                                  "'signing_boundary':{'signing_gate':'allow','automated_signing_permitted':True}}))\n"
+                                  "sys.exit(0)\n")
             out = Path(tmp) / "out"
             done = subprocess.run([sys.executable, str(TESTING / "runner/run_benchmark.py"), "--hguet", str(stub),
                                    "--subset", "smoke", "--out", str(out), "--known-defects", str(Path(tmp) / "none")],
@@ -190,14 +206,13 @@ class RunnerIsNotVacuous(unittest.TestCase):
         import subprocess
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
-            stub = Path(tmp) / "hguet"
-            stub.write_text("#!%s\nimport json,sys\n"
-                            "if '--version' in sys.argv: print('stub'); sys.exit(0)\n"
-                            "if 'signer-preflight' in sys.argv:\n"
-                            "    print(json.dumps({'signer_refusal':{'signing_gate':'block','signing_permitted':False,'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False}})); sys.exit(20)\n"
-                            "print(json.dumps({'verdict':{'decision':'UNKNOWN','findings':[]}}))\n"
-                            "sys.exit(30)\n" % sys.executable)
-            stub.chmod(stub.stat().st_mode | stat.S_IXUSR)
+            stub = make_stub(
+                tmp, "if 'signer-preflight' in sys.argv:\n"
+                     "    print(json.dumps({'signer_refusal':{'signing_gate':'block','signing_permitted':False,"
+                     "'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False}}))\n"
+                     "    sys.exit(20)\n"
+                     "print(json.dumps({'verdict':verdict('UNKNOWN')}))\n"
+                     "sys.exit(30)\n")
 
             def run(known):
                 kd = Path(tmp) / "known.json"
@@ -221,6 +236,147 @@ class RunnerIsNotVacuous(unittest.TestCase):
             code, report = run({passing: {"defect": "STALE"}})
             self.assertEqual(report["totals"]["XPASS"], 1)
             self.assertEqual(code, 1)
+
+
+class Coverage(unittest.TestCase):
+    """The dimensions the first 60 scenarios never touched must stay covered."""
+
+    def test_every_wire_format_encoding_and_network_has_good_and_bad_cases(self):
+        import base64
+        everything = SCENARIOS + REGRESSION
+
+        def wire_format(s):
+            raw = base64.b64decode(s["input"]["transaction"]["data"])
+            if raw[:1] == b"\x81":
+                return "v1"
+            return "v0" if len(raw) > 65 and raw[65] & 0x80 else "legacy"
+        for name, key in (("wire format", wire_format),
+                          ("encoding", lambda s: s["input"]["transaction"]["encoding"]),
+                          ("network", lambda s: s["input"]["network"])):
+            seen = {}
+            for s in everything:
+                seen.setdefault(key(s), set()).add(s["class"])
+            expected = {"wire format": {"legacy", "v0", "v1"}, "encoding": {"base64", "binary", "base58"},
+                        "network": {"devnet", "mainnet", "testnet"}}[name]
+            self.assertEqual(set(seen), expected, name)
+            for value, classes in seen.items():
+                with self.subTest(dimension=name, value=value):
+                    self.assertIn("BAD", classes, "no BAD scenario: a blind spot for this " + name)
+                    self.assertTrue(classes & {"GOOD", "UNKNOWN"}, "no non-BAD scenario for this " + name)
+
+    def test_every_deny_finding_family_has_a_scenario_that_requires_it(self):
+        required = {code for s in SCENARIOS + REGRESSION if s["class"] == "BAD"
+                    for group in s["expect"]["findings_required"] for code in group}
+        for code in ("INTENT_REJECTED", "INVALID_TRANSACTION_SIGNATURE", "MALFORMED_TRANSACTION",
+                     "POLICY_SOL_TRANSFER_CAP", "POLICY_BLOCKED_SOL_RECIPIENT", "POLICY_BLOCKED_PROGRAM",
+                     "POLICY_UNAPPROVED_PROGRAM", "POLICY_UNAPPROVED_SOL_RECIPIENT", "POLICY_WRONG_NETWORK",
+                     "INTENT_SCOPE_AUTHORITY_TRANSFER", "INTENT_SCOPE_CLOSE_DESTINATION"):
+            self.assertIn(code, required, "no BAD scenario requires " + code)
+
+    def test_bad_scenarios_outnumber_no_class_and_ids_are_unique(self):
+        ids = [s["id"] for s in SCENARIOS + REGRESSION]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertGreaterEqual(len(REGRESSION), 60)
+
+
+class V1Builder(unittest.TestCase):
+    def test_layout_signature_and_resource_header(self):
+        payer = ct.signer_pubkey("signer:payer")
+        dst = ct.plain_pubkey("dest:alice")
+        wire, message = ct.build_v1_transaction([ct.ix_system_transfer(payer, dst, 1234)], payer,
+                                                ("signer:payer",), "valid", priority_fee=7)
+        self.assertEqual(wire[0], 0x81)
+        self.assertEqual(wire[:len(message)], message)
+        signature = wire[len(message):]
+        self.assertEqual(len(signature), 64)
+        self.assertTrue(ct.ed25519_verify(ct.b58decode(payer), message, signature))
+        self.assertEqual(list(message[1:4]), [1, 0, 1])                    # one signer, System is read-only
+        self.assertEqual(int.from_bytes(message[4:8], "little"), 0b1111)   # fee + CU + loaded-data bits
+        self.assertEqual(list(message[40:42]), [1, 3])                     # one instruction, three addresses
+        self.assertEqual(message[42:74], ct.b58decode(payer))
+        values = message[42 + 96:]
+        self.assertEqual(int.from_bytes(values[:8], "little"), 7)
+        self.assertEqual(int.from_bytes(values[8:12], "little"), 200_000)
+        self.assertEqual(message[-8:], (1234).to_bytes(8, "little"))
+        unsigned, _ = ct.build_v1_transaction([ct.ix_system_transfer(payer, dst, 1)], payer)
+        self.assertEqual(unsigned[-64:], bytes(64))
+
+    def test_omitted_limits_clear_their_mask_bits(self):
+        payer = ct.signer_pubkey("signer:payer")
+        _, message = ct.build_v1_transaction([ct.ix_system_transfer(payer, ct.plain_pubkey("d"), 1)], payer,
+                                             compute_unit_limit=None, loaded_accounts_data_size=None)
+        self.assertEqual(int.from_bytes(message[4:8], "little"), 0)
+
+
+class SchemaAndContract(unittest.TestCase):
+    GOOD = {"schema_version": 1, "kind": "security_verdict", "decision": "UNKNOWN", "network": "devnet",
+            "message_sha256": None, "transaction_sha256": None, "intent_status": "not_checked",
+            "simulation_status": "not_performed", "coverage": [], "findings": [], "limitations": []}
+
+    def test_validator_accepts_a_conforming_verdict_and_names_each_violation(self):
+        self.assertEqual(rb.schema_errors(self.GOOD, rb.VERDICT_SCHEMA), [])
+        for change, needle in (({"intent_status": "made_up"}, "intent_status"),
+                               ({"decision": "MAYBE"}, "decision"),
+                               ({"surprise": 1}, "surprise"),
+                               ({"coverage": "all"}, "coverage"),
+                               ({"findings": [{"code": "X"}]}, "findings[0]")):
+            bad = dict(self.GOOD, **change)
+            errors = rb.schema_errors(bad, rb.VERDICT_SCHEMA)
+            self.assertTrue(any(needle in e for e in errors), (change, errors))
+        missing = dict(self.GOOD)
+        del missing["network"]
+        self.assertTrue(any("network" in e and "required" in e for e in rb.schema_errors(missing, rb.VERDICT_SCHEMA)))
+
+    def test_full_schema_rejects_invalid_hashes_and_boolean_version(self):
+        for field in ("message_sha256", "transaction_sha256"):
+            for value in ("not-a-hash", 17, {}, [], True):
+                with self.subTest(field=field, value=value):
+                    self.assertTrue(rb.schema_errors(dict(self.GOOD, **{field: value}), rb.VERDICT_SCHEMA))
+        self.assertTrue(rb.schema_errors(dict(self.GOOD, schema_version=True), rb.VERDICT_SCHEMA))
+
+    def test_malformed_findings_are_reported_without_crashing(self):
+        scenario = next(x for x in SCENARIOS if x["id"] == "U-004")
+        for value in (None, 1, "bad", [None], [{"code": []}]):
+            result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {
+                "verdict": dict(self.GOOD, findings=value)}, "stderr": ""}, None)
+            self.assertEqual(result["failure_type"], "public_schema_violation")
+
+    def test_every_status_the_cli_source_emits_is_published(self):
+        """A status string added to the CLI without the schema is caught without running the tool."""
+        import re
+        source = (TESTING.parent / "crates/hguet-cli/src/main.rs").read_text(encoding="utf-8")
+        source += (TESTING.parent / "crates/hguet-core/src/lib.rs").read_text(encoding="utf-8")
+        for field in ("intent_status", "simulation_status"):
+            emitted = set(re.findall(field + r'\s*[:=]\s*"([a-z_]+)"\s*\.into\(\)', source))
+            self.assertTrue(emitted, field)
+            published = set(rb.VERDICT_SCHEMA["properties"][field]["enum"])
+            self.assertLessEqual(emitted, published, "%s values missing from the public schema" % field)
+
+    def test_schema_violation_and_wrong_exit_code_fail_a_scenario(self):
+        scenario = next(x for x in SCENARIOS if x["id"] == "U-004")
+        verdict = dict(self.GOOD, intent_status="invented_status")
+        result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {"verdict": verdict}, "stderr": ""}, None)
+        self.assertEqual(result["failure_type"], "public_schema_violation")
+        result = rb.evaluate(scenario, {"rc": 20, "stdout_json": {"verdict": dict(self.GOOD)}, "stderr": ""}, None)
+        self.assertEqual(result["failure_type"], "exit_code_contract_violation")
+        result = rb.evaluate(scenario, {"rc": 30, "stdout_json": {"verdict": dict(self.GOOD)}, "stderr": ""}, None)
+        self.assertIsNone(result["failure_type"])
+
+    def test_input_file_is_written_in_the_declared_encoding(self):
+        import base64
+        import tempfile
+        raw = bytes(range(1, 80))
+        for encoding, check in (("binary", lambda p: p.read_bytes() == raw),
+                                ("base58", lambda p: ct.b58decode(p.read_text().strip()) == raw),
+                                ("base64", lambda p: base64.b64decode(p.read_text()) == raw)):
+            scenario = {"input": {"transaction": {"encoding": encoding, "data": base64.b64encode(raw).decode()},
+                                  "intent": None, "policy_toml": None, "network": "devnet", "trusted_key": None}}
+            with tempfile.TemporaryDirectory() as tmp:
+                files = rb.write_inputs(scenario, Path(tmp))
+                self.assertTrue(check(files["tx"]), encoding)
+                command = rb.build_commands("hguet", scenario, files, None)["check"]
+                self.assertNotIn("--intent", command)
+                self.assertEqual(command[command.index("--encoding") + 1], encoding)
 
 
 if __name__ == "__main__":

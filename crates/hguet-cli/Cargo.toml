@@ -13,3 +13,6 @@ hguet-signer = { path = "../hguet-signer" }
 serde_json = "1"
 base64 = "0.22"
 bs58 = "0.5"
+
+[dev-dependencies]
+ed25519-dalek = "2.2"
