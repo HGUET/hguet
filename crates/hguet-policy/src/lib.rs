@@ -197,6 +197,7 @@ mod tests {
             compiled_top_level_instructions: vec![],
             system_transfers: vec![hguet_core::SystemTransfer {
                 instruction_index: 0,
+                kind: "transfer",
                 source: bs58::encode([9u8; 32]).into_string(),
                 destination: bs58::encode([8u8; 32]).into_string(),
                 lamports: "500".into(),

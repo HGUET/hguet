@@ -1,0 +1,43 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "UNKNOWN",
+  "expect": {
+    "findings_forbidden": [
+      "INTENT_REJECTED"
+    ],
+    "findings_required": [],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "U-111",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtVS0xMTEiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJhYmU3MTdkY2VkNjE5NjA3MTM2OGZkNTJiMjY0ZmY2MzU3ZTk0ZTM5NzUyYTQwNzNkODI1MjViNWRkMjg1ZTM5Iiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiXSwibWF4X3NwZW5kX2xhbXBvcnRzIjoiNTAwMCJ9",
+      "signature_b58": "4cmLS9KATRbB156yfSBxuu52d9YYn5NueParMrrkBNuW3FTXFBEg2Hoe3U3qWToR4CxEFatPbePMZhiePNTwcLzY",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "abe717dced6196071368fd52b264ff6357e94e39752a4073d82525b5dd285e39",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgABAziDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplGNYGazPH1j4joagb1p3bPMq0AHUXfNH+ndsrRNxTgfUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQICAAE0AAAAANAHAAAAAAAApQAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqQ==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Pair of B-116: 2000 lamports are inside the cap, so nothing is violated; what the new account is used for stays unproven.",
+  "smoke": false,
+  "title": "CreateAccount funding inside the signed SOL cap",
+  "truth": {
+    "acceptable_decisions": [
+      "UNKNOWN"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "insufficient",
+    "label": "UNKNOWN"
+  }
+}

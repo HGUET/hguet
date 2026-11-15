@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_SOL_TRANSFER_CAP"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-120",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "21052f0b4c0aef819433a3dac214c434288ceea476e5442c88714a45d0ca9cb5",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nmax_declared_system_transfer_lamports = \"499\"\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgABAziDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxplGNYGazPH1j4joagb1p3bPMq0AHUXfNH+ndsrRNxTgfUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMnjG74SDU7kLYrXsWgBR41TcsbVNzfn6N85DVHZPU8PAQICAAE0AAAAAICEHgAAAAAApQAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqQ==",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "The operator caps declared native movements at 499 lamports; createAccount declares 2,000,000.",
+  "smoke": false,
+  "title": "CreateAccount funding above the local policy cap",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

@@ -160,6 +160,12 @@ pub enum IntentFailure {
     Coverage {
         reason: &'static str,
         message: String,
+        /// The signed payload, present only when the signature, network, message
+        /// binding, validity window and every statically visible program and
+        /// amount were already verified and ONLY unresolved lookup-table
+        /// addresses remain. It is NOT a verified intent: callers may compare it
+        /// with later advisory evidence, never treat its limits as enforced.
+        intent: Option<Box<PaymentIntentPayload>>,
     },
 }
 
@@ -183,6 +189,7 @@ impl From<ReviewFailure> for IntentFailure {
             Some(reason) => Self::Coverage {
                 reason,
                 message: value.message,
+                intent: None,
             },
             None => Self::violation(value.message),
         }
@@ -284,7 +291,14 @@ pub fn verify_intent_detailed(
         .max_spend_lamports
         .parse()
         .map_err(|_| v("intent spend cap invalid"))?;
-    if spending_limit == 0 || intent.max_spend_lamports.starts_with('0') {
+    // `str::parse::<u64>` accepts a leading '+': require plain decimal digits.
+    if spending_limit == 0
+        || intent.max_spend_lamports.starts_with('0')
+        || !intent
+            .max_spend_lamports
+            .bytes()
+            .all(|b| b.is_ascii_digit())
+    {
         return Err(v(
             "intent spending limit must be positive canonical integer",
         ));
@@ -317,6 +331,7 @@ pub fn verify_intent_detailed(
         return Err(IntentFailure::Coverage {
             reason: "ALT_UNRESOLVED",
             message: "unresolved ALT addresses: program identities and accounts behind the lookup table cannot be checked against the intent allowlist; no violation is proven".into(),
+            intent: Some(Box::new(intent)),
         });
     }
     // Account-control operations (SetAuthority / CloseAccount) judged in context.
@@ -428,6 +443,20 @@ mod tests {
         assert!(verify_intent(&signed, &key, "devnet", &p, 100).is_ok());
         assert!(verify_intent(&signed, &key, "mainnet", &p, 100).is_err());
         assert!(verify_intent(&signed, &key, "devnet", &p, 4102444800).is_err());
+        // A signed but non-canonical cap ("+1000" parses as a u64) is refused.
+        let mut plus = payload.clone();
+        plus.max_spend_lamports = "+1000".into();
+        let b = serde_json::to_vec(&plus).unwrap();
+        let mut msg = INTENT_DOMAIN.to_vec();
+        msg.extend(&b);
+        let plus_signed = SignedPaymentIntent {
+            payload_b64: STANDARD.encode(b),
+            signer_pubkey_b58: key.clone(),
+            signature_b58: bs58::encode(signing.sign(&msg).to_bytes()).into_string(),
+        };
+        assert!(verify_intent(&plus_signed, &key, "devnet", &p, 100)
+            .unwrap_err()
+            .contains("canonical"));
         let mut tampered = signed.clone();
         tampered.signature_b58 = "bad".into();
         assert!(verify_intent(&tampered, &key, "devnet", &p, 100).is_err());

@@ -1,0 +1,41 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "POLICY_UNAPPROVED_SOL_RECIPIENT"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-119",
+  "input": {
+    "intent": null,
+    "message_sha256_independent": "276ec2305f97265f23a4587329a8fdc341114aefa50948c8078cd29172a44a77",
+    "network": "devnet",
+    "policy_toml": "version = 1\nnetwork = \"devnet\"\nallowed_sol_recipients = [\"AaUhWpHpPF1qDGPCAK9VgDf2gigSUA7Nbdmin61URcGV\"]\n",
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDOIM9cuqqbSbrv+GgxHAO7R8MKmTgxuaTvA5+qsILGmWqj3n7+k6EmZ6VyXHhZ7e1no9GF7t5dPw+4ySThplJlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8BAgIAAQ0CAAAACgAAAAAAAAAA",
+      "encoding": "base64"
+    },
+    "trusted_key": null
+  },
+  "rationale": "Only Alice may be paid. A trailing byte must not hide the transfer to Bob from the recipient allowlist.",
+  "smoke": false,
+  "title": "Padded SOL transfer to a recipient outside the operator allowlist",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

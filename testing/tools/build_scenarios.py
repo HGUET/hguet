@@ -407,11 +407,12 @@ def unknown():
                         bytes([26, 1]) + (900).to_bytes(8, "little") + bytes([6]) + (50).to_bytes(8, "little"))],
         req=[], caps=[(MINT_A, "1000")], progs=(SYS, T22), evidence="requires_rpc")
     unk("U-015", "System account creation funds an undeclared amount",
-        "createAccount moves lamports that are not a plain top-level transfer; total spend is unprovable offline.",
+        "createAccount funds a new account with 2,000,000 lamports, inside the signed cap of 5,000,000: the declared "
+        "amount is in scope, but what the created account and its owner program do next is unprovable offline.",
         [ct.Instruction(SYS, [(PAYER, True, True), (ct.signer_pubkey("signer:newacct"), True, True)],
                         (0).to_bytes(4, "little") + (2_000_000).to_bytes(8, "little") + (165).to_bytes(8, "little")
                         + ct.b58decode(T))],
-        req=[], cap="5000", signers=(), evidence="insufficient")
+        req=[], cap="5000000", signers=(), evidence="insufficient")
 
 
 # ============================================ REGRESSION PAIRS (separate suite)
@@ -546,6 +547,62 @@ def regression():
     reg("U-110", "UNKNOWN", "Unchecked Transfer under a SOL-only intent (no token caps)",
         "Without token caps there is no signed token scope to violate: the transfer is unauthorised-but-unbounded, not a form violation.",
         [unchecked], req=["SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED"], forbid=["INTENT_REJECTED"], evidence="insufficient")
+    # --- Encoding and instruction-form evasions of the declared amounts (fixed after the code review).
+    # The on-chain programs decode a PREFIX and ignore trailing bytes; System instructions other than
+    # Transfer also name an explicit lamport amount. Neither may move a declared amount out of a cap.
+    def sys_transfer_data(lamports, pad=b""):
+        return (2).to_bytes(4, "little") + lamports.to_bytes(8, "little") + pad
+
+    padded_pay = lambda dst, lamports: ct.Instruction(  # noqa: E731
+        SYS, [(PAYER, True, True), (dst, False, True)], sys_transfer_data(lamports, b"\x00"))
+    reg("B-113", "BAD", "Over-cap SOL transfer padded with one trailing byte",
+        "6000 lamports against a signed cap of 5000. The extra byte does not stop the System Program from executing "
+        "the transfer, so it must not stop the cap from applying.",
+        [padded_pay(ALICE, 6000)], req=F_INTENT, progs=(SYS,))
+    reg("G-105", "GOOD", "In-cap SOL transfer padded with one trailing byte",
+        "Pair of B-113: an unusual encoding of a payment inside the cap is not a violation and must not be blocked.",
+        [padded_pay(ALICE, 1000)], progs=(SYS,), forbid=FORBIDDEN_FOR_GOOD + NO_SCOPE_DENY, proven=PROVEN_INTENT)
+    reg("B-114", "BAD", "Over-cap TransferChecked padded with one trailing byte",
+        "1500 of mint A against a signed cap of 1000; the token program ignores the trailing byte.",
+        [ct.Instruction(T, [(SRC_A, False, True), (MINT_A, False, False), (DST_A, False, True), (PAYER, True, False)],
+                        bytes([12]) + (1500).to_bytes(8, "little") + bytes([6, 0]))], req=F_TOKEN_INTENT, caps=tc)
+    reg("B-115", "BAD", "SetAuthority to a third party padded with one trailing byte",
+        "Ownership of the token account goes to Eve; padding the instruction must not turn theft into 'unsupported'.",
+        [ct.Instruction(T, [(SRC_A, False, True), (PAYER, True, False)],
+                        bytes([6, 2, 1]) + ct.b58decode(EVE) + b"\x00")], req=F_SCOPE_AUTH)
+    NEWACCT = ct.signer_pubkey("signer:newacct")
+
+    def create_account(lamports):
+        return ct.Instruction(SYS, [(PAYER, True, True), (NEWACCT, True, True)],
+                              (0).to_bytes(4, "little") + lamports.to_bytes(8, "little") + (165).to_bytes(8, "little")
+                              + ct.b58decode(T))
+    reg("B-116", "BAD", "CreateAccount funding above the signed SOL cap",
+        "createAccount moves 2,000,000 lamports out of the payer; the amount is explicit on the wire and exceeds the "
+        "signed cap of 5000.", [create_account(2_000_000)], req=F_INTENT, progs=(SYS,))
+    reg("U-111", "UNKNOWN", "CreateAccount funding inside the signed SOL cap",
+        "Pair of B-116: 2000 lamports are inside the cap, so nothing is violated; what the new account is used for "
+        "stays unproven.", [create_account(2000)], forbid=["INTENT_REJECTED"], progs=(SYS,), evidence="insufficient")
+    reg("B-117", "BAD", "TransferWithSeed above the signed SOL cap",
+        "A seed-derived account pays 6000 lamports to Eve; the amount is explicit and above the cap of 5000.",
+        [ct.Instruction(SYS, [(SRC_OTHER, False, True), (PAYER, True, False), (EVE, False, True)],
+                        (11).to_bytes(4, "little") + (6000).to_bytes(8, "little") + (2).to_bytes(8, "little") + b"ab"
+                        + ct.b58decode(SYS))], req=F_INTENT, progs=(SYS,))
+    reg("B-118", "BAD", "WithdrawNonceAccount above the signed SOL cap",
+        "A nonce account is drained of 6000 lamports to Eve under the payer's authority; above the cap of 5000.",
+        [ct.Instruction(SYS, [(ct.plain_pubkey("nonce:acct"), False, True), (EVE, False, True),
+                              (ct.plain_pubkey("sysvar:recent-blockhashes"), False, False),
+                              (ct.plain_pubkey("sysvar:rent"), False, False), (PAYER, True, False)],
+                        (5).to_bytes(4, "little") + (6000).to_bytes(8, "little"))], req=F_INTENT, progs=(SYS,))
+    raw, msg = tx_b64([padded_pay(BOB, 10)])
+    add("B-119", "BAD", "Padded SOL transfer to a recipient outside the operator allowlist", "regression",
+        "Only Alice may be paid. A trailing byte must not hide the transfer to Bob from the recipient allowlist.",
+        raw, msg, intent=None, trusted=None, policy=policy(allowed_sol_recipients=[ALICE]),
+        required=[["POLICY_UNAPPROVED_SOL_RECIPIENT"]])
+    raw, msg = tx_b64([create_account(2_000_000)])
+    add("B-120", "BAD", "CreateAccount funding above the local policy cap", "regression",
+        "The operator caps declared native movements at 499 lamports; createAccount declares 2,000,000.",
+        raw, msg, intent=None, trusted=None, policy=policy(max_declared_system_transfer_lamports="499"),
+        required=[["POLICY_SOL_TRANSFER_CAP"]])
     SINK[0] = SCENARIOS
 
 

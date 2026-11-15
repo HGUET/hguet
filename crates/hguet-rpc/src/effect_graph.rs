@@ -731,6 +731,7 @@ mod tests {
             compiled_top_level_instructions: vec![],
             system_transfers: vec![SystemTransfer {
                 instruction_index: 0,
+                kind: "transfer",
                 source: address(1),
                 destination: address(2),
                 lamports: "50".into(),

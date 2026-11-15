@@ -25,6 +25,10 @@ pub enum TransactionSignatureStatus {
 #[derive(Debug, Clone, Serialize)]
 pub struct SystemTransfer {
     pub instruction_index: usize,
+    /// Which System instruction declared the movement: `transfer`,
+    /// `create_account`, `create_account_with_seed`, `withdraw_nonce_account`
+    /// or `transfer_with_seed`.
+    pub kind: &'static str,
     pub source: String,
     pub destination: String,
     pub lamports: String,
@@ -232,6 +236,72 @@ fn parse_v1_config(r: &mut Reader<'_>, config_mask: u32) -> Result<V1Resources, 
     })
 }
 
+/// One explicit lamport movement declared by a top-level System instruction.
+struct SystemMovement {
+    kind: &'static str,
+    lamports: u64,
+    /// Index into the instruction's account list of the receiving account.
+    destination_role: usize,
+    trailing_bytes: bool,
+}
+
+/// Decodes the System instructions that carry an explicit lamport amount. The
+/// funding account is always account role 0. Returns `None` for every other
+/// instruction and for data too short to hold the declared layout.
+fn system_lamport_movement(data: &[u8]) -> Option<SystemMovement> {
+    let u64_at = |offset: usize| -> Option<u64> {
+        let end = offset.checked_add(8)?;
+        Some(u64::from_le_bytes(data.get(offset..end)?.try_into().ok()?))
+    };
+    let tag = u32::from_le_bytes(data.get(0..4)?.try_into().ok()?);
+    let (kind, lamports, destination_role, canonical_len) = match tag {
+        // CreateAccount { lamports, space, owner }: funder -> new account.
+        0 if data.len() >= 52 => ("create_account", u64_at(4)?, 1, 52),
+        // Transfer { lamports }.
+        2 if data.len() >= 12 => ("transfer", u64_at(4)?, 1, 12),
+        // CreateAccountWithSeed { base, seed: String, lamports, space, owner }.
+        3 => {
+            let seed_len = usize::try_from(u64_at(36)?).ok()?;
+            if seed_len > 32 {
+                return None;
+            }
+            let after_seed = 44 + seed_len;
+            let canonical = after_seed + 48;
+            if data.len() < canonical {
+                return None;
+            }
+            (
+                "create_account_with_seed",
+                u64_at(after_seed)?,
+                1,
+                canonical,
+            )
+        }
+        // WithdrawNonceAccount(lamports): nonce account -> recipient.
+        5 if data.len() >= 12 => ("withdraw_nonce_account", u64_at(4)?, 1, 12),
+        // TransferWithSeed { lamports, from_seed: String, from_owner }: accounts are
+        // [funding, base, recipient].
+        11 => {
+            let seed_len = usize::try_from(u64_at(12)?).ok()?;
+            if seed_len > 32 {
+                return None;
+            }
+            let canonical = 20 + seed_len + 32;
+            if data.len() < canonical {
+                return None;
+            }
+            ("transfer_with_seed", u64_at(4)?, 2, canonical)
+        }
+        _ => return None,
+    };
+    Some(SystemMovement {
+        kind,
+        lamports,
+        destination_role,
+        trailing_bytes: data.len() > canonical_len,
+    })
+}
+
 pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     if raw.is_empty() || raw.len() > MAX_V1_SIZE {
         return Err("transaction size outside supported bound".into());
@@ -433,6 +503,17 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     {
         return Err("invalid message header/account set".into());
     }
+    // The runtime refuses a message that loads the same account twice; accepting one
+    // here would let an account play two roles the checks treat as distinct.
+    let mut seen_keys = std::collections::HashSet::with_capacity(key_count);
+    if !key_bytes
+        .as_chunks::<32>()
+        .0
+        .iter()
+        .all(|k| seen_keys.insert(k))
+    {
+        return Err("duplicate account key in message".into());
+    }
 
     let mut programs = Vec::with_capacity(instruction_data.len());
     let mut compiled_top_level_instructions = Vec::with_capacity(instruction_data.len());
@@ -458,40 +539,51 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         };
         if program == SYSTEM_PROGRAM {
             // The System Program decodes its instruction as a bincode PREFIX and
-            // ignores trailing bytes, so a Transfer padded with extra data still
-            // moves the lamports. Decode the prefix; requiring exactly 12 bytes
-            // would let one appended byte hide the transfer from every cap.
-            if ins.data.len() >= 12
-                && u32::from_le_bytes(ins.data[0..4].try_into().expect("12 bytes")) == 2
-            {
-                if ins.data.len() > 12 {
-                    noncanonical_data = true;
-                }
-                if ins.accounts.len() < 2 {
-                    return Err("System transfer requires two account indices".into());
-                }
-                let value = u64::from_le_bytes(ins.data[4..12].try_into().expect("12 bytes"));
-                declared = declared
-                    .checked_add(value as u128)
-                    .ok_or("native transfer total overflow")?;
-                let lookup_key = |index: usize| -> String {
-                    if index < key_count {
-                        key(&key_bytes, index)
-                    } else {
-                        "<unresolved-ALT-account>".into()
+            // ignores trailing bytes, so an instruction padded with extra data still
+            // moves the lamports. Every form that names an explicit lamport amount
+            // is decoded from its prefix and counted; requiring exact lengths, or
+            // recognising Transfer alone, would let the amount escape every cap.
+            match system_lamport_movement(&ins.data) {
+                Some(movement) => {
+                    if movement.kind == "transfer" && ins.accounts.len() < 2 {
+                        return Err("System transfer requires two account indices".into());
                     }
-                };
-                system_transfers.push(SystemTransfer {
-                    instruction_index: i,
-                    source: lookup_key(ins.accounts[0]),
-                    destination: lookup_key(ins.accounts[1]),
-                    lamports: value.to_string(),
-                });
-                if ins.accounts[0] >= key_count || ins.accounts[1] >= key_count {
-                    unknown_effects = true;
+                    if ins.accounts.len() <= movement.destination_role {
+                        // Too few accounts: the instruction cannot execute as declared.
+                        unknown_effects = true;
+                    } else {
+                        if movement.trailing_bytes {
+                            noncanonical_data = true;
+                        }
+                        declared = declared
+                            .checked_add(u128::from(movement.lamports))
+                            .ok_or("native transfer total overflow")?;
+                        let lookup_key = |index: usize| -> String {
+                            if index < key_count {
+                                key(&key_bytes, index)
+                            } else {
+                                "<unresolved-ALT-account>".into()
+                            }
+                        };
+                        let (source, destination) =
+                            (ins.accounts[0], ins.accounts[movement.destination_role]);
+                        system_transfers.push(SystemTransfer {
+                            instruction_index: i,
+                            kind: movement.kind,
+                            source: lookup_key(source),
+                            destination: lookup_key(destination),
+                            lamports: movement.lamports.to_string(),
+                        });
+                        if source >= key_count || destination >= key_count {
+                            unknown_effects = true;
+                        }
+                        if movement.kind != "transfer" {
+                            // Account creation and nonce handling have effects beyond the amount.
+                            unknown_effects = true;
+                        }
+                    }
                 }
-            } else {
-                unknown_effects = true; // may include create-account funding, nonce withdraw, etc.
+                None => unknown_effects = true, // Assign, Allocate, nonce administration, malformed
             }
         } else if program != MEMO_PROGRAM && program != COMPUTE_BUDGET {
             unknown_effects = true; // SPL token/Token-2022/CPI or other program side effects
@@ -508,7 +600,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     let mut limitations = vec![
         "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing".into(),
         "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis".into(),
-        "Declared System transfers are top-level instructions only; total spend and network fees are NOT fully verified".into(),
+        "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified".into(),
     ];
     if unresolved > 0 {
         limitations.push("v0 Address Lookup Table account addresses are unresolved".into());
@@ -517,7 +609,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
         limitations.push("Unknown effects: nontrivial system or other program instructions cannot be fully evaluated offline".into());
     }
     if noncanonical_data {
-        limitations.push("A System transfer carries trailing instruction bytes: it was decoded from its prefix and counted, but the non-canonical encoding is unusual and should be reviewed".into());
+        limitations.push("A System instruction that moves lamports carries trailing bytes: it was decoded from its prefix and counted, but the non-canonical encoding is unusual and should be reviewed".into());
     }
     if status != TransactionSignatureStatus::Verified {
         limitations.push(
@@ -718,6 +810,92 @@ mod tests {
         // The canonical 12-byte form carries no such note.
         let canonical = parse_transaction(&legacy(&[(5, 0, 1)], false)).unwrap();
         assert!(!canonical.limitations.iter().any(|l| l.contains("trailing")));
+    }
+    /// Legacy message: signer [7;32], accounts [2;32] and [5;32], System program.
+    fn system_ix(accounts: &[u8], data: &[u8]) -> Vec<u8> {
+        let mut wire = vec![1];
+        wire.extend([0u8; 64]);
+        wire.extend([1, 0, 1, 4]);
+        wire.extend([7u8; 32]);
+        wire.extend([2u8; 32]);
+        wire.extend([5u8; 32]);
+        wire.extend([0u8; 32]);
+        wire.extend([3u8; 32]);
+        wire.extend([1, 3, accounts.len() as u8]);
+        wire.extend(accounts);
+        wire.push(data.len() as u8);
+        wire.extend(data);
+        wire
+    }
+    #[test]
+    fn every_system_instruction_with_an_explicit_amount_is_counted() {
+        let k = |n: u8| bs58::encode([n; 32]).into_string();
+        // CreateAccount { lamports, space, owner }
+        let mut create = 0u32.to_le_bytes().to_vec();
+        create.extend(900u64.to_le_bytes());
+        create.extend(165u64.to_le_bytes());
+        create.extend([9u8; 32]);
+        // CreateAccountWithSeed { base, seed "ab", lamports, space, owner }
+        let mut seeded = 3u32.to_le_bytes().to_vec();
+        seeded.extend([7u8; 32]);
+        seeded.extend(2u64.to_le_bytes());
+        seeded.extend(b"ab");
+        seeded.extend(900u64.to_le_bytes());
+        seeded.extend(165u64.to_le_bytes());
+        seeded.extend([9u8; 32]);
+        // WithdrawNonceAccount(lamports)
+        let mut withdraw = 5u32.to_le_bytes().to_vec();
+        withdraw.extend(900u64.to_le_bytes());
+        // TransferWithSeed { lamports, seed "ab", owner }: recipient is account role 2.
+        let mut with_seed = 11u32.to_le_bytes().to_vec();
+        with_seed.extend(900u64.to_le_bytes());
+        with_seed.extend(2u64.to_le_bytes());
+        with_seed.extend(b"ab");
+        with_seed.extend([9u8; 32]);
+        for (kind, data, accounts, destination) in [
+            ("create_account", &create, &[0u8, 1][..], k(2)),
+            ("create_account_with_seed", &seeded, &[0, 1][..], k(2)),
+            ("withdraw_nonce_account", &withdraw, &[1, 2, 0][..], k(5)),
+            ("transfer_with_seed", &with_seed, &[1, 0, 2][..], k(5)),
+        ] {
+            let p = parse_transaction(&system_ix(accounts, data)).unwrap();
+            assert_eq!(p.declared_system_transfer_lamports, "900", "{kind}");
+            assert_eq!(p.system_transfers.len(), 1, "{kind}");
+            assert_eq!(p.system_transfers[0].kind, kind);
+            assert_eq!(p.system_transfers[0].destination, destination, "{kind}");
+            // Padding does not hide it either.
+            let mut padded = data.clone();
+            padded.push(0);
+            let p = parse_transaction(&system_ix(accounts, &padded)).unwrap();
+            assert_eq!(p.declared_system_transfer_lamports, "900", "padded {kind}");
+        }
+    }
+    #[test]
+    fn system_instructions_without_an_amount_or_too_short_are_not_counted() {
+        // Assign { owner }, Allocate { space }, AdvanceNonceAccount, truncated CreateAccount.
+        let mut assign = 1u32.to_le_bytes().to_vec();
+        assign.extend([9u8; 32]);
+        let mut allocate = 8u32.to_le_bytes().to_vec();
+        allocate.extend(165u64.to_le_bytes());
+        let advance = 4u32.to_le_bytes().to_vec();
+        let mut short_create = 0u32.to_le_bytes().to_vec();
+        short_create.extend(900u64.to_le_bytes());
+        for data in [&assign, &allocate, &advance, &short_create] {
+            let p = parse_transaction(&system_ix(&[0, 1], data)).unwrap();
+            assert_eq!(p.declared_system_transfer_lamports, "0");
+            assert!(p.system_transfers.is_empty());
+            assert!(p.limitations.iter().any(|l| l.contains("Unknown effects")));
+        }
+    }
+    #[test]
+    fn a_message_that_lists_the_same_account_twice_is_rejected() {
+        let mut wire = system_ix(&[0, 1], &2u32.to_le_bytes());
+        // Overwrite account 2 ([5;32]) with a copy of account 1 ([2;32]).
+        let start = 1 + 64 + 4 + 64;
+        wire[start..start + 32].copy_from_slice(&[2u8; 32]);
+        assert!(parse_transaction(&wire)
+            .unwrap_err()
+            .contains("duplicate account key"));
     }
     #[test]
     fn system_transfer_sum_cannot_wrap_u64() {

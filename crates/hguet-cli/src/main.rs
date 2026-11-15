@@ -14,7 +14,7 @@ fn usage() -> &'static str {
     "HGUET unreleased CLI (offline prototype)\n\
 Usage:\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet check FILE --mode local --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--policy TRUSTED.toml] [--rpc-url HTTPS_URL] [--encoding binary|base64|base58] [--json]\n\
+  hguet check FILE --mode local --network mainnet|devnet|testnet [--intent FILE --trusted-key BASE58] [--policy TRUSTED.toml] [--rpc-url HTTPS_URL] [--encoding binary|base64|base58] [--json]\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
@@ -152,7 +152,9 @@ fn parse_args() -> Result<Args, String> {
     if v.command == "inspect" && v.policy.is_some() {
         return Err("--policy requires check command".into());
     }
-    if (v.command == "check" || v.command == "signer-preflight") && v.intent.is_none() {
+    // `check` works without an intent (policy-only or inspection-grade checks);
+    // the verdict then says the intent is unverified. The signer seam needs one.
+    if v.command == "signer-preflight" && v.intent.is_none() {
         return Err("--intent FILE required".into());
     }
     if v.command == "signer-preflight" {
@@ -1242,6 +1244,10 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
         }
     }
     let mut verified_intent: Option<PaymentIntentPayload> = None;
+    // Signed payload whose scope could not be completed because of unresolved
+    // lookup tables. Used ONLY for advisory comparison with RPC observations.
+    let mut alt_gap_intent: Option<PaymentIntentPayload> = None;
+    let mut coverage_gaps = serde_json::Value::Null;
     let mut intent_scope_review = serde_json::Value::Null;
     if v.command == "check" {
         match (&v.intent, &v.trusted_key) {
@@ -1276,7 +1282,11 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                             .coverage
                             .push("independently_pinned_intent_signature".into());
                     }
-                    Err(IntentFailure::Coverage { reason, message }) => {
+                    Err(IntentFailure::Coverage {
+                        reason,
+                        message,
+                        intent,
+                    }) => {
                         // The signature WAS verified; nothing proves the intent violated.
                         // Missing coverage is UNKNOWN, never INTENT_REJECTED.
                         verdict.intent_status = "signature_verified_scope_incomplete".into();
@@ -1288,13 +1298,23 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                             "high",
                             format!("{message} [coverage_reason={reason}]"),
                         );
-                        return (
-                            json!({"inspection":parsed,
-                            "coverage_gaps":[{"code":"INTENT_COVERAGE_INCOMPLETE","reason":reason,"detail":message,
-                                "violation_proven":false}],
-                            "verdict":verdict}),
-                            30,
-                        );
+                        coverage_gaps = json!([{"code":"INTENT_COVERAGE_INCOMPLETE","reason":reason,
+                            "detail":message,"violation_proven":false}]);
+                        // Unresolved lookup tables are exactly what the opt-in RPC can
+                        // resolve, so do not stop before it. The intent stays unverified
+                        // for every cap and for the signing boundary.
+                        match (intent, &v.rpc_url) {
+                            (Some(payload), Some(_)) if reason == "ALT_UNRESOLVED" => {
+                                alt_gap_intent = Some(*payload);
+                            }
+                            _ => {
+                                return (
+                                    json!({"inspection":parsed,"coverage_gaps":coverage_gaps,
+                                        "verdict":verdict}),
+                                    30,
+                                );
+                            }
+                        }
                     }
                     Err(IntentFailure::Violation { message, findings }) => {
                         verdict.intent_status = "rejected".into();
@@ -1318,6 +1338,14 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     }
                 }
             }
+            (None, Some(_)) => {
+                verdict.intent_status = "not_checked".into();
+                verdict.finding(
+                    "INTENT_UNVERIFIED",
+                    "high",
+                    "No signed intent was supplied; nothing independent states what is authorized",
+                );
+            }
             (_, None) => {
                 verdict.intent_status = "unverified_no_independent_trust_key".into();
                 verdict.finding(
@@ -1326,7 +1354,6 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     "--trusted-key is required to verify independent authorization",
                 );
             }
-            _ => {}
         }
     }
     let mut signed_token_spend_review = None;
@@ -1596,7 +1623,11 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                         }
                     }
                 }
-                if let Some(ref intent) = verified_intent {
+                if alt_gap_intent.is_some() {
+                    verdict.finding("INTENT_SCOPE_ADVISORY_ONLY","high",
+                        "Lookup-table addresses were supplied by the selected RPC; the signed intent was compared with RPC observations as advisory evidence only and none of its limits is enforced");
+                }
+                if let Some(intent) = verified_intent.as_ref().or(alt_gap_intent.as_ref()) {
                     if intent.token_spend_limits.is_some() {
                         for (code, severity, message) in
                             rpc_signed_token_cap_findings(intent, &evidence.status, effects)
@@ -1664,6 +1695,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
         "intent_scope_review":intent_scope_review.clone(),
+        "coverage_gaps":coverage_gaps.clone(),
                     "signed_source_account_snapshot":signed_source_account_snapshot,
                     "signed_source_authority_evidence":signed_source_authority_evidence,
                     "cpi_source_account_snapshot":cpi_source_account_snapshot,
@@ -1690,6 +1722,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
                     "signed_token_spend_review":signed_token_spend_review,
                     "signed_token_source_review":signed_token_source_review,
         "intent_scope_review":intent_scope_review.clone(),
+        "coverage_gaps":coverage_gaps.clone(),
                     "signing_boundary":signing_boundary,
                     "verdict":verdict}),
                     30,
@@ -1714,6 +1747,7 @@ fn execute(v: Args) -> (serde_json::Value, i32) {
         "signed_token_spend_review":signed_token_spend_review,
         "signed_token_source_review":signed_token_source_review,
         "intent_scope_review":intent_scope_review.clone(),
+        "coverage_gaps":coverage_gaps.clone(),
         "signing_boundary":signing_boundary,
         "verdict":verdict}),
         if v.command == "inspect" { 0 } else { 30 },

@@ -86,3 +86,35 @@ label stands until the owner decides the intended contract for unchecked debits.
 * ALLOW is unreachable offline; `good_left_unknown` stays 20/20 (+3 in regression).
 * Approve/delegate to a third party under a **SOL-only** intent is still UNKNOWN (only SetAuthority and
   CloseAccount were in scope here); under token caps it is DENY (B-111).
+
+---
+
+## Code-review findings outside the original benchmark (encoding and instruction-form evasions)
+
+A manual code review, not the benchmark, found that a declared amount could leave every cap without
+any scenario failing:
+
+| Finding | Why no scenario caught it | Fix | New regression cases |
+|---------|---------------------------|-----|----------------------|
+| One trailing byte on a System `Transfer`, `TransferChecked`, `BurnChecked`, `TransferCheckedWithFee` or `SetAuthority` made the instruction unrecognised (decoders required exact lengths): DENY became UNKNOWN, the SOL total read 0 and recipient lists were skipped | every scenario was built by `crypto_tx.py` with canonical encodings only | decoders read the prefix and treat lengths as minimums | B-113, B-114, B-115, B-119, G-105 |
+| `CreateAccount`, `CreateAccountWithSeed`, `WithdrawNonceAccount` and `TransferWithSeed` name an explicit lamport amount but were not counted | U-015 labelled an over-cap `CreateAccount` UNKNOWN | all five forms are counted in `declared_system_transfer_lamports` and `system_transfers` (new `kind` field) | B-116, B-117, B-118, B-120, U-111 |
+
+### Ground-truth correction (explicit, not silent)
+
+**U-015 was mislabelled.** It funded a new account with 2,000,000 lamports under a signed cap of 5000
+and was labelled UNKNOWN with the rationale "total spend is unprovable offline". The amount is explicit
+in the instruction data, so that transaction is a proven overage, the same class as B-001. The scenario
+keeps its id, label and instruction; its signed cap is now 5,000,000 so the declared amount is inside
+the cap and UNKNOWN is the correct answer. The over-cap case is preserved as regression B-116. The main
+suite stays 20/25/15.
+
+Not re-run against the pre-fix binary: only the padded SOL transfer and padded `TransferChecked` cases
+were reproduced by hand before the fix (both UNKNOWN then, DENY now).
+
+Also changed: a message that lists the same account key twice is rejected as malformed; a signed
+`max_spend_lamports` with a leading `+` is rejected; `check` no longer requires `--intent`; with
+`--rpc-url`, an unresolved lookup table no longer stops `check` before the RPC is consulted (the intent
+is then advisory only and no limit is reported as enforced).
+
+Current: 60 main + 36 regression = **96/96 PASS**, BAD denied 45/45, false blocks 0/25,
+UNKNOWN overclaimed as DENY 0/26.
