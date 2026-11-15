@@ -1,6 +1,6 @@
 # HGUET CLI → private Server: public contract change notice
 
-**Status:** unreleased. This notice does **not** authorize automatic changes to server production infrastructure.
+**Status:** historical request recorded during development; public `HGUET/hguet` owns the wire contract and private `HGUET/server` consumes an exact pin. The current state is tracked in [server compatibility](../architecture/server-compatibility.md). This notice does **not** authorize any production infrastructure changes.
 
 The CLI now has a **read-only, explicit opt-in** `hguet-rpc` module, including network-genesis verification, v0 address lookup table account validation and Solana `simulateTransaction` evidence.
 
@@ -23,8 +23,8 @@ The optional `rpc_analysis` object is **local CLI output** wrapping `SecurityVer
 ## Requested action by private Server
 
 1. Read this notice and the public schema **only**; leave public CLI implementation untouched.
-2. Compare the private `docs/architecture/public-contract.lock.json` with the current reviewed public `main` SHA. As of this note the private pin was `0606d5f2549a7a55a0fce24d6ebdf65bb713e598`, preceding the new enum.
+2. Compare the private `docs/architecture/public-contract.lock.json` against the reviewed public revision. **At the time of this historic notice**, the private pin was `0606d5f2549a7a55a0fce24d6ebdf65bb713e598`; **as of 2026-11-15** it is `b60c4d5e403946070b3f189dec3bf56ad18efd56`. Do not use this older instruction as the current lock status.
 3. When appropriate, **update the private pin and workflow together** to the exact tested public commit, including changed schema blob SHA, and run protocol compatibility CI. Do not silently loosen unrelated price/receipt schemas or invent new wire messages.
 4. Continue the independently assigned private Rust backend and Devnet/Sandbox work; no real Mainnet SOL, no public 443 without security gates.
 
-Until the private re-pin is done, do not describe the latest public enum as verified against the private server's pinned contract. A public green CI does not test an implemented backend transport. The CLI Cloud function remains disabled.
+Do not describe public HEAD changes as verified against the server's pinned contract until corresponding reviewed blobs and tests agree. Public green CI alone does not demonstrate paid-client/server interoperability. The CLI Cloud function remains disabled.
