@@ -134,7 +134,9 @@ pub(crate) fn decode_token_cpi(
                 12 | 13 => 4,
                 _ => return Ok(opaque(extension, false)),
             };
-            if bytes.len() != if checked { 10 } else { 9 } || accounts.len() < min_accounts {
+            // Minimum lengths: the token programs decode a prefix and ignore
+            // trailing bytes, so a padded instruction is still this operation.
+            if bytes.len() < if checked { 10 } else { 9 } || accounts.len() < min_accounts {
                 return Ok(opaque(extension, false));
             }
             let amount = u64::from_le_bytes(
@@ -206,7 +208,7 @@ pub(crate) fn decode_token_cpi(
             } else {
                 3
             };
-            if bytes.len() != 1 || accounts.len() < needed {
+            if accounts.len() < needed {
                 return Ok(opaque(extension, false));
             }
             item.operation = match tag {
@@ -235,8 +237,8 @@ pub(crate) fn decode_token_cpi(
                 return Ok(opaque(extension, false));
             }
             let next = match bytes[2] {
-                0 if bytes.len() == 3 => None,
-                1 if bytes.len() == 35 => Some(bs58::encode(&bytes[3..35]).into_string()),
+                0 => None,
+                1 if bytes.len() >= 35 => Some(bs58::encode(&bytes[3..35]).into_string()),
                 _ => return Ok(opaque(extension, false)),
             };
             item.operation = "set_authority".into();

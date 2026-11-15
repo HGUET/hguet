@@ -127,12 +127,15 @@ pub(crate) fn checked_direct_debits(
         }
         let (mint_role,auth_role,amount,expected_count) = match bytes.as_slice(){
             // TransferChecked and BurnChecked: opcode + u64 amount + u8 decimals.
-            _ if bytes.len()==10 && bytes[0]==12 && ix.account_indices.len()>=4 =>{
+            // The token programs decode a PREFIX and ignore trailing bytes, so
+            // padded instructions still execute: lengths are minimums, never
+            // exact, or one appended byte would move a debit out of the caps.
+            _ if bytes.len()>=10 && bytes[0]==12 && ix.account_indices.len()>=4 =>{
                 let raw=u64::from_le_bytes(bytes[1..9].try_into()
                     .map_err(|_|ReviewFailure::violation("invalid checked transfer amount"))?);
                 (1,3,raw,4)
             },
-            _ if bytes.len()==10 && bytes[0]==15 && ix.account_indices.len()>=3 =>{
+            _ if bytes.len()>=10 && bytes[0]==15 && ix.account_indices.len()>=3 =>{
                 let raw=u64::from_le_bytes(bytes[1..9].try_into()
                     .map_err(|_|ReviewFailure::violation("invalid checked burn amount"))?);
                 (1,2,raw,3)
@@ -140,7 +143,7 @@ pub(crate) fn checked_direct_debits(
             // Token-2022 TransferCheckedWithFee: opcode 26, subtype 1,
             // amount u64, decimals u8, expected withheld fee u64.
             [26,1,..] if program==TOKEN_2022 &&
-                bytes.len()==19 && ix.account_indices.len()>=4 =>{
+                bytes.len()>=19 && ix.account_indices.len()>=4 =>{
                 let raw=u64::from_le_bytes(bytes[2..10].try_into()
                     .map_err(|_|ReviewFailure::violation("invalid Token-2022 fee transfer amount"))?);
                 (1,3,raw,4)
@@ -351,6 +354,34 @@ mod tests {
             "123"
         );
         assert!(review_declared_token_limits(&tx, &[cap(4, "122")]).is_err());
+    }
+    #[test]
+    fn trailing_bytes_cannot_move_a_checked_debit_out_of_the_signed_cap() {
+        for tag in [12u8, 15] {
+            let mut padded = op(tag, 500);
+            padded.push(0);
+            let accounts = if tag == 12 {
+                vec![1, 3, 2, 4]
+            } else {
+                vec![1, 3, 4]
+            };
+            let tx = wire(&[(padded, accounts, false)]);
+            let over = review_declared_token_limits_detailed(&tx, &[cap(4, "499")]).unwrap_err();
+            assert!(
+                over.coverage_reason.is_none(),
+                "opcode {tag} must be a DENY"
+            );
+            let ok = review_declared_token_limits(&tx, &[cap(4, "500")]).unwrap();
+            assert_eq!(ok.debits[0].declared_raw, "500");
+        }
+        let mut fee = vec![26, 1];
+        fee.extend(500u64.to_le_bytes());
+        fee.push(6);
+        fee.extend(3u64.to_le_bytes());
+        fee.push(0);
+        let tx = wire(&[(fee, vec![1, 3, 2, 4], true)]);
+        let over = review_declared_token_limits_detailed(&tx, &[cap(4, "499")]).unwrap_err();
+        assert!(over.coverage_reason.is_none());
     }
     #[test]
     fn over_u64_cumulative_sum_is_rejected_without_overflow() {

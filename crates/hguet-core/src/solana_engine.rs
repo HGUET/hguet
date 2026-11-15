@@ -439,6 +439,7 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     let mut system_transfers = Vec::new();
     let mut declared: u128 = 0;
     let mut unknown_effects = false;
+    let mut noncanonical_data = false;
     for (i, ins) in instruction_data.iter().enumerate() {
         if ins.program >= total || ins.accounts.iter().any(|n| *n >= total) {
             return Err("compiled instruction references an out-of-range account".into());
@@ -456,9 +457,16 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
             "<unresolved-ALT-program>".into()
         };
         if program == SYSTEM_PROGRAM {
-            if ins.data.len() == 12
+            // The System Program decodes its instruction as a bincode PREFIX and
+            // ignores trailing bytes, so a Transfer padded with extra data still
+            // moves the lamports. Decode the prefix; requiring exactly 12 bytes
+            // would let one appended byte hide the transfer from every cap.
+            if ins.data.len() >= 12
                 && u32::from_le_bytes(ins.data[0..4].try_into().expect("12 bytes")) == 2
             {
+                if ins.data.len() > 12 {
+                    noncanonical_data = true;
+                }
                 if ins.accounts.len() < 2 {
                     return Err("System transfer requires two account indices".into());
                 }
@@ -507,6 +515,9 @@ pub fn parse_transaction(raw: &[u8]) -> Result<ParsedTransaction, String> {
     }
     if unknown_effects {
         limitations.push("Unknown effects: nontrivial system or other program instructions cannot be fully evaluated offline".into());
+    }
+    if noncanonical_data {
+        limitations.push("A System transfer carries trailing instruction bytes: it was decoded from its prefix and counted, but the non-canonical encoding is unusual and should be reviewed".into());
     }
     if status != TransactionSignatureStatus::Verified {
         limitations.push(
@@ -681,6 +692,32 @@ mod tests {
         let p = parse_transaction(&wire).unwrap();
         assert_eq!(p.wire_format, "v0");
         assert_eq!(p.unresolved_lookup_addresses, 1);
+    }
+    #[test]
+    fn system_transfer_with_trailing_bytes_is_still_counted() {
+        // Same layout as `legacy`, but the Transfer data carries one extra byte.
+        let mut wire = vec![1];
+        wire.extend([0u8; 64]);
+        wire.extend([1, 0, 1, 3]);
+        wire.extend([7u8; 32]);
+        wire.extend([2u8; 32]);
+        wire.extend([0u8; 32]);
+        wire.extend([3u8; 32]);
+        wire.extend([1, 2, 2, 0, 1, 13]);
+        wire.extend(2u32.to_le_bytes());
+        wire.extend(1_000_000u64.to_le_bytes());
+        wire.push(0);
+        let p = parse_transaction(&wire).unwrap();
+        assert_eq!(p.declared_system_transfer_lamports, "1000000");
+        assert_eq!(p.system_transfers.len(), 1);
+        assert_eq!(
+            p.system_transfers[0].destination,
+            bs58::encode([2u8; 32]).into_string()
+        );
+        assert!(p.limitations.iter().any(|l| l.contains("trailing")));
+        // The canonical 12-byte form carries no such note.
+        let canonical = parse_transaction(&legacy(&[(5, 0, 1)], false)).unwrap();
+        assert!(!canonical.limitations.iter().any(|l| l.contains("trailing")));
     }
     #[test]
     fn system_transfer_sum_cannot_wrap_u64() {

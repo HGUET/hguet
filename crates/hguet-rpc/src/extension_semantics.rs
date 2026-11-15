@@ -126,7 +126,8 @@ pub fn inspect_token_2022_extension(
     };
     match (tag, sub) {
         // [26,1,amount:u64,decimals:u8,expected_fee:u64], 4+ account roles.
-        (26, Some(1)) if bytes.len() == 19 && accounts.len() >= 4 => {
+        // Minimum length: trailing bytes do not change the decoded prefix.
+        (26, Some(1)) if bytes.len() >= 19 && accounts.len() >= 4 => {
             if let (Some(amount), Some(fee)) = (read_u64(bytes, 2), read_u64(bytes, 11)) {
                 result.layout_checked = true;
                 result.source_account = accounts.first().cloned();

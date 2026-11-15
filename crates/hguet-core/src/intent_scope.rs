@@ -143,9 +143,11 @@ pub fn review_account_control(parsed: &ParsedTransaction, intent_id: &str) -> Ve
                 if let Some(name) = &kind {
                     refs.push(format!("authority_type:{name}"));
                 }
+                // Prefix decode: the token programs ignore trailing bytes, so a
+                // padded SetAuthority must not escape this review.
                 let new_authority = match (data.len(), data.get(2)) {
-                    (35, Some(1)) => Some(bs58::encode(&data[3..35]).into_string()),
-                    (3, Some(0)) => None,
+                    (35.., Some(1)) => Some(bs58::encode(&data[3..35]).into_string()),
+                    (3.., Some(0)) => None,
                     _ => {
                         out.push(gap(
                             "TOKEN_ACCOUNT_CONTROL_UNSUPPORTED_ENCODING",
@@ -337,6 +339,14 @@ mod tests {
                 "missing evidence {needle}"
             );
         }
+    }
+
+    #[test]
+    fn set_authority_padded_with_trailing_bytes_is_still_a_violation() {
+        let (mut data, accounts) = set_authority(2, Some(4));
+        data.push(0);
+        let found = review_account_control(&wire(&[(data, accounts)]), "i");
+        assert!(found[0].violation && found[0].code == "INTENT_SCOPE_AUTHORITY_TRANSFER");
     }
 
     #[test]
