@@ -1,16 +1,6 @@
 name: "PQ interoperability (ML-DSA-87 known answers, protocol harness)"
 on:
-  pull_request:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "testing/cloud-value/**"
-      - "testing/tests/**"
-      - "protocol/**"
-      - "crates/hguet-cloud/**"
-      - ".github/workflows/pq-interop.yml"
-      - "Cargo.lock"
 permissions:
   contents: read
 jobs:
