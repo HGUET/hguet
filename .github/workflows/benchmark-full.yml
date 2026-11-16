@@ -1,13 +1,6 @@
 name: "Security benchmark (full: 60 + regression pairs)"
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 4 * * 1"
-  push:
-    branches: [main]
-    paths:
-      - "testing/**"
-      - "crates/**"
 permissions:
   contents: read
 jobs:
