@@ -6,7 +6,7 @@ use ed25519_dalek::{Signature, VerifyingKey};
 use serde::Serialize;
 
 const MAX_LEGACY_V0_SIZE: usize = 1_232;
-const MAX_V1_SIZE: usize = 4_096;
+pub(crate) const MAX_V1_SIZE: usize = 4_096;
 const MAX_INSTRUCTIONS: usize = 64;
 const MAX_V1_ACCOUNTS: usize = 96;
 const SYSTEM_PROGRAM: &str = "11111111111111111111111111111111";

@@ -657,6 +657,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OpenSSL ML-DSA-87; mandatory in pq-interop CI"]
     fn separately_pinned_report_keys_verify_their_own_domains() {
         use std::fs::{self, OpenOptions};
         use std::io::Write;
@@ -673,17 +674,15 @@ mod tests {
                 let _ = fs::remove_file(&self.private);
             }
         }
-        fn key() -> Option<EphemeralKey> {
+        fn key() -> EphemeralKey {
             let generated = Command::new("openssl")
                 .args(["genpkey", "-algorithm", "ML-DSA-87"])
                 .output()
-                .ok()?;
-            if !generated.status.success() {
-                if std::env::var_os("HGUET_REQUIRE_PQ_SIGNING").is_some() {
-                    panic!("ML-DSA-87 separate issuer-key test cannot skip");
-                }
-                return None;
-            }
+                .expect("OpenSSL is required for PQ tests");
+            assert!(
+                generated.status.success(),
+                "ML-DSA-87 is required but unavailable"
+            );
             let id = COUNTER.fetch_add(1, Ordering::Relaxed);
             let path = std::env::temp_dir()
                 .join(format!("hguet-report-keys-{}-{id}.pem", std::process::id()));
@@ -703,10 +702,10 @@ mod tests {
                 .output()
                 .unwrap();
             assert!(derived.status.success());
-            Some(EphemeralKey {
+            EphemeralKey {
                 private: path,
                 public: derived.stdout,
-            })
+            }
         }
         fn sign(key: &EphemeralKey, domain: Domain, payload: &[u8]) -> Vec<u8> {
             struct SignedInput(std::path::PathBuf);
@@ -743,9 +742,7 @@ mod tests {
             assert!(result.status.success());
             result.stdout
         }
-        let (Some(receipt_key), Some(assessment_key)) = (key(), key()) else {
-            return;
-        };
+        let (receipt_key, assessment_key) = (key(), key());
         let receipt_pin = PinnedKey::from_public_pem(&receipt_key.public, "openssl").unwrap();
         let assessment_pin = PinnedKey::from_public_pem(&assessment_key.public, "openssl").unwrap();
         assert_ne!(receipt_pin.key_id(), assessment_pin.key_id());

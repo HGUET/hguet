@@ -33,6 +33,8 @@ import crypto_tx  # noqa: E402
 import rpc_mock  # noqa: E402
 
 VERDICT_SCHEMA = json.loads((ROOT / "protocol/v1/security-verdict.schema.json").read_text(encoding="utf-8"))
+BOUNDARY_SCHEMA = json.loads((ROOT / "protocol/v1/signing-boundary.schema.json").read_text(encoding="utf-8"))
+REFUSAL_SCHEMA = json.loads((ROOT / "protocol/v1/signer-refusal.schema.json").read_text(encoding="utf-8"))
 
 DECISIONS = ["ALLOW", "WARN", "DENY", "UNKNOWN", "ERROR"]
 CLASSES = ["GOOD", "BAD", "UNKNOWN"]
@@ -137,12 +139,54 @@ def lookup(document, path):
     return node, True
 
 
-def response_errors(run):
+def report_errors(out, expected=None):
+    """Validate nested public objects and bind every reported identity to the input."""
+    errors = []
+    boundary = out.get("signing_boundary")
+    refusal = out.get("signer_refusal")
+    if boundary is not None:
+        errors += schema_errors(boundary, BOUNDARY_SCHEMA, "signing_boundary")
+    if refusal is not None:
+        errors += schema_errors(refusal, REFUSAL_SCHEMA, "signer_refusal")
+        if isinstance(refusal, dict) and refusal.get("signing_boundary") is not None:
+            errors += schema_errors(refusal["signing_boundary"], BOUNDARY_SCHEMA, "signer_refusal.signing_boundary")
+    if expected is None:
+        return errors
+    import base64
+    message = expected.get("message_sha256_independent")
+    transaction = hashlib.sha256(base64.b64decode(expected["transaction"]["data"])).hexdigest()
+    objects = [("inspection", out.get("inspection")), ("verdict", out.get("verdict")),
+               ("signing_boundary", boundary)]
+    if isinstance(refusal, dict):
+        objects += [("signer_refusal.signing_boundary", refusal.get("signing_boundary"))]
+        for field, wanted in (("original_message_sha256", message), ("original_transaction_sha256", transaction)):
+            value = refusal.get(field)
+            if value is not None and wanted is not None and value != wanted:
+                errors.append("signer_refusal." + field + ": input binding mismatch")
+        if refusal.get("signing_boundary") is not None and any(
+                refusal.get(field) is None for field in ("original_message_sha256", "original_transaction_sha256")):
+            errors.append("signer_refusal: parsed boundary requires original hashes")
+    for name, obj in objects:
+        if not isinstance(obj, dict):
+            continue
+        for field, wanted in (("message_sha256", message), ("transaction_sha256", transaction),
+                              ("network", expected["network"])):
+            if field not in obj:
+                continue
+            value = obj[field]
+            required = name == "inspection" or (name == "verdict" and isinstance(out.get("inspection"), dict))
+            if wanted is not None and (value is not None or required) and value != wanted:
+                errors.append(name + "." + field + ": input binding mismatch")
+    return errors
+
+
+def response_errors(run, expected=None):
     """Validate the process contract before inspecting nested report fields."""
     out = run.get("stdout_json")
     if not isinstance(out, dict):
         return ["CLI output must be a JSON object"]
     errors = schema_errors(out.get("verdict"), VERDICT_SCHEMA)
+    errors += report_errors(out, expected)
     for field in ("inspection", "signing_boundary", "coverage_gaps", "intent_scope_review"):
         value = out.get(field)
         kind = list if field == "coverage_gaps" else dict
@@ -227,6 +271,13 @@ def evaluate(scenario, run, preflight):
     checks["verdict_matches_public_schema"] = not problems
     for problem in problems[:5]:
         result["reasons"].append("public schema violation: " + problem)
+    report_problems = report_errors(out, scenario["input"])
+    if preflight is not None:
+        preflight_out = preflight.get("stdout_json")
+        if isinstance(preflight_out, dict):
+            report_problems += report_errors(preflight_out, scenario["input"])
+    checks["report_contract_and_bindings"] = not report_problems
+    result["reasons"].extend(report_problems[:8])
     # The exit status is part of the contract automation relies on.
     expected_rc = {"DENY": (20, 40), "UNKNOWN": (30,), "ALLOW": (0,), "WARN": (10,)}.get(result["decision"])
     checks["exit_code_matches_decision"] = expected_rc is None or run["rc"] in expected_rc
@@ -258,6 +309,8 @@ def evaluate(scenario, run, preflight):
         failure = "error"
     elif any(value is False for value in inv.values()):
         failure = "invariant_violation"  # signing-block violations outrank every accuracy failure
+    elif not checks["report_contract_and_bindings"]:
+        failure = "report_contract_violation"
     elif label == "GOOD" and result["decision"] == "DENY":
         failure = "false_block"
     elif label == "BAD" and result["decision"] == "ALLOW":
@@ -487,7 +540,7 @@ def main():
         entry = scenario["id"]
         outcome = "PASS" if scored["failure_type"] is None else "FAIL"
         if entry in known and scored["failure_type"] not in ("invariant_violation", "error",
-                "public_schema_violation", "exit_code_contract_violation", "scenario_builder_error") and (scored["failure_type"] is None or
+                "public_schema_violation", "report_contract_violation", "exit_code_contract_violation", "scenario_builder_error") and (scored["failure_type"] is None or
                                scored["failure_type"] == known[entry].get("failure_type")):
             # Only the explicitly registered failure may be waived.
             # A documented defect may be an accuracy gap, but NEVER a violated signing-block invariant.

@@ -85,7 +85,8 @@ def run_local(hguet, inputs, outdir, rpc_url=None):
     commands = rb.build_commands(hguet, scenario, files, rpc_url)
     run = rb.execute(commands["check"])
     out = run["stdout_json"] if isinstance(run["stdout_json"], dict) else {}
-    problems = rb.response_errors(run)
+    expected = dict(inputs, message_sha256_independent=inputs["cloud_request"]["message_sha256"])
+    problems = rb.response_errors(run, expected)
     verdict = out.get("verdict") if isinstance(out.get("verdict"), dict) else {}
     boundary = out.get("signing_boundary")
     blocked = (isinstance(boundary, dict) and boundary.get("signing_gate") == "block"

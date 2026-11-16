@@ -1,0 +1,45 @@
+{
+  "build_spec": {},
+  "category": "regression",
+  "class": "BAD",
+  "expect": {
+    "findings_forbidden": [],
+    "findings_required": [
+      [
+        "INTENT_REJECTED"
+      ]
+    ],
+    "proven": []
+  },
+  "format": "hguet-bench-scenario/1",
+  "id": "B-190",
+  "input": {
+    "intent": {
+      "payload_b64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwia2luZCI6ImhndWV0X3BheW1lbnRfaW50ZW50IiwiaW50ZW50X2lkIjoiYmVuY2gtQi0xOTAiLCJuZXR3b3JrIjoiZGV2bmV0IiwibWVzc2FnZV9zaGEyNTYiOiJiZTc4MjEzNWM2YTUxYTUzNjc5MWM0N2Y0MmJmZWI1NTRiNWYxYzBiZDEyNmU2ZWViZmQzYmY4YWVkZmJlZTJhIiwibm90X2JlZm9yZV91bml4IjoxLCJleHBpcmVzX2F0X3VuaXgiOjQxMDI0NDQ4MDAsImFsbG93ZWRfcHJvZ3JhbV9pZHMiOlsiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJUb2tlbmtlZ1FmZVp5aU53QUpiTmJHS1BGWENXdUJ2ZjlTczYyM1ZRNURBIl0sIm1heF9zcGVuZF9sYW1wb3J0cyI6IjUwMDAiLCJ0b2tlbl9zb3VyY2VfbGltaXRzIjpbeyJtaW50IjoiNzVpdHNvblJRdVMzYkRYS0ppUWh2VjRFRkpOWkdoR2R4U3NRNW5YQktEYm0iLCJzb3VyY2VfdG9rZW5fYWNjb3VudCI6Ikg1TkZneWlYVjZtdkt6cENLcjg4ZUQ2N3BQdlF3ZXNCOEJqYVdEQmd6NHpRIiwiYXV0aG9yaXR5IjoiNG9idUUzM2dhOVVmaXkxNzQ0YlA2QVZGcjVDcnJmdmRSdnZiMlE2TWVycXoiLCJtYXhfZGViaXRfcmF3IjoiMTAwIn1dfQ==",
+      "signature_b58": "5swL3rpeMdsvy5dN9a4DsLNzB4bsuXiTVoyzEjVqUerJ3R2MrhbtpWKSCSdzodh2TjZzyG5ycJiZ7xPN7ot3Vtuv",
+      "signer_pubkey_b58": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+    },
+    "message_sha256_independent": "be782135c6a51a536791c47f42bfeb554b5f1c0bd126e6eebfd3bf8aedfbee2a",
+    "network": "devnet",
+    "policy_toml": null,
+    "rpc": {
+      "mode": "none"
+    },
+    "transaction": {
+      "data": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAQABBDiDPXLqqm0m67/hoMRwDu0fDCpk4Mbmk7wOfqrCCxpljYS8J2U+6GERbnHAZ4Hq4OHWS4iH2LnsRIr9uMGa0/Cv8UPuemiiNaIix4LKeFZNBSCIyGxcPhVDxIOxmrwS4gbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpyeMbvhINTuQtitexaAFHjVNyxtU3N+fo3zkNUdk9Tw8CAwQBBAIACgwyAAAAAAAAAAYDBAEEAgAKDDIAAAAAAAAABgFGIQLdSqI0Mh7C6GLXJapyUqduJ6N4bJZSMe6GTM+v2wEAAA==",
+      "encoding": "base64"
+    },
+    "trusted_key": "Hgc2ZLBvS7ukRG7KSo7gGwprT6z8hwraeWqAnrybERe3"
+  },
+  "rationale": "Unknown mint cannot excuse an unapproved source or a known cumulative source overage. A matching source at the limit still needs mint resolution.",
+  "smoke": false,
+  "title": "ALT mint, source=unapproved, amount=100, split=True",
+  "truth": {
+    "acceptable_decisions": [
+      "DENY"
+    ],
+    "authored_independently_of_tool": true,
+    "evidence_level": "offline_sufficient",
+    "label": "BAD"
+  }
+}

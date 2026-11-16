@@ -95,16 +95,19 @@ class ReferenceCloudServer:
         wanted = {(s["type"], s["id"]) for s in request["subjects"]}
         return [r for r in self.records if (r["subject"]["type"], r["subject"]["id"]) in wanted]
 
-    def _retracted(self, record):
+    def _retracted(self, record, now):
         return any(other.get("retracts") == record["evidence_id"] and
-                   parse_time(other["observed_at"]) > parse_time(record["observed_at"]) for other in self.records)
+                   other["claim"]["polarity"] == "retraction" and
+                   other["network"] == record["network"] and other["subject"] == record["subject"] and
+                   parse_time(record["observed_at"]) < parse_time(other["observed_at"]) <= now
+                   for other in self.records)
 
     def _usable(self, record, request, now):
         if self.profile == "naive":
             return True
         return (record["network"] == request["network"]
                 and parse_time(record["observed_at"]) <= now <= parse_time(record["valid_until"])
-                and not self._retracted(record))
+                and not self._retracted(record, now))
 
     # --- main --------------------------------------------------------------
     def assess_payload(self, request, now_iso):

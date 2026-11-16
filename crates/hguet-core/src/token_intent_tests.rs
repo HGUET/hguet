@@ -16,8 +16,14 @@ fn checked(tag: u8, amount: u64) -> Vec<u8> {
     b
 }
 fn wire(ops: &[(bool, Vec<u8>, Vec<u8>)]) -> ParsedTransaction {
+    wire_with_lookup(ops, false)
+}
+fn wire_with_lookup(ops: &[(bool, Vec<u8>, Vec<u8>)], lookup: bool) -> ParsedTransaction {
     let mut bytes = vec![1u8];
     bytes.extend([0u8; 64]);
+    if lookup {
+        bytes.push(0x80);
+    }
     bytes.extend([1, 0, 1, 7]); // 1 signer, 7 static keys
     for key in [
         key(1),
@@ -36,10 +42,100 @@ fn wire(ops: &[(bool, Vec<u8>, Vec<u8>)]) -> ParsedTransaction {
         bytes.push(if *token_2022 { 6 } else { 5 });
         bytes.push(accounts.len() as u8);
         bytes.extend(accounts);
-        bytes.push(data.len() as u8);
+        let mut size = data.len();
+        loop {
+            let next = (size & 127) as u8;
+            size >>= 7;
+            bytes.push(next | if size > 0 { 128 } else { 0 });
+            if size == 0 {
+                break;
+            }
+        }
         bytes.extend(data);
     }
+    if lookup {
+        bytes.push(1);
+        bytes.extend([8u8; 32]);
+        bytes.extend([1, 0, 0]);
+    }
     parse_transaction(&bytes).unwrap()
+}
+
+#[test]
+fn long_checked_prefixes_keep_mint_and_source_overages_visible() {
+    for size in [511, 512, 513, 800] {
+        for source_cap in [false, true] {
+            for amount in [100, 101] {
+                let mut data = checked(12, amount);
+                data.resize(size, 0);
+                let tx = wire(&[(false, data, vec![1, 3, 2, 0])]);
+                let mut p = payload(
+                    &tx,
+                    if source_cap {
+                        None
+                    } else {
+                        Some(vec![capped(4, "100")])
+                    },
+                );
+                if source_cap {
+                    p.token_source_limits = Some(vec![TokenSourceLimit {
+                        mint: key(4),
+                        source_token_account: key(2),
+                        authority: key(1),
+                        max_debit_raw: "100".into(),
+                    }]);
+                }
+                let (envelope, issuer) = sign(&p);
+                let result = verify_intent_detailed(&envelope, &issuer, "devnet", &tx, 101);
+                if amount == 100 {
+                    assert!(
+                        result.is_ok(),
+                        "size={size}, source={source_cap}: {result:?}"
+                    );
+                } else {
+                    assert!(matches!(
+                        result.unwrap_err(),
+                        IntentFailure::Violation { .. }
+                    ));
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn unresolved_mint_cannot_hide_source_scope_or_cumulative_overages() {
+    for source in [1, 2] {
+        for amount in [100, 101] {
+            for split in [false, true] {
+                let amounts = if split {
+                    vec![50, amount - 50]
+                } else {
+                    vec![amount]
+                };
+                let ops: Vec<_> = amounts
+                    .into_iter()
+                    .map(|n| (false, checked(12, n), vec![source, 7, 2, 0]))
+                    .collect();
+                let tx = wire_with_lookup(&ops, true);
+                let mut p = payload(&tx, None);
+                p.token_source_limits = Some(vec![TokenSourceLimit {
+                    mint: key(4),
+                    source_token_account: key(2),
+                    authority: key(1),
+                    max_debit_raw: "100".into(),
+                }]);
+                let (envelope, issuer) = sign(&p);
+                let error =
+                    verify_intent_detailed(&envelope, &issuer, "devnet", &tx, 101).unwrap_err();
+                assert_eq!(
+                    matches!(error, IntentFailure::Coverage { .. }),
+                    source == 1 && amount == 100,
+                    "{error:?}"
+                );
+            }
+        }
+    }
 }
 fn payload(
     parsed: &ParsedTransaction,

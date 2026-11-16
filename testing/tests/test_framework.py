@@ -162,7 +162,7 @@ def make_stub(directory, body):
     script.write_text("import json,sys\n"
                       "def verdict(decision):\n"
                       "    return {'schema_version':1,'kind':'security_verdict','decision':decision,"
-                      "'network':'devnet','message_sha256':None,'transaction_sha256':None,"
+                      "'network':sys.argv[sys.argv.index('--network')+1] if '--network' in sys.argv else 'devnet','message_sha256':None,'transaction_sha256':None,"
                       "'intent_status':'not_checked','simulation_status':'not_performed',"
                       "'coverage':[],'findings':[],'limitations':[]}\n"
                       "if '--version' in sys.argv: print('stub'); sys.exit(0)\n" + body, encoding="utf-8")
@@ -208,12 +208,18 @@ class RunnerIsNotVacuous(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             stub = make_stub(
                 tmp, "if 'signer-preflight' in sys.argv:\n"
-                     "    print(json.dumps({'signer_refusal':{'signing_gate':'block','signing_permitted':False,"
-                     "'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False}}))\n"
+                     "    print(json.dumps({'signer_refusal':{'version':1,'signing_gate':'block','signing_permitted':False,"
+                     "'signature_created':False,'transaction_broadcast':False,'signer_backend_invoked':False,"
+                     "'original_transaction_sha256':None,'original_message_sha256':None,"
+                     "'independent_intent_signature_verified':False,'reason_code':'SIGNED_INTENT_VERIFICATION_FAILED',"
+                     "'signing_boundary':None,'limitation':'Test stub refuses every signing request.'}}))\n"
                      "    sys.exit(20)\n"
                      "from pathlib import Path\n"
                      "hashes=" + repr({x["id"]: x["input"]["message_sha256_independent"] for x in SCENARIOS}) + "\n"
-                     "print(json.dumps({'verdict':verdict('UNKNOWN'),'inspection':{'message_sha256':hashes[Path(sys.argv[2]).parent.name]}}))\n"
+                     "import base64,hashlib\n"
+                     "digest=hashes[Path(sys.argv[2]).parent.name]\n"
+                     "v=verdict('UNKNOWN'); v.update(message_sha256=digest,transaction_sha256=hashlib.sha256(base64.b64decode(Path(sys.argv[2]).read_text())).hexdigest())\n"
+                     "print(json.dumps({'verdict':v,'inspection':{'message_sha256':digest}}))\n"
                      "sys.exit(30)\n")
 
             def run(known):

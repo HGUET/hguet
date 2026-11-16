@@ -77,9 +77,12 @@ class Registry:
         self.by_id = {r["evidence_id"]: r for r in records}
         self.records = records
 
-    def retracted(self, record):
+    def retracted(self, record, now):
         return any(o.get("retracts") == record["evidence_id"] and
-                   parse_time(o["observed_at"]) > parse_time(record["observed_at"]) for o in self.records)
+                   o["claim"]["polarity"] == "retraction" and
+                   o["network"] == record["network"] and o["subject"] == record["subject"] and
+                   parse_time(record["observed_at"]) < parse_time(o["observed_at"]) <= now
+                   for o in self.records)
 
     def eligibility(self, record, request, now):
         subjects = {(s["type"], s["id"]) for s in request["subjects"]}
@@ -91,7 +94,7 @@ class Registry:
             return "not_yet_observed"
         if now > parse_time(record["valid_until"]):
             return "expired"
-        if self.retracted(record):
+        if self.retracted(record, now):
             return "superseded"
         return None
 

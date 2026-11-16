@@ -41,4 +41,4 @@ jobs:
         with:
           toolchain: 1.100.0
       - name: Rust signed payload and real TLS profile tests (backend mandatory)
-        run: cargo test -p hguet-cloud --locked --test transport_loopback --test paid_check_signed -- --ignored --nocapture
+        run: cargo test -p hguet-cloud --locked --lib --test transport_loopback --test paid_check_signed -- --ignored --nocapture

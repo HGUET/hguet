@@ -25,7 +25,17 @@ def derive_label(inputs, evidence):
     now = _t(inputs["clock"])
     subjects = {(s["type"], s["id"]) for s in request["subjects"]}
     about = [e for e in evidence if (e["subject"]["type"], e["subject"]["id"]) in subjects]
-    retracted = {e["retracts"] for e in about if e.get("retracts")}
+    retracted = set()
+    for original in about:
+        if original["network"] != request["network"]:
+            continue
+        for notice in about:
+            if (notice.get("retracts") == original["evidence_id"]
+                    and notice["claim"]["polarity"] == "retraction"
+                    and notice["subject"] == original["subject"]
+                    and notice["network"] == original["network"]
+                    and _t(original["observed_at"]) < _t(notice["observed_at"]) <= now):
+                retracted.add(original["evidence_id"])
     live = [e for e in about
             if e["network"] == request["network"] and _t(e["observed_at"]) <= now <= _t(e["valid_until"])
             and e["evidence_id"] not in retracted and e["claim"]["polarity"] in ("adverse", "benign")]
@@ -43,7 +53,7 @@ def derive_label(inputs, evidence):
         return "BAD", "valid strong adverse evidence"
     if benign:
         return "GOOD", "valid strong benign evidence"
-    if retracted and any(e["network"] == request["network"] and e["claim"]["polarity"] == "retraction" for e in about):
+    if any(e["evidence_id"] in retracted and e["claim"]["polarity"] == "adverse" for e in about):
         return "GOOD", "only adverse record was retracted"
     return "UNKNOWN", "no valid strong evidence"
 

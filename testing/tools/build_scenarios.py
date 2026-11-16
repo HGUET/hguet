@@ -666,6 +666,48 @@ def regression():
             v0=[("source-table", [0], [])], caps=[(MINT_A, "100")],
             req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
             forbid=[] if bad else FORBIDDEN_FOR_GOOD)
+    # Decoder boundaries must not erase a known prefix, in either cap mode.
+    bad_id += 1
+    unknown_id += 1
+    for operation in ("transfer", "burn", "fee"):
+        for size in (511, 512, 513, 800):
+            for scope in ("mint", "source"):
+                for amount in (100, 101):
+                    program = T22 if operation == "fee" else T
+                    if operation == "burn":
+                        ix = ct.ix_token_burn_checked(program, SRC_A, MINT_A, PAYER, amount)
+                    else:
+                        ix = ct.ix_token_transfer_checked(program, SRC_A, MINT_A, DST_A, PAYER, amount)
+                    data = (bytes([26, 1]) + amount.to_bytes(8, "little") + bytes([6]) + bytes(8)
+                            if operation == "fee" else ix.data)
+                    ix = ct.Instruction(program, ix.accounts, data + bytes(size - len(data)))
+                    bad = amount > 100
+                    sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+                    bad_id += bad
+                    unknown_id += not bad
+                    reg(sid, "BAD" if bad else "UNKNOWN", "%s %d-byte prefix with %s cap, amount=%d" %
+                        (operation, size, scope, amount),
+                        "Trailing bytes do not erase the declared checked debit prefix. "
+                        "101 exceeds cap 100; exactly 100 proves no cap violation or execution safety.", [ix],
+                        progs=(program,), caps=[(MINT_A, "100")] if scope == "mint" else None,
+                        sources=[(MINT_A, SRC_A, PAYER, "100")] if scope == "source" else None,
+                        req=F_INTENT if bad else None, forbid=[] if bad else FORBIDDEN_FOR_GOOD)
+    for amount in (100, 101):
+        for source in (SRC_A, SRC_OTHER):
+            for split in (False, True):
+                amounts = [50, amount - 50] if split else [amount]
+                bad = amount > 100 or source != SRC_A
+                sid = ("B-%03d" % bad_id) if bad else ("U-%03d" % unknown_id)
+                bad_id += bad
+                unknown_id += not bad
+                reg(sid, "BAD" if bad else "UNKNOWN", "ALT mint, source=%s, amount=%d, split=%s" %
+                    ("signed" if source == SRC_A else "unapproved", amount, split),
+                    "Unknown mint cannot excuse an unapproved source or a known cumulative source overage. "
+                    "A matching source at the limit still needs mint resolution.",
+                    [ct.ix_token_transfer_checked(T, source, "alt:0", DST_A, PAYER, n) for n in amounts],
+                    v0=[("mint-table", [0], [])], sources=[(MINT_A, SRC_A, PAYER, "100")],
+                    req=F_INTENT if bad else ["INTENT_COVERAGE_INCOMPLETE"],
+                    forbid=[] if bad else FORBIDDEN_FOR_GOOD)
     coverage()
     SINK[0] = SCENARIOS
 

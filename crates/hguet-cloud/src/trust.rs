@@ -207,19 +207,16 @@ mod tests {
         public_pem: Vec<u8>,
     }
 
-    /// None when OpenSSL cannot generate ML-DSA-87 here (skipped unless HGUET_REQUIRE_PQ_SIGNING is set).
-    fn keys() -> Option<Keys> {
+    // Explicitly ignored backend tests must fail, never silently skip, when selected.
+    fn keys() -> Keys {
         let generated = Command::new("openssl")
             .args(["genpkey", "-algorithm", "ML-DSA-87"])
-            .output();
-        let generated = match generated {
-            Ok(output) if output.status.success() => output,
-            _ if std::env::var_os("HGUET_REQUIRE_PQ_SIGNING").is_none() => {
-                eprintln!("ML-DSA-87 unavailable; trust tests skipped");
-                return None;
-            }
-            _ => panic!("ML-DSA-87 is required but unavailable"),
-        };
+            .output()
+            .expect("OpenSSL is required for PQ tests");
+        assert!(
+            generated.status.success(),
+            "ML-DSA-87 is required but unavailable"
+        );
         let private = TempFile::new("key", &generated.stdout).unwrap();
         let public = Command::new("openssl")
             .args(["pkey", "-pubout", "-in"])
@@ -227,10 +224,10 @@ mod tests {
             .output()
             .unwrap();
         assert!(public.status.success());
-        Some(Keys {
+        Keys {
             private,
             public_pem: public.stdout,
-        })
+        }
     }
 
     fn sign(keys: &Keys, domain: Domain, payload: &[u8]) -> Vec<u8> {
@@ -247,8 +244,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OpenSSL ML-DSA-87; mandatory in pq-interop CI"]
     fn a_valid_signature_verifies_and_every_tampering_is_refused() {
-        let Some(keys) = keys() else { return };
+        let keys = keys();
         let pinned = PinnedKey::from_public_pem(&keys.public_pem, "openssl").unwrap();
         assert_eq!(pinned.key_id().len(), 32);
         let payload = br#"{"schema_version":1}"#;
@@ -316,12 +314,13 @@ mod tests {
     }
 
     fn keys_pair() -> Vec<u8> {
-        keys().expect("ML-DSA-87 available").public_pem
+        keys().public_pem
     }
 
     #[test]
+    #[ignore = "requires OpenSSL ML-DSA-87; mandatory in pq-interop CI"]
     fn only_ml_dsa_87_public_keys_can_be_pinned() {
-        let Some(keys) = keys() else { return };
+        let keys = keys();
         // A private key, an Ed25519 public key and garbage are all refused.
         let private_pem = std::fs::read(keys.private.path()).unwrap();
         assert!(PinnedKey::from_public_pem(&private_pem, "openssl").is_err());
@@ -351,8 +350,9 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires OpenSSL ML-DSA-87; mandatory in pq-interop CI"]
     fn a_signed_quote_needs_both_a_valid_signature_and_matching_bindings() {
-        let Some(keys) = keys() else { return };
+        let keys = keys();
         let pinned = PinnedKey::from_public_pem(&keys.public_pem, "openssl").unwrap();
         let receiver = "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi";
         let genesis = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";

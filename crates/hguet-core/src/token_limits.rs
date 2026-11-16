@@ -10,7 +10,8 @@ use std::collections::{BTreeMap, BTreeSet};
 const TOKEN_LEGACY: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const TOKEN_2022: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const MAX_MINTS: usize = 16;
-const MAX_INSTRUCTION_BYTES: usize = 512;
+// No instruction inside an accepted transaction can exceed the wire bound.
+const MAX_INSTRUCTION_BYTES: usize = crate::solana_engine::MAX_V1_SIZE;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DeclaredMintDebit {
@@ -52,7 +53,7 @@ fn canonical_raw(s: &str) -> Option<u64> {
 #[derive(Debug, Clone)]
 pub(crate) struct CheckedDirectDebit {
     pub token_program: String,
-    pub mint: String,
+    pub mint: Option<String>,
     pub source_token_account: Option<String>,
     pub authority: Option<String>,
     pub authority_is_required_signer: bool,
@@ -109,7 +110,7 @@ pub(crate) fn checked_direct_debits(
         if program != TOKEN_LEGACY && program != TOKEN_2022 {
             continue;
         }
-        if ix.data_base58.len() > 1024 {
+        if ix.data_base58.len() > MAX_INSTRUCTION_BYTES * 2 {
             gap.get_or_insert_with(|| {
                 ReviewFailure::coverage(
                     "UNSUPPORTED_TOKEN_INSTRUCTION",
@@ -177,12 +178,9 @@ pub(crate) fn checked_direct_debits(
                 .get(ix.account_indices[role])
                 .cloned()
         };
-        let Some(mint) = key(mint_role) else {
-            continue;
-        };
         result.push(CheckedDirectDebit {
             token_program: program.clone(),
-            mint,
+            mint: key(mint_role),
             source_token_account: key(0),
             authority: key(auth_role),
             authority_is_required_signer: ix.account_indices[auth_role]
@@ -235,11 +233,14 @@ fn review_token_limits_impl(
     let (debits, gap) = checked_direct_debits(parsed, defer_account_control)?;
     let mut totals = BTreeMap::<String, u128>::new();
     for debit in &debits {
+        let Some(mint) = &debit.mint else {
+            continue; // Source checks can still use this debit; the ALT gap remains.
+        };
         let cap = caps
-            .get(&debit.mint)
+            .get(mint)
             .ok_or("direct token debit mint is missing from signed token_spend_limits")?;
         let new = totals
-            .get(&debit.mint)
+            .get(mint)
             .copied()
             .unwrap_or(0)
             .checked_add(u128::from(debit.amount_raw))
@@ -247,7 +248,7 @@ fn review_token_limits_impl(
         if new > u128::from(*cap) {
             return Err("declared direct token debits exceed signed per-mint max_debit_raw".into());
         }
-        totals.insert(debit.mint.clone(), new);
+        totals.insert(mint.clone(), new);
     }
     if let Some(gap) = gap {
         return Err(gap);

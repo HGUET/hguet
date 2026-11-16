@@ -136,7 +136,16 @@ fn review_source_limits_impl(
         let Some(source) = &debit.source_token_account else {
             continue;
         };
-        let key = (debit.mint.clone(), source.clone());
+        // Source caps are unique by source account. An unresolved mint must
+        // not hide an amount already exceeding that source's only allowed cap.
+        let key = match &debit.mint {
+            Some(mint) => (mint.clone(), source.clone()),
+            None => signed
+                .keys()
+                .find(|(_, account)| account == source)
+                .cloned()
+                .ok_or("direct token debit source is missing from signed token_source_limits")?,
+        };
         if let Some(previous) = programs.insert(key.clone(), debit.token_program.clone()) {
             if previous != debit.token_program {
                 return Err("same signed source has incompatible token program identities".into());

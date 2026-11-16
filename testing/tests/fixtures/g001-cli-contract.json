@@ -1,0 +1,164 @@
+{
+  "check": {
+    "coverage_gaps": null,
+    "inspection": {
+      "address_table_lookups": [],
+      "compiled_top_level_instructions": [
+        {
+          "account_indices": [
+            0,
+            1
+          ],
+          "data_base58": "3Bxs4ffTu9T19DNF",
+          "instruction_index": 0,
+          "program_index": 2
+        }
+      ],
+      "declared_system_transfer_lamports": "1000",
+      "instruction_count": 1,
+      "limitations": [
+        "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+        "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+        "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+        "The transaction is unsigned, partly signed or has invalid signature bytes"
+      ],
+      "lookup_table_count": 0,
+      "message_sha256": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+      "program_ids": [
+        "11111111111111111111111111111111"
+      ],
+      "required_signatures": 1,
+      "resource_config": null,
+      "signature_count": 1,
+      "static_account_count": 3,
+      "static_account_keys": [
+        "4obuE33ga9Ufiy1744bP6AVFr5CrrfvdRvvb2Q6Merqz",
+        "AaUhWpHpPF1qDGPCAK9VgDf2gigSUA7Nbdmin61URcGV",
+        "11111111111111111111111111111111"
+      ],
+      "system_transfers": [
+        {
+          "destination": "AaUhWpHpPF1qDGPCAK9VgDf2gigSUA7Nbdmin61URcGV",
+          "instruction_index": 0,
+          "kind": "transfer",
+          "lamports": "1000",
+          "source": "4obuE33ga9Ufiy1744bP6AVFr5CrrfvdRvvb2Q6Merqz"
+        }
+      ],
+      "total_address_count": 3,
+      "transaction_bytes": 215,
+      "transaction_sha256": "0cb29888dbfe2d1f626942943b41e63aa44258559512b8af6305b47ba7e69fb4",
+      "transaction_signature_status": "unsigned",
+      "unresolved_lookup_addresses": 0,
+      "wire_format": "legacy"
+    },
+    "intent_scope_review": null,
+    "signed_token_source_review": null,
+    "signed_token_spend_review": null,
+    "signing_boundary": {
+      "automated_signing_permitted": false,
+      "block_reasons": [
+        "EXECUTION_BANK_NOT_AUTHENTICATED",
+        "RPC_EFFECT_COVERAGE_UNAVAILABLE",
+        "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED",
+        "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN",
+        "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN"
+      ],
+      "direct_mint_declaration_bound_checked": false,
+      "direct_source_declaration_bound_checked": false,
+      "direct_token_program_present": false,
+      "direct_token_semantics_incomplete": false,
+      "execution_bank_authenticated": false,
+      "independent_intent_verified_by_caller": true,
+      "limitation": "This read-only gate never authorizes or signs. Only separately verified signed message/direct checked token declarations can be locally bounded. Missing intent, ALT, custom programs, Token-2022 extensions, unknown CPI, fees, account ownership, RPC simulation and final execution prevent proof of transaction-wide gross spending. A trusted, enforceable customer signer is not integrated; BLOCK is unconditional.",
+      "message_sha256": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+      "native_sol_direct_transfer_declared_raw": "1000",
+      "original_wire_lookup_identity_unresolved": false,
+      "original_wire_program_allowlist_checked": true,
+      "rpc_advisory_aggregate_available": false,
+      "rpc_advisory_cap_anomalies": false,
+      "signer_side_enforcement_integrated": false,
+      "signing_gate": "block",
+      "total_gross_token_spending_proven": false,
+      "total_native_sol_spending_proven": false,
+      "transaction_signature_status": "unsigned",
+      "unsupported_program_execution_surface": false,
+      "version": 1
+    },
+    "verdict": {
+      "coverage": [
+        "wire_structure",
+        "wire_top_level_instruction_bytes",
+        "independently_pinned_intent_signature",
+        "block_only_signing_boundary"
+      ],
+      "decision": "UNKNOWN",
+      "findings": [
+        {
+          "code": "NO_SIMULATION",
+          "severity": "high",
+          "summary": "Wire inspection does not prove transfers, CPI effects, execution or wallet authorization"
+        }
+      ],
+      "intent_status": "signature_verified",
+      "kind": "security_verdict",
+      "limitations": [
+        "No onchain execution simulation or customer-controlled signer enforcement has been performed",
+        "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+        "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+        "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+        "The transaction is unsigned, partly signed or has invalid signature bytes"
+      ],
+      "message_sha256": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+      "network": "devnet",
+      "schema_version": 1,
+      "simulation_status": "not_performed",
+      "transaction_sha256": "0cb29888dbfe2d1f626942943b41e63aa44258559512b8af6305b47ba7e69fb4"
+    }
+  },
+  "preflight": {
+    "signer_refusal": {
+      "independent_intent_signature_verified": true,
+      "limitation": "Block-only local signer seam. No private keys or signer-device calls, signing or broadcast, onchain authorization, independent bank proof or enforceable gross SOL/token spend limit. Agent or selected RPC cannot grant permission.",
+      "original_message_sha256": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+      "original_transaction_sha256": "0cb29888dbfe2d1f626942943b41e63aa44258559512b8af6305b47ba7e69fb4",
+      "reason_code": "SIGNER_SIDE_ENFORCEMENT_NOT_IMPLEMENTED",
+      "signature_created": false,
+      "signer_backend_invoked": false,
+      "signing_boundary": {
+        "automated_signing_permitted": false,
+        "block_reasons": [
+          "EXECUTION_BANK_NOT_AUTHENTICATED",
+          "RPC_EFFECT_COVERAGE_UNAVAILABLE",
+          "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED",
+          "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN",
+          "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN"
+        ],
+        "direct_mint_declaration_bound_checked": false,
+        "direct_source_declaration_bound_checked": false,
+        "direct_token_program_present": false,
+        "direct_token_semantics_incomplete": false,
+        "execution_bank_authenticated": false,
+        "independent_intent_verified_by_caller": true,
+        "limitation": "This read-only gate never authorizes or signs. Only separately verified signed message/direct checked token declarations can be locally bounded. Missing intent, ALT, custom programs, Token-2022 extensions, unknown CPI, fees, account ownership, RPC simulation and final execution prevent proof of transaction-wide gross spending. A trusted, enforceable customer signer is not integrated; BLOCK is unconditional.",
+        "message_sha256": "9ed4427b4e86ae54b1dd228e51c3176dbed0dcba3803e5f9957d965fa4a793d6",
+        "native_sol_direct_transfer_declared_raw": "1000",
+        "original_wire_lookup_identity_unresolved": false,
+        "original_wire_program_allowlist_checked": true,
+        "rpc_advisory_aggregate_available": false,
+        "rpc_advisory_cap_anomalies": false,
+        "signer_side_enforcement_integrated": false,
+        "signing_gate": "block",
+        "total_gross_token_spending_proven": false,
+        "total_native_sol_spending_proven": false,
+        "transaction_signature_status": "unsigned",
+        "unsupported_program_execution_surface": false,
+        "version": 1
+      },
+      "signing_gate": "block",
+      "signing_permitted": false,
+      "transaction_broadcast": false,
+      "version": 1
+    }
+  }
+}
