@@ -45,6 +45,23 @@ and expiry as Unix seconds. The default gateway returns `QUOTE_UNAVAILABLE`.
 The joint release test exercises successful delivery on a one-shot loopback
 peer with an ephemeral issuer and disposable database.
 
+Add `--save-order order.json` to the quote command to save the verified
+response and its request bindings for later retrieval. Choose a new filename
+for each order. Keep the original 32-byte binary claim secret in a private
+file. Its SHA-256 must match the commitment supplied with the quote.
+
+```sh
+hguet cloud status order.json --claim-file claim.bin --ca-file sandbox-ca.pem \
+  --quote-key quote-public.pem --assessment-key assessment-public.pem \
+  --receipt-key receipt-public.pem --json
+```
+
+Status rechecks the signed quote at its recorded acceptance time. A completed
+response must carry a fresh assessment and its matching signed receipt. The
+command prints both after verification. `STATUS_UNAVAILABLE` means the gateway
+could not deliver a result for this claim. Keep the order and claim file for
+retry. The command submits no payment.
+
 **Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0/v1 wire-format** decoding, bounded inputs, SHA-256 message/transaction hashes, local verification of provided **Ed25519 transaction signatures**, detection of top-level native **SOL System transfers**, and independently trusted **Ed25519 PaymentIntent** verification including a lower-bound spend-cap check. The prototype emits explicit UNKNOWN/DENY SecurityVerdicts and has Rust unit / end-to-end JSON smoke tests.
 
 **Local restrictive policy now works:** the `hguet-policy` Rust crate and `hguet policy validate TRUSTED.toml` enforce optional user-controlled network/program/SOL-recipient restrictions and direct native transfer cap violations. This can return **DENY**, never ALLOW. More in the [implementation guide](docs/implementation/README.md).

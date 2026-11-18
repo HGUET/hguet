@@ -20,7 +20,8 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
-  hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--json]\n\
+  hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--save-order FILE] [--json]\n\
+  hguet cloud status ORDER --claim-file FILE --ca-file FILE --quote-key FILE --assessment-key FILE --receipt-key FILE [--json]\n\
   hguet --help\n\
   hguet --version\n\
 Paid Cloud checks are unavailable. Never send real SOL to a demonstration."
@@ -1827,9 +1828,16 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
 }
 fn main() {
     let mut arguments = env::args().skip(1);
-    if arguments.next().as_deref() == Some("cloud") && arguments.next().as_deref() == Some("quote")
+    let command = (arguments.next(), arguments.next());
+    if command.0.as_deref() == Some("cloud")
+        && matches!(command.1.as_deref(), Some("quote" | "status"))
     {
-        match cloud_quote::run(arguments) {
+        let result = if command.1.as_deref() == Some("status") {
+            cloud_quote::status(arguments)
+        } else {
+            cloud_quote::run(arguments)
+        };
+        match result {
             Ok(output) => println!("{output}"),
             Err(code) => {
                 println!("{}", json!({"code":code}));

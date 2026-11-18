@@ -323,7 +323,9 @@ dependencies = [
  "hguet-policy",
  "hguet-rpc",
  "hguet-signer",
+ "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

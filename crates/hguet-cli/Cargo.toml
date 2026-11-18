@@ -12,6 +12,8 @@ hguet-policy = { path = "../hguet-policy" }
 hguet-rpc = { path = "../hguet-rpc" }
 hguet-signer = { path = "../hguet-signer" }
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+tempfile = { version = "3", default-features = false }
 base64 = "0.22"
 bs58 = "0.5"
 
