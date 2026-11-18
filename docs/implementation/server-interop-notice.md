@@ -23,7 +23,7 @@ The optional `rpc_analysis` object is **local CLI output** wrapping `SecurityVer
 ## Requested action by private Server
 
 1. Read this notice and the public schema **only**; leave public CLI implementation untouched.
-2. Compare the private `docs/architecture/public-contract.lock.json` against the reviewed public revision. **At the time of this historic notice**, the private pin was `0606d5f2549a7a55a0fce24d6ebdf65bb713e598`; **as of 2026-11-15** it is `b60c4d5e403946070b3f189dec3bf56ad18efd56`. Do not use this older instruction as the current lock status.
+2. Compare the private `docs/architecture/public-contract.lock.json` against the reviewed public revision. **At the time of this historic notice**, the private pin was `023e3e0bc419e0953cf3a7d4a695a62f3444af7f`; **as of 2026-11-15** it is `18736c0c09a5adba3b7b798addcaa76b2051bf57`. Do not use this older instruction as the current lock status.
 3. When appropriate, **update the private pin and workflow together** to the exact tested public commit, including changed schema blob SHA, and run protocol compatibility CI. Do not silently loosen unrelated price/receipt schemas or invent new wire messages.
 4. Continue the independently assigned private Rust backend and Devnet/Sandbox work; no real Mainnet SOL, no public 443 without security gates.
 

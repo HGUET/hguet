@@ -2,7 +2,7 @@
 
 **Design status:** Unreleased draft, not a running public API. **No HGUET product releases exist yet.** The `protocol/v1` folder denotes a proposed wire-schema major version, **not** an HGUET v1.0 product release. · Compatibility review 2026-11-15. Private loopback prototypes do not constitute a released service.
 
-This directory is the **canonical public contract** shared by `HGUET/hguet` (Rust CLI) and private `HGUET/server`. The server consumes an exact pinned commit and must not fork these public message definitions. The current private lock is `b60c4d5e403946070b3f189dec3bf56ad18efd56`; [compatibility status](../../docs/architecture/server-compatibility.md) distinguishes unchanged Cloud wire artifacts from newer public-only changes.
+This directory is the **canonical public contract** shared by `HGUET/hguet` (Rust CLI) and private `HGUET/server`. The server consumes an exact pinned commit and must not fork these public message definitions. The current private lock is `18736c0c09a5adba3b7b798addcaa76b2051bf57`; [compatibility status](../../docs/architecture/server-compatibility.md) distinguishes unchanged Cloud wire artifacts from newer public-only changes.
 
 ## Files
 

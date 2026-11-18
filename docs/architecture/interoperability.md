@@ -1,6 +1,6 @@
 # HGUET CLI ↔ Server — Unified interoperability contract
 
-**Status: Unreleased architecture draft. No HGUET product releases exist.** `protocol/v1` is a wire-format draft, not a v1.0 product release. The private Rust `HGUET/server` currently pins public commit `b60c4d5e403946070b3f189dec3bf56ad18efd56` for its reviewed contract; do not mistake the public `main` HEAD for the pinned server version. See [current server compatibility](server-compatibility.md).
+**Status: Unreleased architecture draft. No HGUET product releases exist.** `protocol/v1` is a wire-format draft, not a v1.0 product release. The private Rust `HGUET/server` currently pins public commit `18736c0c09a5adba3b7b798addcaa76b2051bf57` for its reviewed contract; do not mistake the public `main` HEAD for the pinned server version. See [current server compatibility](server-compatibility.md).
 
 ## Responsibility
 
