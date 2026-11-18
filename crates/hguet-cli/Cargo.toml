@@ -6,6 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+hguet-cloud = { path = "../hguet-cloud" }
 hguet-core = { path = "../hguet-core" }
 hguet-policy = { path = "../hguet-policy" }
 hguet-rpc = { path = "../hguet-rpc" }

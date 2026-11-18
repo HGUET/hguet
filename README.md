@@ -22,6 +22,13 @@
 
 ## Implementation status — first Rust code (unreleased)
 
+**Local gateway handshake.** With a Devnet sandbox gateway running on
+`127.0.0.1:8443`, run `hguet cloud hello --ca-file sandbox-ca.pem --json`.
+Supply the trusted certificate from the sandbox operator. The gateway certificate
+must cover IP address `127.0.0.1`. The command requires a compatible OpenSSL
+executable on PATH and prints the negotiated protocol, server release and
+advertised capabilities. Public Cloud and paid checks remain unavailable.
+
 **Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0/v1 wire-format** decoding, bounded inputs, SHA-256 message/transaction hashes, local verification of provided **Ed25519 transaction signatures**, detection of top-level native **SOL System transfers**, and independently trusted **Ed25519 PaymentIntent** verification including a lower-bound spend-cap check. The prototype emits explicit UNKNOWN/DENY SecurityVerdicts and has Rust unit / end-to-end JSON smoke tests.
 
 **Local restrictive policy now works:** the `hguet-policy` Rust crate and `hguet policy validate TRUSTED.toml` enforce optional user-controlled network/program/SOL-recipient restrictions and direct native transfer cap violations. This can return **DENY**, never ALLOW. More in the [implementation guide](docs/implementation/README.md).

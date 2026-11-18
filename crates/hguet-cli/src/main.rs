@@ -18,9 +18,10 @@ Usage:\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
+  hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
   hguet --help\n\
   hguet --version\n\
-Cloud/payment commands are NOT implemented. Never send real SOL to a demonstration."
+Paid Cloud checks are unavailable. Never send real SOL to a demonstration."
 }
 
 struct Args {
@@ -44,6 +45,32 @@ fn parse_args() -> Result<Args, String> {
             file: String::new(),
             network: "mainnet".into(),
             encoding: "binary".into(),
+            intent: None,
+            trusted_key: None,
+            policy: None,
+            rpc_url: None,
+            mode: "local".into(),
+            offline: false,
+        });
+    }
+    if cmd == "cloud" {
+        if a.next().as_deref() != Some("hello") || a.next().as_deref() != Some("--ca-file") {
+            return Err("expected cloud hello --ca-file FILE [--json]".into());
+        }
+        let file = a
+            .next()
+            .filter(|p| !p.is_empty() && !p.starts_with('-'))
+            .ok_or("missing trusted CA file")?;
+        if let Some(option) = a.next() {
+            if option != "--json" || a.next().is_some() {
+                return Err("unexpected cloud hello option".into());
+            }
+        }
+        return Ok(Args {
+            command: "cloud-hello".into(),
+            file,
+            network: "devnet".into(),
+            encoding: String::new(),
             intent: None,
             trusted_key: None,
             policy: None,
@@ -1833,6 +1860,13 @@ fn main() {
                 }
             }
         }
+        Ok(v) if v.command == "cloud-hello" => match cloud_config::loopback_hello(v.file.into()) {
+            Ok(output) => println!("{output}"),
+            Err(error) => {
+                println!("{}", json!({"code": error}));
+                process::exit(40);
+            }
+        },
         Ok(v) if v.command == "config-show" => {
             println!(
                 "{}",

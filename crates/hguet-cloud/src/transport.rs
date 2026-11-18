@@ -9,7 +9,7 @@
 //! * the negotiated parameters printed by OpenSSL are parsed and every one must match, otherwise the response is discarded
 //!   even if the connection worked - a client that cannot prove the profile was met has not met it.
 //!
-//! The Cloud endpoint is not enabled in the CLI yet; this module is not called by any command.
+//! The explicit CLI loopback hello uses this transport with an operator-supplied trust anchor.
 
 use crate::wire::{decode_frame, encode_frame, v1, MAX_FRAME_BYTES};
 use crate::{Error, Result};

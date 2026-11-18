@@ -1,6 +1,4 @@
-//! Pure, network-free building blocks of the HGUET Cloud protocol for the client (S7.1 PROPOSAL, see
-//! HGUET/server docs/architecture/canonical-contract-s7.md). No I/O, no keys, no transport: the Cloud transport
-//! is NOT implemented in the CLI yet and nothing here sends anything.
+//! Client-side Cloud protocol validation, report verification and opt-in TLS transport.
 //!
 //! Every function returns a stable error code that matches the server's golden vectors
 //! (`tests/vectors.rs` reproduces them from `testing/cloud-value/protocol/s7-client-vectors.json`).
