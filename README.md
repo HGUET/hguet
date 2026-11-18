@@ -29,6 +29,22 @@ must cover IP address `127.0.0.1`. The command requires a compatible OpenSSL
 executable on PATH and prints the negotiated protocol, server release and
 advertised capabilities. Public Cloud and paid checks remain unavailable.
 
+The local integration command requests a metadata-only quote for one Devnet
+program. The operator supplies the TLS CA and a separately trusted ML-DSA-87
+quote verification key. Use the SHA-256 of the original Solana message and
+the SHA-256 commitment of a buyer-held claim secret. Keep the secret private.
+
+```sh
+hguet cloud quote "$PROGRAM" --message-sha256 "$MESSAGE_SHA256" \
+  --claim-sha256 "$CLAIM_SHA256" --max-lamports 1000000 \
+  --ca-file sandbox-ca.pem --quote-key quote-public.pem --json
+```
+
+A verified response shows the program, quote ID, exact price in lamports
+and expiry as Unix seconds. The default gateway returns `QUOTE_UNAVAILABLE`.
+The joint release test exercises successful delivery on a one-shot loopback
+peer with an ephemeral issuer and disposable database.
+
 **Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0/v1 wire-format** decoding, bounded inputs, SHA-256 message/transaction hashes, local verification of provided **Ed25519 transaction signatures**, detection of top-level native **SOL System transfers**, and independently trusted **Ed25519 PaymentIntent** verification including a lower-bound spend-cap check. The prototype emits explicit UNKNOWN/DENY SecurityVerdicts and has Rust unit / end-to-end JSON smoke tests.
 
 **Local restrictive policy now works:** the `hguet-policy` Rust crate and `hguet policy validate TRUSTED.toml` enforce optional user-controlled network/program/SOL-recipient restrictions and direct native transfer cap violations. This can return **DENY**, never ALLOW. More in the [implementation guide](docs/implementation/README.md).

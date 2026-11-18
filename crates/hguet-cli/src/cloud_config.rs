@@ -4,19 +4,23 @@ pub const DEFAULT_CLOUD_HOST: &str = "vps-d0669a91.vps.ovh.net";
 pub const DEFAULT_CLOUD_PORT: u16 = 443;
 pub const DEFAULT_CLOUD_ENDPOINT: &str = "vps-d0669a91.vps.ovh.net:443";
 
-pub fn loopback_hello(ca_file: std::path::PathBuf) -> Result<serde_json::Value, &'static str> {
-    use hguet_cloud::transport::{exchange, TlsProfile};
-    use hguet_cloud::wire::{
-        envelope_with,
-        v1::{envelope::Payload, ClientHello},
-    };
-    let profile = TlsProfile {
+pub fn loopback_profile(ca_file: std::path::PathBuf) -> hguet_cloud::transport::TlsProfile {
+    hguet_cloud::transport::TlsProfile {
         host: "127.0.0.1".into(),
         port: 8443,
         openssl: "openssl".into(),
         timeout: std::time::Duration::from_secs(10),
         ca_file,
+    }
+}
+
+pub fn loopback_hello(ca_file: std::path::PathBuf) -> Result<serde_json::Value, &'static str> {
+    use hguet_cloud::transport::exchange;
+    use hguet_cloud::wire::{
+        envelope_with,
+        v1::{envelope::Payload, ClientHello},
     };
+    let profile = loopback_profile(ca_file);
     let request = envelope_with(
         [1; 16],
         Payload::ClientHello(ClientHello {

@@ -1,4 +1,5 @@
 mod cloud_config;
+mod cloud_quote;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{
     parse_transaction, unix_now, verify_intent_detailed, Decision, IntentFailure,
@@ -19,6 +20,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
+  hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--json]\n\
   hguet --help\n\
   hguet --version\n\
 Paid Cloud checks are unavailable. Never send real SOL to a demonstration."
@@ -1824,6 +1826,18 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
     (json!({"signer_refusal":refusal}), 20)
 }
 fn main() {
+    let mut arguments = env::args().skip(1);
+    if arguments.next().as_deref() == Some("cloud") && arguments.next().as_deref() == Some("quote")
+    {
+        match cloud_quote::run(arguments) {
+            Ok(output) => println!("{output}"),
+            Err(code) => {
+                println!("{}", json!({"code":code}));
+                process::exit(40);
+            }
+        }
+        return;
+    }
     match parse_args() {
         Ok(v) if v.command == "--help" || v.command == "-h" => {
             println!("{}", usage());
