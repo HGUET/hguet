@@ -62,6 +62,18 @@ command prints both after verification. `STATUS_UNAVAILABLE` means the gateway
 could not deliver a result for this claim. Keep the order and claim file for
 retry. The command submits no payment.
 
+For an already-paid Devnet sandbox invoice, submit the external wallet's
+transaction signature to a gateway running in Devnet submission mode:
+
+```sh
+hguet cloud submit order.json --claim-file claim.bin --ca-file sandbox-ca.pem \
+  --quote-key quote-public.pem --payment-signature "$PAYMENT_SIGNATURE"
+```
+
+`payment_finalized` acknowledges settlement for this order. Use `cloud status`
+to retrieve the reports. If the connection drops, retry with the same order
+and signature. This command sends a verification request and never signs a transfer.
+
 **Working today:** a Rust workspace with `hguet-core` and `hguet` CLI, strict offline **legacy/v0/v1 wire-format** decoding, bounded inputs, SHA-256 message/transaction hashes, local verification of provided **Ed25519 transaction signatures**, detection of top-level native **SOL System transfers**, and independently trusted **Ed25519 PaymentIntent** verification including a lower-bound spend-cap check. The prototype emits explicit UNKNOWN/DENY SecurityVerdicts and has Rust unit / end-to-end JSON smoke tests.
 
 **Local restrictive policy now works:** the `hguet-policy` Rust crate and `hguet policy validate TRUSTED.toml` enforce optional user-controlled network/program/SOL-recipient restrictions and direct native transfer cap violations. This can return **DENY**, never ALLOW. More in the [implementation guide](docs/implementation/README.md).

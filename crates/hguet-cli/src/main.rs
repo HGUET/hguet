@@ -22,6 +22,7 @@ Usage:\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
   hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--save-order FILE] [--json]\n\
   hguet cloud status ORDER --claim-file FILE --ca-file FILE --quote-key FILE --assessment-key FILE --receipt-key FILE [--json]\n\
+  hguet cloud submit ORDER --claim-file FILE --ca-file FILE --quote-key FILE --payment-signature BASE58 [--json]\n\
   hguet --help\n\
   hguet --version\n\
 Paid Cloud checks are unavailable. Never send real SOL to a demonstration."
@@ -1830,12 +1831,12 @@ fn main() {
     let mut arguments = env::args().skip(1);
     let command = (arguments.next(), arguments.next());
     if command.0.as_deref() == Some("cloud")
-        && matches!(command.1.as_deref(), Some("quote" | "status"))
+        && matches!(command.1.as_deref(), Some("quote" | "status" | "submit"))
     {
-        let result = if command.1.as_deref() == Some("status") {
-            cloud_quote::status(arguments)
-        } else {
-            cloud_quote::run(arguments)
+        let result = match command.1.as_deref() {
+            Some("status") => cloud_quote::order_request(arguments, false),
+            Some("submit") => cloud_quote::order_request(arguments, true),
+            _ => cloud_quote::run(arguments),
         };
         match result {
             Ok(output) => println!("{output}"),
