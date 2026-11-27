@@ -1,0 +1,3 @@
+version = 1
+network = "devnet"
+max_declared_system_transfer_lamports = "500"

@@ -1,5 +1,6 @@
 mod cloud_config;
 mod cloud_quote;
+mod demo;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{unix_now, SignedPaymentIntent};
 use hguet_policy::LocalPolicy;
@@ -17,6 +18,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet doctor [--json]  (offline environment report)\n\
+  hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
   hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--save-order FILE] [--json]\n\
   hguet cloud status ORDER --claim-file FILE --ca-file FILE --quote-key FILE --assessment-key FILE --receipt-key FILE [--json]\n\
@@ -47,10 +49,10 @@ fn parse_args() -> Result<Args, String> {
     }
     let mut a = raw.into_iter().filter(|s| s != "--report-v2");
     let cmd = a.next().ok_or("missing command")?;
-    if cmd == "doctor" {
+    if cmd == "doctor" || cmd == "demo" {
         if let Some(option) = a.next() {
             if option != "--json" || a.next().is_some() {
-                return Err("expected doctor [--json]".into());
+                return Err("expected doctor/demo [--json]".into());
             }
         }
         return Ok(Args {
@@ -396,6 +398,14 @@ fn main() {
         return;
     }
     match parse_args() {
+        Ok(v) if v.command == "demo" => {
+            let output = demo::run();
+            if env::args().any(|arg| arg == "--json") {
+                println!("{output}");
+            } else {
+                println!("{}", demo::text(&output));
+            }
+        }
         Ok(v) if v.command == "doctor" => {
             println!(
                 "{}",

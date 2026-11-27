@@ -49,6 +49,12 @@ Fixtures are synthetic and use placeholder signatures. Inspection/check decision
 
 ## Community Edition 0.1.0
 
+Run `hguet demo` for three synthetic offline cases through the actual engine.
+Use `hguet demo --json` for the versioned reports and evidence. The demo
+contains an expected 500-lamport declaration, an additional transfer exceeding
+the configured cap, and an opaque program requiring UNKNOWN. Every case
+refuses signing. No endpoint or credentials are needed.
+
 Our first public release prioritizes a reusable security engine, scoped findings and coverage, real Solana runtime validation, terminal/JSON/HTML reports, audit and diff, semantic policies, x402 exact SVM verification, Rust and TypeScript integration and an open benchmark.
 
 These are **targets**, not installed commands. No general ALLOW or automatic signing is planned for 0.1.0. MPP and expanded Cloud are deferred.
