@@ -170,8 +170,9 @@ pub fn order_request(
         .step_by(2)
         .map(|i| u8::from_str_radix(&quote.quote_id[i..i + 2], 16).map_err(|_| "QUOTE_ID_INVALID"))
         .collect::<Result<_, _>>()?;
-    let profile = super::cloud_config::loopback_profile(option("--ca-file")?.into());
+    let mut profile = super::cloud_config::loopback_profile(option("--ca-file")?.into());
     if submit {
+        profile.timeout = std::time::Duration::from_secs(70);
         let signature = option("--payment-signature")?;
         hguet_cloud::solana_signature(signature).map_err(|e| e.code())?;
         let request = envelope_with(

@@ -138,6 +138,41 @@ fn a_signed_receipt_and_assessment_verify_and_every_substitution_is_refused() {
     assert_eq!(ok.receipt.analysis_state, AnalysisState::Completed);
     assert!(!ok.assessment.unwrap().evidence_verified);
 
+    let mut archived_expectations = assessment_expectations;
+    archived_expectations.now_unix += 86400;
+    assert!(verify_paid_check(
+        &signed_receipt,
+        Some(&signed_assessment),
+        &key,
+        &receipt_expectations,
+        &archived_expectations,
+    )
+    .is_err());
+    hguet_cloud::report::verify_archived_paid_check_with_keys(
+        &signed_receipt,
+        Some(&signed_assessment),
+        &key,
+        &key,
+        &receipt_expectations,
+        &archived_expectations,
+    )
+    .expect("expired signed purchase remains authentic");
+    let mut forged_archive = signed_assessment.clone();
+    forged_archive.signature[0] ^= 1;
+    assert!(hguet_cloud::report::verify_archived_paid_check_with_keys(
+        &signed_receipt,
+        Some(&forged_archive),
+        &key,
+        &key,
+        &receipt_expectations,
+        &archived_expectations,
+    )
+    .is_err());
+    let assessment_expectations = AssessmentExpectations {
+        now_unix: 1_760_000_100,
+        ..archived_expectations
+    };
+
     // An assessment signed under the receipt domain is refused even though its bytes hash correctly.
     let wrong_domain = signed(&assessment, Domain::PaymentReceipt, "w");
     let code = |r: &SignedPayload, a: Option<&SignedPayload>| {
