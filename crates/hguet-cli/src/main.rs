@@ -139,8 +139,8 @@ fn parse_args() -> Result<Args, String> {
     if file.starts_with('-') && file != "-" {
         return Err("invalid transaction path".into());
     }
-    if file == "-" {
-        return Err("stdin not yet supported; use a bounded file".into());
+    if file == "-" && cmd == "signer-preflight" {
+        return Err("signer-preflight requires a bounded file".into());
     }
     let mut v = Args {
         command: cmd,
@@ -231,7 +231,20 @@ fn limited_file(path: &str, max: u64) -> Result<Vec<u8>, String> {
     Ok(b)
 }
 fn read_transaction(path: &str, enc: &str) -> Result<Vec<u8>, String> {
-    let raw = limited_file(path, 16_384)?;
+    let raw = if path == "-" {
+        let mut bytes = Vec::new();
+        std::io::stdin()
+            .lock()
+            .take(16_385)
+            .read_to_end(&mut bytes)
+            .map_err(|_| "cannot read stdin")?;
+        if bytes.len() > 16_384 {
+            return Err("input exceeds size limit".into());
+        }
+        bytes
+    } else {
+        limited_file(path, 16_384)?
+    };
     match enc {
         "binary" => Ok(raw),
         "base64" => STANDARD
