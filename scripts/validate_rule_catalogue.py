@@ -19,7 +19,7 @@ def validate():
         assert source_path.is_relative_to(ROOT)
         source = source_path.read_text()
         assert '"' + code + '"' in source, f"missing source code {code}"
-        assert rule["tests"], f"no regression test for {code}"
+        assert rule["tests"] or rule.get("test_status") == "TARGETED_REGRESSION_OPEN", f"unrecorded regression gap for {code}"
         test_source = (ROOT / rule.get("test_source", rule["source"])).resolve()
         assert test_source.is_relative_to(ROOT)
         test_text = test_source.read_text()
@@ -38,6 +38,10 @@ def validate():
     missing=sorted(emitted-seen)
     print(f"OPEN: {len(missing)} engine finding codes without individual catalogue entries")
     for code in missing:
+        print("  "+code)
+    gaps=[rule["legacy_code"] for rule in catalogue["rules"] if rule.get("test_status")=="TARGETED_REGRESSION_OPEN"]
+    print(f"OPEN: {len(gaps)} catalogue entries without targeted regression references")
+    for code in gaps:
         print("  "+code)
 
 

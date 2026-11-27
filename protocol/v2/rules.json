@@ -1,6 +1,6 @@
 {
   "catalogue_version": 1,
-  "status": "policy_intent_wire_rpc_and_correlation_subset",
+  "status": "engine_emission_inventory_with_regression_gaps",
   "rules": [
     {
       "rule_id": "HGUET.POLICY_SOL_TRANSFER_CAP",
@@ -105,7 +105,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_BLOCKED_SOL_RECIPIENT",
@@ -208,7 +209,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_UNAPPROVED_PROGRAM",
@@ -310,7 +312,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_UNRESOLVED_PROGRAM",
@@ -332,7 +335,8 @@
       "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open.",
       "benchmark_fixtures": [
         "testing\\scenarios\\U-009.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_WRONG_NETWORK",
@@ -434,7 +438,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_BLOCKED_PROGRAM",
@@ -536,7 +541,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_UNAPPROVED_SOL_RECIPIENT",
@@ -639,7 +645,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.POLICY_UNRESOLVED_RECIPIENT",
@@ -659,7 +666,8 @@
         "unresolvable_recipient_stays_unknown"
       ],
       "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.INVALID_TRANSACTION_SIGNATURE",
@@ -764,7 +772,8 @@
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
       ],
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs"
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.MALFORMED_TRANSACTION",
@@ -873,7 +882,8 @@
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
       ],
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs"
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.WIRE_TOKEN_DIRECT_MOVEMENT",
@@ -893,7 +903,8 @@
         "Declared wire effects do not prove owner permissions, total spending or execution."
       ],
       "fixture_review": "Existing synthetic Rust tests; runtime corroboration is separately scoped in testing/runtime.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.WIRE_TOKEN_DIRECT_UNCHECKED_TRANSFER",
@@ -913,7 +924,8 @@
         "Declared wire effects do not prove owner permissions, total spending or execution."
       ],
       "fixture_review": "Existing synthetic Rust tests; runtime corroboration is separately scoped in testing/runtime.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.WIRE_TOKEN_DIRECT_AUTHORITY_RISK",
@@ -936,7 +948,8 @@
       "benchmark_fixtures": [
         "testing\\scenarios\\B-014.json",
         "testing\\scenarios\\B-015.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.WIRE_TOKEN_DIRECT_OPAQUE",
@@ -958,7 +971,8 @@
       "fixture_review": "Existing synthetic Rust tests; runtime corroboration is separately scoped in testing/runtime.",
       "benchmark_fixtures": [
         "testing\\scenarios\\U-006.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.WIRE_TOKEN_DIRECT_ALT_UNTRUSTED",
@@ -978,7 +992,8 @@
         "Declared wire effects do not prove owner permissions, total spending or execution."
       ],
       "fixture_review": "Existing synthetic Rust tests; runtime corroboration is separately scoped in testing/runtime.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_CPI_AUTHORITY_RISK",
@@ -999,7 +1014,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_CPI_MOVEMENT",
@@ -1020,7 +1036,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_CPI_OPAQUE",
@@ -1041,7 +1058,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_2022_TRANSFER_FEE",
@@ -1062,7 +1080,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_2022_TRANSFER_HOOK",
@@ -1083,7 +1102,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_2022_PERMANENT_DELEGATE",
@@ -1104,7 +1124,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS",
@@ -1125,7 +1146,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_STATE_NON_ATOMIC",
@@ -1146,7 +1168,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_STATE_MISSING",
@@ -1167,7 +1190,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_TRANSFER_FEE_CONFIG",
@@ -1188,7 +1212,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_TRANSFER_HOOK_ACTIVE",
@@ -1209,7 +1234,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_PERMANENT_DELEGATE_ACTIVE",
@@ -1230,7 +1256,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_CONFIDENTIAL_EXTENSION",
@@ -1251,7 +1278,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_UNKNOWN_EXTENSION",
@@ -1272,7 +1300,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_MINT_OPAQUE_EXTENSION_STATE",
@@ -1293,7 +1322,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_NON_ATOMIC",
@@ -1314,7 +1344,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MISSING",
@@ -1335,7 +1366,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_PROGRAM_UNVERIFIED",
@@ -1356,7 +1388,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MINT_MISMATCH",
@@ -1377,7 +1410,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH",
@@ -1398,7 +1432,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED",
@@ -1419,7 +1454,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_FROZEN",
@@ -1440,7 +1476,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_DELEGATE",
@@ -1461,7 +1498,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CLOSE_AUTHORITY",
@@ -1482,7 +1520,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_WITHHELD_FEES",
@@ -1503,7 +1542,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MEMO_REQUIRED",
@@ -1524,7 +1564,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CPI_GUARD",
@@ -1545,7 +1586,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_HOOK_TRANSFERRING",
@@ -1566,7 +1608,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_NON_TRANSFERABLE",
@@ -1587,7 +1630,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CONFIDENTIAL",
@@ -1608,7 +1652,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_OPAQUE_EXTENSION",
@@ -1629,7 +1674,8 @@
         "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
       ],
       "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.INTENT_REJECTED",
@@ -1836,7 +1882,8 @@
         "testing\\scenarios-regression\\U-160.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.INTENT_COVERAGE_INCOMPLETE",
@@ -1887,7 +1934,8 @@
         "testing\\scenarios-regression\\U-136.json",
         "testing\\scenarios-regression\\U-161.json",
         "testing\\scenarios-regression\\U-162.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.INTENT_UNVERIFIED",
@@ -1912,7 +1960,8 @@
         "testing\\scenarios\\U-002.json",
         "testing\\scenarios\\U-005.json",
         "testing\\scenarios-regression\\U-103.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIMULATION_FAILED",
@@ -1936,7 +1985,8 @@
         "testing\\scenarios\\U-010.json",
         "testing\\scenarios\\U-011.json",
         "testing\\scenarios\\U-012.json"
-      ]
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIMULATION_ONLY",
@@ -1956,7 +2006,8 @@
         "Supported scope only; no general safety or signing authorization."
       ],
       "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_SOURCE_CPI_OUTSIDE_SCOPE",
@@ -1979,7 +2030,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_SOURCE_CPI_OVER_CAP",
@@ -2002,7 +2054,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT",
@@ -2025,7 +2078,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE",
@@ -2048,7 +2102,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS",
@@ -2071,7 +2126,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_TOKEN_CPI_OVER_CAP",
@@ -2094,7 +2150,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_TOKEN_NET_LOSS_OVER_CAP",
@@ -2117,7 +2174,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SIGNED_TOKEN_CAP_INCOMPLETE",
@@ -2140,7 +2198,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_NON_ADDITIVE",
@@ -2164,7 +2223,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_WIRE_CAP_ANOMALY",
@@ -2188,7 +2248,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_CPI_MINT_CAP_RISK",
@@ -2212,7 +2273,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_CPI_SOURCE_CAP_RISK",
@@ -2236,7 +2298,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_NET_MINT_CAP_RISK",
@@ -2260,7 +2323,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_NET_SOURCE_CAP_RISK",
@@ -2284,7 +2348,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_UNLISTED_MINT",
@@ -2308,7 +2373,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_UNLISTED_SOURCE",
@@ -2332,7 +2398,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_WIRE_ALT_IDENTITY_UNTRUSTED",
@@ -2356,7 +2423,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE",
@@ -2380,7 +2448,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS",
@@ -2404,7 +2473,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_NON_ATOMIC",
@@ -2428,7 +2498,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_SEMANTICS_INCOMPLETE",
@@ -2452,7 +2523,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_UNOBSERVED",
@@ -2476,7 +2548,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_PROGRAM_MISMATCH",
@@ -2500,7 +2573,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_MINT_MISMATCH",
@@ -2524,7 +2598,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_UNCHECKED_MINT",
@@ -2548,7 +2623,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_AUTHORITY_UNRESOLVED",
@@ -2572,7 +2648,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_DELEGATE_ALLOWANCE_LOW",
@@ -2596,7 +2673,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_BALANCE_LOW",
@@ -2620,7 +2698,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_CPI_SOURCE_FROZEN",
@@ -2644,7 +2723,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_NON_ATOMIC",
@@ -2668,7 +2748,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_UNOBSERVED",
@@ -2692,7 +2773,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_PROGRAM_CONFLICT",
@@ -2716,7 +2798,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_MINT_CONFLICT",
@@ -2740,7 +2823,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_ROLE_UNMATCHED",
@@ -2764,7 +2848,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_DELEGATE_ALLOWANCE_LOW",
@@ -2788,7 +2873,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_BALANCE_LOW",
@@ -2812,7 +2898,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_FROZEN",
@@ -2836,7 +2923,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_EXTENSION_UNRESOLVED",
@@ -2860,7 +2948,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED",
@@ -2883,7 +2972,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_EFFECT_GRAPH_IDENTITY_CONFLICT",
@@ -2906,7 +2996,8 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
-      "benchmark_fixtures": []
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
     },
     {
       "rule_id": "HGUET.RPC_EFFECT_GRAPH_OPAQUE_CPI",
@@ -2929,7 +3020,574 @@
         "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
       ],
       "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": [],
+      "test_status": "EXISTING_FAMILY_REGRESSION"
+    },
+    {
+      "rule_id": "HGUET.UNSUPPORTED_FORMAT",
+      "legacy_code": "UNSUPPORTED_FORMAT",
+      "severity": "high",
+      "scope": "existing_v1_check",
+      "summary": "The named analysis check could not establish its supported scope.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "unsupported_version_is_unknown_and_never_contacts_rpc"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-007.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE",
+      "legacy_code": "WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE",
+      "severity": "high",
+      "scope": "original_wire_instruction_declarations",
+      "summary": "The bounded original-wire token decoder could not establish complete direct token semantics; no safety is inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
       "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.WIRE_TOKEN_DIRECT_ALT_UNRESOLVED",
+      "legacy_code": "WIRE_TOKEN_DIRECT_ALT_UNRESOLVED",
+      "severity": "high",
+      "scope": "original_wire_instruction_declarations",
+      "summary": "Original v0 transaction references unresolved lookup addresses; full direct-token program/account roles require separately checked ALT evidence",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "lookup_table_with_a_signed_intent_reaches_the_rpc_and_stays_advisory"
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-003.json",
+        "testing\\scenarios\\U-009.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED",
+      "legacy_code": "SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED",
+      "severity": "high",
+      "scope": "existing_v1_check",
+      "summary": "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed token debit limits",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-008.json",
+        "testing\\scenarios-regression\\U-110.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE",
+      "legacy_code": "SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE",
+      "severity": "high",
+      "scope": "existing_v1_check",
+      "summary": "Signed per-mint limits bound recognized direct checked token debit declarations only. CPI, fees, unknown program side effects and total gross spending are NOT enforceable from the original wire alone",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "legacy_code": "SIGNED_INTENT_TOKEN_CAP_INVALID",
+      "severity": "critical",
+      "scope": "existing_v1_check",
+      "summary": "The named analysis check could not establish its supported scope.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\B-009.json",
+        "testing\\scenarios\\B-010.json",
+        "testing\\scenarios\\B-011.json",
+        "testing\\scenarios\\B-012.json",
+        "testing\\scenarios\\B-013.json",
+        "testing\\scenarios\\B-014.json",
+        "testing\\scenarios\\B-015.json",
+        "testing\\scenarios\\G-001.json",
+        "testing\\scenarios\\G-002.json",
+        "testing\\scenarios\\G-003.json",
+        "testing\\scenarios\\G-004.json",
+        "testing\\scenarios\\G-005.json",
+        "testing\\scenarios\\G-006.json",
+        "testing\\scenarios\\G-007.json",
+        "testing\\scenarios\\G-008.json",
+        "testing\\scenarios\\G-009.json",
+        "testing\\scenarios\\G-010.json",
+        "testing\\scenarios\\G-011.json",
+        "testing\\scenarios\\G-012.json",
+        "testing\\scenarios\\G-013.json",
+        "testing\\scenarios\\G-014.json",
+        "testing\\scenarios\\G-015.json",
+        "testing\\scenarios\\G-016.json",
+        "testing\\scenarios\\G-017.json",
+        "testing\\scenarios\\G-018.json",
+        "testing\\scenarios\\G-019.json",
+        "testing\\scenarios\\G-020.json",
+        "testing\\scenarios-regression\\B-111.json",
+        "testing\\scenarios-regression\\B-112.json",
+        "testing\\scenarios-regression\\B-114.json",
+        "testing\\scenarios-regression\\B-123.json",
+        "testing\\scenarios-regression\\B-126.json",
+        "testing\\scenarios-regression\\B-127.json",
+        "testing\\scenarios-regression\\B-135.json",
+        "testing\\scenarios-regression\\B-136.json",
+        "testing\\scenarios-regression\\G-101.json",
+        "testing\\scenarios-regression\\G-102.json",
+        "testing\\scenarios-regression\\G-103.json",
+        "testing\\scenarios-regression\\G-104.json",
+        "testing\\scenarios-regression\\G-105.json",
+        "testing\\scenarios-regression\\G-106.json",
+        "testing\\scenarios-regression\\G-107.json",
+        "testing\\scenarios-regression\\G-108.json",
+        "testing\\scenarios-regression\\G-109.json",
+        "testing\\scenarios-regression\\G-110.json",
+        "testing\\scenarios-regression\\G-111.json",
+        "testing\\scenarios-regression\\U-114.json",
+        "testing\\scenarios-regression\\U-115.json",
+        "testing\\scenarios-regression\\U-116.json",
+        "testing\\scenarios-regression\\U-117.json",
+        "testing\\scenarios-regression\\U-118.json",
+        "testing\\scenarios-regression\\U-119.json",
+        "testing\\scenarios-regression\\U-120.json",
+        "testing\\scenarios-regression\\U-121.json",
+        "testing\\scenarios-regression\\U-122.json",
+        "testing\\scenarios-regression\\U-123.json",
+        "testing\\scenarios-regression\\U-124.json",
+        "testing\\scenarios-regression\\U-125.json",
+        "testing\\scenarios-regression\\U-126.json",
+        "testing\\scenarios-regression\\U-127.json",
+        "testing\\scenarios-regression\\U-128.json",
+        "testing\\scenarios-regression\\U-129.json",
+        "testing\\scenarios-regression\\U-130.json",
+        "testing\\scenarios-regression\\U-131.json",
+        "testing\\scenarios-regression\\U-132.json",
+        "testing\\scenarios-regression\\U-133.json",
+        "testing\\scenarios-regression\\U-134.json",
+        "testing\\scenarios-regression\\U-135.json",
+        "testing\\scenarios-regression\\U-136.json",
+        "testing\\scenarios-regression\\U-137.json",
+        "testing\\scenarios-regression\\U-138.json",
+        "testing\\scenarios-regression\\U-139.json",
+        "testing\\scenarios-regression\\U-140.json",
+        "testing\\scenarios-regression\\U-141.json",
+        "testing\\scenarios-regression\\U-142.json",
+        "testing\\scenarios-regression\\U-143.json",
+        "testing\\scenarios-regression\\U-144.json",
+        "testing\\scenarios-regression\\U-145.json",
+        "testing\\scenarios-regression\\U-146.json",
+        "testing\\scenarios-regression\\U-147.json",
+        "testing\\scenarios-regression\\U-148.json",
+        "testing\\scenarios-regression\\U-149.json",
+        "testing\\scenarios-regression\\U-150.json",
+        "testing\\scenarios-regression\\U-151.json",
+        "testing\\scenarios-regression\\U-152.json",
+        "testing\\scenarios-regression\\U-153.json",
+        "testing\\scenarios-regression\\U-154.json",
+        "testing\\scenarios-regression\\U-155.json",
+        "testing\\scenarios-regression\\U-156.json",
+        "testing\\scenarios-regression\\U-157.json",
+        "testing\\scenarios-regression\\U-158.json",
+        "testing\\scenarios-regression\\U-159.json",
+        "testing\\scenarios-regression\\U-160.json",
+        "testing\\scenarios-regression\\U-161.json",
+        "testing\\scenarios-regression\\U-162.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE",
+      "legacy_code": "SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE",
+      "severity": "high",
+      "scope": "existing_v1_check",
+      "summary": "Signed source/mint/authority scopes bind direct checked debit declarations to required message signer roles, but do not verify token-account ownership, multisig, CPI, actual signature presence before signing or total executed spending",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "legacy_code": "SIGNED_INTENT_SOURCE_SCOPE_INVALID",
+      "severity": "critical",
+      "scope": "existing_v1_check",
+      "summary": "The named analysis check could not establish its supported scope.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\B-016.json",
+        "testing\\scenarios\\B-017.json",
+        "testing\\scenarios\\B-018.json",
+        "testing\\scenarios\\G-001.json",
+        "testing\\scenarios\\G-002.json",
+        "testing\\scenarios\\G-003.json",
+        "testing\\scenarios\\G-004.json",
+        "testing\\scenarios\\G-005.json",
+        "testing\\scenarios\\G-006.json",
+        "testing\\scenarios\\G-007.json",
+        "testing\\scenarios\\G-008.json",
+        "testing\\scenarios\\G-009.json",
+        "testing\\scenarios\\G-010.json",
+        "testing\\scenarios\\G-011.json",
+        "testing\\scenarios\\G-012.json",
+        "testing\\scenarios\\G-013.json",
+        "testing\\scenarios\\G-014.json",
+        "testing\\scenarios\\G-015.json",
+        "testing\\scenarios\\G-016.json",
+        "testing\\scenarios\\G-017.json",
+        "testing\\scenarios\\G-018.json",
+        "testing\\scenarios\\G-019.json",
+        "testing\\scenarios\\G-020.json",
+        "testing\\scenarios-regression\\B-137.json",
+        "testing\\scenarios-regression\\G-101.json",
+        "testing\\scenarios-regression\\G-102.json",
+        "testing\\scenarios-regression\\G-103.json",
+        "testing\\scenarios-regression\\G-104.json",
+        "testing\\scenarios-regression\\G-105.json",
+        "testing\\scenarios-regression\\G-106.json",
+        "testing\\scenarios-regression\\G-107.json",
+        "testing\\scenarios-regression\\G-108.json",
+        "testing\\scenarios-regression\\G-109.json",
+        "testing\\scenarios-regression\\G-110.json",
+        "testing\\scenarios-regression\\G-111.json",
+        "testing\\scenarios-regression\\U-114.json",
+        "testing\\scenarios-regression\\U-115.json",
+        "testing\\scenarios-regression\\U-116.json",
+        "testing\\scenarios-regression\\U-117.json",
+        "testing\\scenarios-regression\\U-118.json",
+        "testing\\scenarios-regression\\U-119.json",
+        "testing\\scenarios-regression\\U-120.json",
+        "testing\\scenarios-regression\\U-121.json",
+        "testing\\scenarios-regression\\U-122.json",
+        "testing\\scenarios-regression\\U-123.json",
+        "testing\\scenarios-regression\\U-124.json",
+        "testing\\scenarios-regression\\U-125.json",
+        "testing\\scenarios-regression\\U-126.json",
+        "testing\\scenarios-regression\\U-127.json",
+        "testing\\scenarios-regression\\U-128.json",
+        "testing\\scenarios-regression\\U-129.json",
+        "testing\\scenarios-regression\\U-130.json",
+        "testing\\scenarios-regression\\U-131.json",
+        "testing\\scenarios-regression\\U-132.json",
+        "testing\\scenarios-regression\\U-133.json",
+        "testing\\scenarios-regression\\U-134.json",
+        "testing\\scenarios-regression\\U-135.json",
+        "testing\\scenarios-regression\\U-136.json",
+        "testing\\scenarios-regression\\U-137.json",
+        "testing\\scenarios-regression\\U-138.json",
+        "testing\\scenarios-regression\\U-139.json",
+        "testing\\scenarios-regression\\U-140.json",
+        "testing\\scenarios-regression\\U-141.json",
+        "testing\\scenarios-regression\\U-142.json",
+        "testing\\scenarios-regression\\U-143.json",
+        "testing\\scenarios-regression\\U-144.json",
+        "testing\\scenarios-regression\\U-145.json",
+        "testing\\scenarios-regression\\U-146.json",
+        "testing\\scenarios-regression\\U-147.json",
+        "testing\\scenarios-regression\\U-148.json",
+        "testing\\scenarios-regression\\U-149.json",
+        "testing\\scenarios-regression\\U-150.json",
+        "testing\\scenarios-regression\\U-151.json",
+        "testing\\scenarios-regression\\U-152.json",
+        "testing\\scenarios-regression\\U-153.json",
+        "testing\\scenarios-regression\\U-154.json",
+        "testing\\scenarios-regression\\U-155.json",
+        "testing\\scenarios-regression\\U-156.json",
+        "testing\\scenarios-regression\\U-157.json",
+        "testing\\scenarios-regression\\U-158.json",
+        "testing\\scenarios-regression\\U-159.json",
+        "testing\\scenarios-regression\\U-160.json",
+        "testing\\scenarios-regression\\U-161.json",
+        "testing\\scenarios-regression\\U-162.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.RPC_EFFECT_EVIDENCE_INCOMPLETE",
+      "legacy_code": "RPC_EFFECT_EVIDENCE_INCOMPLETE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Solana RPC omitted balance/token/CPI fields: missing observations do not imply zero transfers",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "missing_rpc_effect_fields_are_reported_without_inventing_zeroes"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_DELTA_UNDETERMINED",
+      "legacy_code": "RPC_TOKEN_DELTA_UNDETERMINED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_SOURCE_ADDITIONAL_READ_UNAVAILABLE",
+      "legacy_code": "RPC_SIGNED_SOURCE_ADDITIONAL_READ_UNAVAILABLE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The named analysis check could not establish its supported scope.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Source authority correlation is inconsistent across separate RPC slots; no signer ownership or transfer permission can be inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_READ_UNAVAILABLE",
+      "legacy_code": "RPC_CPI_SOURCE_READ_UNAVAILABLE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The named analysis check could not establish its supported scope.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_CORRELATION_INVALID",
+      "legacy_code": "RPC_CPI_SOURCE_CORRELATION_INVALID",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "CPI source evidence is malformed or conflicting across later RPC snapshots; no execution or authority proof is inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID",
+      "legacy_code": "RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Independent token debit evidence views were inconsistent, malformed or exceeded bounds; gross token spending is unknown",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.INTENT_SCOPE_ADVISORY_ONLY",
+      "legacy_code": "INTENT_SCOPE_ADVISORY_ONLY",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Lookup-table addresses were supplied by the selected RPC; the signed intent was compared with RPC observations as advisory evidence only and none of its limits is enforced",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "lookup_table_with_a_signed_intent_reaches_the_rpc_and_stays_advisory"
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_OUTSIDE_SIGNED_INTENT",
+      "legacy_code": "RPC_CPI_OUTSIDE_SIGNED_INTENT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Simulated inner instructions invoke a program absent from the independently signed intent allowlist; this single-provider observation needs review",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [],
+      "test_status": "TARGETED_REGRESSION_OPEN",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP",
+      "legacy_code": "RPC_FEE_PAYER_NET_OUTFLOW_OVER_CAP",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Simulated fee-payer net lamport loss exceeds the signed SOL cap; net loss includes fees and is not a verified total spend",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "verified_intent_is_compared_with_simulated_payer_outflow"
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.NO_SIMULATION",
+      "legacy_code": "NO_SIMULATION",
+      "severity": "high",
+      "scope": "existing_v1_check",
+      "summary": "Wire inspection does not prove transfers, CPI effects, execution or wallet authorization",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "check_without_an_intent_and_offline_inspection_stay_local"
+      ],
+      "test_status": "EXISTING_FAMILY_REGRESSION",
+      "evidence": [
+        "existing v1 finding and its original analysis evidence"
+      ],
+      "limitations": [
+        "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
+      ],
+      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-010.json",
+        "testing\\scenarios\\U-011.json",
+        "testing\\scenarios\\U-012.json"
+      ]
     }
   ]
 }

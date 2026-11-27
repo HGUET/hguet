@@ -521,3 +521,33 @@ fn unreadable_oversized_and_malformed_inputs_are_errors_not_verdicts_of_safety()
     let (report, exit) = execute_with(bad_policy, &Unreachable);
     assert_eq!((exit, report["code"].as_str()), (40, Some("BAD_POLICY")));
 }
+
+#[test]
+fn unsupported_version_is_unknown_and_never_contacts_rpc() {
+    let mut wire = legacy_transfer(75);
+    wire[65] = 0x82;
+    let (report, exit) = execute_with(args(&wire, true), &Unreachable);
+    assert_eq!(exit, 30);
+    assert_eq!(report["verdict"]["decision"], "UNKNOWN");
+    assert!(codes(&report).contains(&"UNSUPPORTED_FORMAT".to_owned()));
+    let (supported, _) = execute_with(args(&legacy_transfer(75), false), &Unreachable);
+    assert!(!codes(&supported).contains(&"UNSUPPORTED_FORMAT".to_owned()));
+}
+
+#[test]
+fn missing_rpc_effect_fields_are_reported_without_inventing_zeroes() {
+    let wire = legacy_transfer(75);
+    let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+    response["value"]
+        .as_object_mut()
+        .unwrap()
+        .remove("preBalances");
+    response["value"]
+        .as_object_mut()
+        .unwrap()
+        .remove("innerInstructions");
+    let (report, exit) = execute_with(args(&wire, true), &FakeRpc::new(response));
+    assert_never_permits(&report, exit);
+    assert!(codes(&report).contains(&"RPC_EFFECT_EVIDENCE_INCOMPLETE".to_owned()));
+    assert!(report["rpc_analysis"]["effect_analysis"]["lamport_deltas"].is_null());
+}
