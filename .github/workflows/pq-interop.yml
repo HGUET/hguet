@@ -1,6 +1,15 @@
 name: "PQ interoperability (ML-DSA-87 known answers, protocol harness)"
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'protocol/**'
+      - 'testing/tests/**'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/pq-interop.yml'
 permissions:
   contents: read
 jobs:
@@ -13,22 +22,42 @@ jobs:
     env:
       HGUET_REQUIRE_PQ: "1"   # a skipped ML-DSA test must fail here
     steps:
+      - name: Initialize PQ evidence
+        run: |
+          mkdir -p /tmp/hguet-pq-evidence
+          printf '%s\n' "$GITHUB_SHA" > /tmp/hguet-pq-evidence/source.txt
       - name: Install tools
         run: |
           apt-get update -qq
           apt-get install -y -qq python3 python3-jsonschema python3-yaml openssl git ca-certificates curl build-essential
-          openssl version
+          openssl version | tee /tmp/hguet-pq-evidence/openssl.txt
           openssl list -signature-algorithms | grep -i ml-dsa-87
       - uses: actions/checkout@v4
       - name: ML-DSA-87 NIST ACVP known answers, protocol codec, TLS flow harness (no skips allowed)
         shell: bash
         run: |
-          python3 -m unittest discover -s testing/tests -v > /tmp/out.txt 2>&1 || { tail -80 /tmp/out.txt; exit 1; }
-          tail -6 /tmp/out.txt
-          if grep -q "skipped" /tmp/out.txt; then echo "::error::a test was skipped; ML-DSA coverage is unverified"; grep -E "skipped|SKIP" /tmp/out.txt | head; exit 1; fi
+          python3 -m unittest discover -s testing/tests -v > /tmp/hguet-pq-evidence/framework.log 2>&1 || { tail -80 /tmp/hguet-pq-evidence/framework.log; exit 1; }
+          tail -6 /tmp/hguet-pq-evidence/framework.log
+          if grep -q "skipped" /tmp/hguet-pq-evidence/framework.log; then echo "::error::a test was skipped; ML-DSA coverage is unverified"; grep -E "skipped|SKIP" /tmp/hguet-pq-evidence/framework.log | head; exit 1; fi
 
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.100.0
       - name: Rust signed payload and real TLS profile tests (backend mandatory)
-        run: cargo test -p hguet-cloud --locked --lib --test transport_loopback --test paid_check_signed -- --ignored --nocapture
+        shell: bash
+        run: |
+          rustc -Vv > /tmp/hguet-pq-evidence/rustc.txt
+          cargo test -p hguet-cloud --locked --lib --test transport_loopback --test paid_check_signed -- --ignored --nocapture 2>&1 | tee /tmp/hguet-pq-evidence/pq-tests.log
+      - name: Hash PQ evidence
+        if: always()
+        shell: bash
+        run: |
+          cd /tmp/hguet-pq-evidence
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
+      - name: Preserve PQ evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pq-interop-evidence
+          path: /tmp/hguet-pq-evidence/
+          if-no-files-found: error
