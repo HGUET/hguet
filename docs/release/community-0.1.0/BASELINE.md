@@ -137,3 +137,24 @@ All eight local-policy codes now have catalogue entries and test references.
 Other finding families still require individual catalogue review.
 Phase 1 acceptance remains open for that work and complete evidence/coverage
 review. The archive is a local artifact, without a public release or tag.
+
+## WSL regression refresh — 2026-11-27
+
+Source: base commit 3faa940 plus the cross-program CPI regression and
+catalogue/docs changes in the accompanying commit. This run is independent
+of the older aa198e5 evidence archive and does not refresh its benchmark
+or runtime claims.
+
+Ubuntu-26.04 WSL: `cargo test --locked --workspace` passed 280 tests,
+zero failures, six ignored. `cargo test --locked -p hguet-cloud --all-targets
+-- --ignored` separately passed all six PQ tests.
+`cargo clippy --locked -p hguet --all-targets -- -D warnings` and
+`cargo fmt --all -- --check` passed. Rule catalogue reference validation
+passed for 111 entries with zero detected uncatalogued engine codes;
+five targeted regression gaps remain open.
+
+Local logs: target/phase01-current/workspace-tests-wsl.txt,
+pq-tests-wsl.txt and clippy-wsl.txt. Tested source SHA-256:
+
+- crates/hguet-cli/src/pipeline_tests.rs: 2835650f9ba9346a480604c89012af796d6c0a9b3b4f9cc1ad1f9a8927211063
+- protocol/v2/rules.json: bc5dcfd7a58a5045220e84d72432ca980ad7fea76142dd6ed29ac8a6baa9e298

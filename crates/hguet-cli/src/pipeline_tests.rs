@@ -903,3 +903,60 @@ fn cpi_item_limit_is_enforced_before_source_correlation_and_aggregation() {
         }
     }
 }
+
+#[test]
+fn conflicting_cpi_token_programs_do_not_invent_source_authority() {
+    let legacy = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+    let token2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+    let mut data = vec![12];
+    data.extend(1u64.to_le_bytes());
+    data.push(6);
+    for conflicting in [false, true] {
+        let wire = legacy_transfer(75);
+        let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+        response["value"]["innerInstructions"] = json!([{"index":0,"instructions":
+            ([legacy, if conflicting { token2022 } else { legacy }].into_iter().map(|program|
+                json!({"programId":program,"accounts":[0,1,1,0],"data":bs58::encode(&data).into_string()})
+            ).collect::<Vec<_>>())
+        }]);
+        let rpc = FakeRpc::new(response);
+        let (report, exit) = execute_with(args(&wire, true), &rpc);
+        assert_never_permits(&report, exit);
+        assert_eq!(exit, 30);
+        assert_eq!(
+            codes(&report).contains(&"RPC_CPI_SOURCE_READ_UNAVAILABLE".to_owned()),
+            conflicting,
+            "{report}"
+        );
+        assert_eq!(
+            rpc.requests
+                .borrow()
+                .iter()
+                .any(|request| request["id"] == 7),
+            !conflicting
+        );
+        let entries = report["cpi_source_coverage"]["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        for entry in entries {
+            assert_eq!(entry["authorization_proven"], false);
+            assert_eq!(entry["authority_relationship"], "unobserved");
+            assert!(entry["observed_owner"].is_null());
+            assert_eq!(
+                entry["observation_source"],
+                if conflicting {
+                    "unobserved"
+                } else {
+                    "cpi_source_rpc"
+                }
+            );
+        }
+        assert_eq!(
+            report["aggregate_token_spending"]["mints"][0]["rpc_cpi_checked_debit_raw"],
+            "2"
+        );
+        assert_eq!(
+            report["aggregate_token_spending"]["total_gross_token_spend_proven"],
+            false
+        );
+    }
+}

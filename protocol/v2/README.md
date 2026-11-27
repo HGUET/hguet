@@ -117,3 +117,12 @@ without claiming executed spending. At 513 items RPC_RESPONSE_INVALID is
 emitted, the CPI account read is not attempted and no aggregate is returned.
 Both cases remain UNKNOWN and signing is blocked. No decoder, trust or
 correlation guard was relaxed to construct these tests.
+
+The cross-program CPI regression pairs two same-program declarations with
+a SPL Token / Token-2022 pair naming the same source. Same-program claims
+perform one supplementary read and retain missing-account observations.
+Conflicting program identities emit RPC_CPI_SOURCE_READ_UNAVAILABLE before
+request id 7 is sent. Both claims retain unobserved authority and no owner;
+the two raw units remain only an advisory CPI declaration view, with gross
+spending unproven and signing blocked. This exercises the missing-address
+constructor guard, not RPC_CPI_SOURCE_CORRELATION_INVALID.

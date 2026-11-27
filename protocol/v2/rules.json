@@ -3467,7 +3467,8 @@
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
       "tests": [
-        "failed_additional_source_reads_preserve_unknown_and_signed_caps"
+        "failed_additional_source_reads_preserve_unknown_and_signed_caps",
+        "conflicting_cpi_token_programs_do_not_invent_source_authority"
       ],
       "test_status": "TARGETED_REGRESSION",
       "evidence": [
