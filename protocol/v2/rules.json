@@ -3097,8 +3097,10 @@
       "summary": "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed token debit limits",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "signed_token_cap_findings_preserve_scope_and_reject_overages_before_rpc"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
@@ -3119,8 +3121,10 @@
       "summary": "Signed per-mint limits bound recognized direct checked token debit declarations only. CPI, fees, unknown program side effects and total gross spending are NOT enforceable from the original wire alone",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "signed_token_cap_findings_preserve_scope_and_reject_overages_before_rpc"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
@@ -3253,8 +3257,10 @@
       "summary": "Signed source/mint/authority scopes bind direct checked debit declarations to required message signer roles, but do not verify token-account ownership, multisig, CPI, actual signature presence before signing or total executed spending",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "signed_token_cap_findings_preserve_scope_and_reject_overages_before_rpc"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],

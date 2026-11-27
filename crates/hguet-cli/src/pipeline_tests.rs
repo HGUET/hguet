@@ -134,6 +134,18 @@ fn issuer_key() -> String {
     bs58::encode(issuer().verifying_key().to_bytes()).into_string()
 }
 
+fn signed_payload_file(payload: &Value) -> String {
+    let bytes = serde_json::to_vec(payload).unwrap();
+    let mut signed = b"HGUET-PAYMENT-INTENT\0".to_vec();
+    signed.extend(&bytes);
+    let envelope = json!({"payload_b64":STANDARD.encode(&bytes),"signer_pubkey_b58":issuer_key(),
+        "signature_b58":bs58::encode(issuer().sign(&signed).to_bytes()).into_string()});
+    temp_file(
+        "signed-payload.json",
+        &serde_json::to_vec(&envelope).unwrap(),
+    )
+}
+
 /// A signed intent bound to `wire`, valid now, System program only.
 fn intent_file(wire: &[u8], max_spend: &str) -> String {
     let parsed = hguet_core::parse_transaction(wire).expect("test transaction parses");
@@ -550,4 +562,79 @@ fn missing_rpc_effect_fields_are_reported_without_inventing_zeroes() {
     assert_never_permits(&report, exit);
     assert!(codes(&report).contains(&"RPC_EFFECT_EVIDENCE_INCOMPLETE".to_owned()));
     assert!(report["rpc_analysis"]["effect_analysis"]["lamport_deltas"].is_null());
+}
+
+#[test]
+fn signed_token_cap_findings_preserve_scope_and_reject_overages_before_rpc() {
+    for (wire_text, envelope_text, partial) in [
+        (
+            include_str!("../../../tests/fixtures/legacy-spl-transfer-checked.base64"),
+            include_str!("../../../tests/fixtures/signed-direct-token-cap-equal.json"),
+            "SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE",
+        ),
+        (
+            include_str!(
+                "../../../tests/fixtures/legacy-spl-transfer-checked-authority-signer.base64"
+            ),
+            include_str!("../../../tests/fixtures/signed-direct-token-source-cap-equal.json"),
+            "SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE",
+        ),
+    ] {
+        let wire = STANDARD.decode(wire_text.trim()).unwrap();
+        let original: Value = serde_json::from_str(envelope_text).unwrap();
+        let mut request = args(&wire, false);
+        request.intent = Some(temp_file("equal-intent.json", envelope_text.as_bytes()));
+        request.trusted_key = Some(original["signer_pubkey_b58"].as_str().unwrap().into());
+        let (report, exit) = execute_with(request, &Unreachable);
+        assert_eq!(exit, 30);
+        assert!(codes(&report).contains(&partial.to_owned()));
+        let mut payload: Value = serde_json::from_slice(
+            &STANDARD
+                .decode(original["payload_b64"].as_str().unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+        payload["token_spend_limits"][0]["max_debit_raw"] = json!("1233");
+        let bytes = serde_json::to_vec(&payload).unwrap();
+        let mut signed = b"HGUET-PAYMENT-INTENT\0".to_vec();
+        signed.extend(&bytes);
+        let envelope = json!({"payload_b64":STANDARD.encode(&bytes),"signer_pubkey_b58":issuer_key(),
+            "signature_b58":bs58::encode(issuer().sign(&signed).to_bytes()).into_string()});
+        let mut request = args(&wire, true);
+        request.intent = Some(temp_file(
+            "over-intent.json",
+            &serde_json::to_vec(&envelope).unwrap(),
+        ));
+        request.trusted_key = Some(issuer_key());
+        let (report, exit) = execute_with(request, &Unreachable);
+        assert_eq!(exit, 20);
+        assert!(codes(&report).contains(&"INTENT_REJECTED".to_owned()));
+        assert!(!codes(&report).contains(&partial.to_owned()));
+        if payload.get("token_source_limits").is_some() {
+            payload["token_spend_limits"][0]["max_debit_raw"] = json!("1234");
+            payload["token_source_limits"][0]["max_debit_raw"] = json!("1233");
+            let mut request = args(&wire, true);
+            request.intent = Some(signed_payload_file(&payload));
+            request.trusted_key = Some(issuer_key());
+            let (report, exit) = execute_with(request, &Unreachable);
+            assert_eq!(exit, 20);
+            assert!(codes(&report).contains(&"INTENT_REJECTED".to_owned()));
+            assert!(!codes(&report).contains(&partial.to_owned()));
+        }
+        payload
+            .as_object_mut()
+            .unwrap()
+            .remove("token_spend_limits");
+        payload
+            .as_object_mut()
+            .unwrap()
+            .remove("token_source_limits");
+        let mut request = args(&wire, false);
+        request.intent = Some(signed_payload_file(&payload));
+        request.trusted_key = Some(issuer_key());
+        let (report, exit) = execute_with(request, &Unreachable);
+        assert_eq!(exit, 30);
+        assert!(codes(&report).contains(&"SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED".to_owned()));
+        assert!(!codes(&report).contains(&partial.to_owned()));
+    }
 }

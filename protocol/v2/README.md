@@ -50,9 +50,17 @@ not imply independent ground-truth review.
 
 The validator also inventories emitted engine finding codes missing individual
 catalogue entries. The current checkpoint reports zero uncatalogued engine emission codes and
-13 entries with targeted regression references still open. Family-level
+10 entries with targeted regression references still open. Family-level
 references also require individual assertion review. It prints these as OPEN;
 a successful reference check does not mean complete catalogue coverage.
 Aggregate and correlation entries preserve the distinction between original
 wire, provider-reported CPI, net changes and later snapshots. A repeated
 observation across views never becomes an additional claimed debit.
+
+Signed-cap pipeline regressions use existing signed token/source fixtures.
+Equal caps retain partial coverage, a one-unit mint or source overage is
+rejected before RPC, and omission of both cap fields emits the explicit
+unspecified-token-cap finding. The later TOKEN_CAP_INVALID and
+SOURCE_SCOPE_INVALID branches repeat verification already performed during
+intent acceptance; their targeted reachability remains open. No guard was
+weakened to force those paths.
