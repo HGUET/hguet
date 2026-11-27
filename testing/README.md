@@ -1,5 +1,7 @@
 # HGUET Security Benchmark (foundation)
 
+> **Community Edition direction (2026-11-27):** Source baseline has 60 main and 167 regression JSON files; run the generator and runner to confirm executable counts. Historical dated counts below are not current measurements. Expand into an open runtime and third-party adapter benchmark, without conflating mocked responses with real execution. See the [release roadmap](../docs/release/community-0.1.0/ROADMAP.md).
+
 Executable framework that measures how well the **real `hguet` binary** detects dangerous
 transactions, how often it blocks legitimate ones, how it treats missing evidence, and that
 signing stays blocked. BLOCK-only: no keys, no wallet, no broadcast, synthetic data only.
@@ -10,7 +12,7 @@ python -m pip install -r testing/requirements.txt
 python testing/tools/build_scenarios.py --check        # committed scenarios == generator output
 python -m unittest discover -s testing/tests            # framework self-tests
 python testing/runner/run_benchmark.py --hguet target/debug/hguet                 # the 60 main scenarios
-python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all     # 60 main + 111 regression/coverage
+python testing/runner/run_benchmark.py --hguet target/debug/hguet --suite all     # 60 main + 167 regression/coverage files
 python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke  # 13, used in CI
 # open testing/reports/latest/report.html   (report.json has every scenario, finding and command)
 ```
@@ -20,7 +22,7 @@ python testing/runner/run_benchmark.py --hguet target/debug/hguet --subset smoke
 | Path | Purpose |
 |------|---------|
 | `scenarios/*.json` | 60 versioned scenarios (`hguet-bench-scenario/1`, schema in `schema/`). 20 GOOD, 25 BAD, 15 UNKNOWN |
-| `scenarios-regression/*.json` | 111 further scenarios: paired regression cases for fixed defects and the coverage extension (v1 wire format, binary/Base58 input, mainnet/testnet, malformed wire structure, partial signatures) |
+| `scenarios-regression/*.json` | Additional regression scenarios: paired regression cases for fixed defects and the coverage extension (v1 wire format, binary/Base58 input, mainnet/testnet, malformed wire structure, partial signatures) |
 | `tools/build_scenarios.py` | deterministic generator; **never runs HGUET**; `--check` forbids hand edits |
 | `lib/crypto_tx.py` | dependency-free Solana wire builder (legacy, v0, v1) + RFC 8032 Ed25519 + Base58, written from the public specs |
 | `runner/run_benchmark.py` | runs `hguet check` (and `signer-preflight`), scores, writes JSON + HTML |
@@ -96,7 +98,7 @@ scenarios are counted and printed. CI runs the 13-scenario smoke set on every pu
 ## Known limits
 
 * ALLOW is structurally unreachable (GOOD scores as UNKNOWN at best; `good_left_unknown` reports it).
-* 171 scenarios still give wide error bars, and every one was written by the same author as the tool's
+* The current corpus still has sampling and selection limits, and every one was written by the same author as the tool's
   fixes. Ground truth is not independently reviewed; one label (U-015) has already been found wrong.
 * The v1 builder could not be cross-checked against a validator. Agreement between builder and parser
   proves they match each other, not the network.

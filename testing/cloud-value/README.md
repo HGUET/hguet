@@ -1,5 +1,7 @@
 # HGUET Cloud Value Benchmark v1
 
+> **Community Edition direction (2026-11-27):** Preserve the Cloud Value Benchmark as optional research; do not merge its scores with the local security benchmark or use them as a free release gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 ```bash
 python testing/cloud-value/tools/build_cloud_value.py --check     # committed files == generator
 python -m unittest discover -s testing/tests                      # verifier, mock, adapter, labelling, workflows

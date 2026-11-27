@@ -1,5 +1,7 @@
 # Label quality report - Cloud Value Benchmark v1
 
+> **Community Edition direction (2026-11-27):** Historical Cloud benchmark labeling evidence remains separate from the independently reviewable Community Edition corpus. See the [release roadmap](../../../docs/release/community-0.1.0/ROADMAP.md).
+
 Snapshot of facts at generation time. `report.json -> labeling_quality` recomputes the numbers on every run.
 
 ## What exists

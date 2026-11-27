@@ -1,5 +1,7 @@
 # Cloud Benchmark - contract for the next stage
 
+> **Community Edition direction (2026-11-27):** Cloud test contract remains independent of the free release; preserve its existing constraints. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 Status: **interface and rules fixed, no real Cloud measured.** Nothing here sends data anywhere.
 The CLI has no Cloud client, so "Local + Cloud" can only be *modelled* today. The contract exists
 so the real server, when it appears, is measured by the same machinery and cannot be confused

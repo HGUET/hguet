@@ -1,11 +1,13 @@
 # HGUET — GitHub presence & brand guide
 
+> **Community Edition direction (2026-11-27):** The free toolkit is the primary public identity. Cloud is optional and experimental; do not claim production threat intelligence or released features. See the [release roadmap](../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** working visual direction · November 2026
 
 ## Product identity
 
 - **Name:** HGUET
-- **Category:** Solana AI Agent Payment Security
+- **Category:** Open-source Solana transaction security toolkit
 - **Primary line:** Secure the intent. Verify the transaction.
 - **Short supporting line:** Security before the signature.
 - **Website:** https://hguet.fr
@@ -13,7 +15,7 @@
 
 ### Public organization description (copy exactly)
 
-`Open-source security for AI-agent payments on Solana. Verify intent, simulate transactions, understand risk — before signing.`
+`Open-source security for Solana transactions and autonomous agents. Verify intent, simulate transactions, understand risk — before signing.`
 
 ### Suggested organization profile settings
 

@@ -1,5 +1,7 @@
 # Interoperability with the public HGUET protocol
 
+> **Community Edition direction (2026-11-27):** Preserve the protocol interoperability record; optional Cloud is not a free release gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 Authority: `protocol/v1/hguet.proto`, `payment-quote.schema.json`, `cloud-assessment.schema.json`,
 `payment-receipt.schema.json`, `docs/architecture/cloud-protocol.md`. **No second protocol exists in this
 benchmark.** Anything below that the public files leave open is listed under "Questions for the protocol

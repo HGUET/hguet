@@ -1,5 +1,7 @@
 # Blind review of the 30 critical cases
 
+> **Community Edition direction (2026-11-27):** Historical review packet; do not reinterpret as independent validation of local engine or runtime. See the [release roadmap](../../../../docs/release/community-0.1.0/ROADMAP.md).
+
 Critical = the additional-true-positive scenarios and the false-accusation traps: the cases where a wrong
 label would most distort the benchmark.
 

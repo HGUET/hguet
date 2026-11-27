@@ -1,5 +1,7 @@
 # Benchmark triage log
 
+> **Community Edition direction (2026-11-27):** Preserve historical triage and original expected labels. Runtime verification and independent review are separate release gates. See the [release roadmap](../docs/release/community-0.1.0/ROADMAP.md).
+
 First full run of the 60 scenarios against `hguet` (debug build, commit `390a889`): **41 PASS / 19 FAIL**.
 Every failure was classified as a framework/scenario error or an HGUET defect. Labels were never
 changed to match the tool; what changed is listed here so the result is not circular.
