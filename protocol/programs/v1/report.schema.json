@@ -483,6 +483,53 @@
                         "pattern": "^(0|[1-9][0-9]*)$"
                       }
                     }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "operation",
+                      "recent_slot_raw",
+                      "bump_seed",
+                      "new_addresses"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "address_lookup_table"
+                      },
+                      "operation": {
+                        "enum": [
+                          "create_lookup_table",
+                          "freeze_lookup_table",
+                          "extend_lookup_table",
+                          "deactivate_lookup_table",
+                          "close_lookup_table"
+                        ]
+                      },
+                      "recent_slot_raw": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "bump_seed": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 255
+                      },
+                      "new_addresses": {
+                        "type": "array",
+                        "maxItems": 256,
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   }
                 ]
               }

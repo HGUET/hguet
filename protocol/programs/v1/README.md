@@ -17,7 +17,7 @@ and byte length). ATA create/create-idempotent accepts only six-account
 layouts, records declared roles and static System/Token program match;
 does not validate PDA, rent, actual account ownership or privileges.
 System native movement reuses existing core parsing, including movement
-subtypes; no total spending inference. SPL Token and Token-2022 now reuse the bounded direct-token binary decoder per static instruction. Base operations and five selected extension layouts (checked fee, set fee, permanent delegate, initialize/update hook) retain declared raw fields; other extensions are PREFIX_ONLY, without guessed roles. Token instructions needing lookup addresses remain UNRESOLVED_ACCOUNTS. A decoder error is DECODER_UNAVAILABLE and does not erase unrelated rows. ALT instruction semantics remain unsupported.
+subtypes; no total spending inference. SPL Token and Token-2022 now reuse the bounded direct-token binary decoder per static instruction. Base operations and five selected extension layouts (checked fee, set fee, permanent delegate, initialize/update hook) retain declared raw fields; other extensions are PREFIX_ONLY, without guessed roles. Token instructions needing lookup addresses remain UNRESOLVED_ACCOUNTS. A decoder error is DECODER_UNAVAILABLE and does not erase unrelated rows. ALT mutation declarations now include canonical create/freeze/extend/deactivate/close shapes, declared account roles, recent slot/bump and bounded address lists. They do not prove current table state or activation/closure eligibility.
 Existing report v1/v2 behavior is unchanged.
 
 References:
@@ -29,6 +29,8 @@ Initial unit tests cover exact compute declarations and malformed lengths,
 plus the existing System fixture. Independent SDK/runtime checks are required
 before Phase 2.0 acceptance. No claim of live compatibility or a release.
 
-The separate [JSON Schema](report.schema.json) covers both success and error envelopes. The independent SDK test script `testing/runtime/programs_preview.py` checks six cases, including actual LiteSVM execution of Compute Budget and Memo, ATA declared roles, unknown/malformed layouts and invalid transaction input. It runs in a network-isolated hosted workflow. ATA runtime execution is not claimed by this slice.
+The separate [JSON Schema](report.schema.json) covers both success and error envelopes. The independent SDK test script `testing/runtime/programs_preview.py` checks eight cases, including actual LiteSVM execution of Compute Budget and Memo, ATA declared roles, unknown/malformed layouts and invalid transaction input. It runs in a network-isolated hosted workflow. The extended preview adds actual ATA creation and idempotent repeat with state checks, and SDK ALT mutation declarations; ALT mutations are not executed in this preview.
 
 Phase 2.0 token increment adds declaration checks to six existing runtime cases (SPL checked transfer, approval, authority change, wrong authority, Token-2022 correct and incorrect fee), and a separate SDK-constructed inventory of base and extension opcodes. Only the six runtime cases execute; the inventory does not claim execution of its other operations. No changes to v1/v2 verdicts or the existing RPC decoder behavior.
+
+ALT interface reference: https://docs.rs/solana-address-lookup-table-interface/4.0.0/solana_address_lookup_table_interface/instruction/enum.ProgramInstruction.html . SDK constructors: https://kevinheavey.github.io/solders/api_reference/system_program.html . Existing v0 lookup runtime now also asserts the program inventory preserves an unresolved destination address as null.

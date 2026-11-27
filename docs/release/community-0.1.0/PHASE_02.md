@@ -21,3 +21,8 @@ Provide an additive offline program-intelligence API and CLI, separate from exis
 No mandatory Cloud, signing, wallet keys, real funds, hidden network or release publication. Use independently constructed SDK fixtures; test invalid lengths, unknown opcodes, unresolved ALT, v1 configurations and misleading account roles. Preserve exact existing JSON and exit semantics. Record actual hosted results for each increment; do not mark Phase 2.0 complete until required coverage is implemented and validated.
 
 Later slices require their own technical specification and acceptance record. Phase 3 remains broader validator/devnet/history/fuzz verification; Phase 4 remains CLI polish and portable delivery.
+
+## Phase 2.0 implementation checkpoints
+
+- Source 1b77605: hosted SDK/CLI preview 5/5, runtime 13/13, benchmark 227/227; all local acceptance commands except rustfmt passed. PQ workflow succeeded. [CI](https://github.com/HGUET/hguet/actions/runs/46041092548), [evidence](https://github.com/HGUET/hguet/actions/runs/46041092548/artifacts/15220296339). All 470 manifest entries verified. Formatting corrections applied in the token increment.
+- Static SPL/Token-2022 instruction inventory, canonical ALT mutations, native System account roles, extended SDK fixtures and actual ATA runtime tests are implemented in following source revisions. Final hosted results pending; Phase 2.0 remains open. Broad System non-movement and Token-2022 extension layouts, ALT mutation execution and other deferred programs require further work. No existing verdict or signing semantics changed.

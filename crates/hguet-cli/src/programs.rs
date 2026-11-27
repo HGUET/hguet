@@ -69,6 +69,12 @@ pub enum Declaration {
         fee_basis_points: Option<u16>,
         maximum_fee_raw: Option<String>,
     },
+    AddressLookupTable {
+        operation: &'static str,
+        recent_slot_raw: Option<String>,
+        bump_seed: Option<u8>,
+        new_addresses: Vec<String>,
+    },
     Unsupported,
 }
 
@@ -139,6 +145,67 @@ fn family(id: Option<&str>) -> &'static str {
         Some(_) => "unknown_program",
         None => "unresolved_lookup_program",
     }
+}
+
+fn lookup_declaration(
+    data: &[u8],
+    accounts: usize,
+) -> Option<(Declaration, &'static [&'static str])> {
+    let tag = u32::from_le_bytes(data.get(..4)?.try_into().ok()?);
+    let mut recent_slot_raw = None;
+    let mut bump_seed = None;
+    let mut new_addresses = Vec::new();
+    let (operation, roles): (&str, &[&str]) = match tag {
+        0 if data.len() == 13 && accounts == 4 => {
+            recent_slot_raw = Some(u64::from_le_bytes(data[4..12].try_into().ok()?).to_string());
+            bump_seed = Some(data[12]);
+            (
+                "create_lookup_table",
+                &["lookup_table", "authority", "payer", "system_program"],
+            )
+        }
+        1 if data.len() == 4 && accounts == 2 => {
+            ("freeze_lookup_table", &["lookup_table", "authority"])
+        }
+        2 if matches!(accounts, 2 | 4) => {
+            let count = u64::from_le_bytes(data.get(4..12)?.try_into().ok()?);
+            // Bound before allocation and multiplication, independently of wire size.
+            if count == 0 || count > 256 {
+                return None;
+            }
+            let count = usize::try_from(count).ok()?;
+            if data.len() != 12 + count * 32 {
+                return None;
+            }
+            new_addresses = data[12..]
+                .chunks_exact(32)
+                .map(|key| bs58::encode(key).into_string())
+                .collect();
+            let roles: &[&str] = if accounts == 4 {
+                &["lookup_table", "authority", "payer", "system_program"]
+            } else {
+                &["lookup_table", "authority"]
+            };
+            ("extend_lookup_table", roles)
+        }
+        3 if data.len() == 4 && accounts == 2 => {
+            ("deactivate_lookup_table", &["lookup_table", "authority"])
+        }
+        4 if data.len() == 4 && accounts == 3 => (
+            "close_lookup_table",
+            &["lookup_table", "authority", "recipient"],
+        ),
+        _ => return None,
+    };
+    Some((
+        Declaration::AddressLookupTable {
+            operation,
+            recent_slot_raw,
+            bump_seed,
+            new_addresses,
+        },
+        roles,
+    ))
 }
 
 fn token_roles(operation: &str) -> &'static [&'static str] {
@@ -277,13 +344,24 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
                     .iter()
                     .find(|movement| movement.instruction_index == ix.instruction_index)
                 {
-                    Some(movement) => (
-                        Declaration::SystemMovement {
-                            operation: movement.kind,
-                            lamports: movement.lamports.clone(),
-                        },
-                        "DECODED_DECLARATION",
-                    ),
+                    Some(movement) => {
+                        roles = match movement.kind {
+                            "transfer" => &["source", "destination"],
+                            "transfer_with_seed" => &["source", "base", "destination"],
+                            "create_account" | "create_account_with_seed" => {
+                                &["funding_account", "new_account"]
+                            }
+                            "withdraw_nonce_account" => &["nonce_account", "recipient"],
+                            _ => &[],
+                        };
+                        (
+                            Declaration::SystemMovement {
+                                operation: movement.kind,
+                                lamports: movement.lamports.clone(),
+                            },
+                            "DECODED_DECLARATION",
+                        )
+                    }
                     None => (Declaration::Unsupported, "UNSUPPORTED_LAYOUT"),
                 }
             }
@@ -317,6 +395,13 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
                     "DECODED_DECLARATION",
                 )
             }
+            Some(ALT) => match lookup_declaration(&data, ix.account_indices.len()) {
+                Some((value, account_roles)) => {
+                    roles = account_roles;
+                    (value, "DECODED_DECLARATION")
+                }
+                None => (Declaration::Unsupported, "UNSUPPORTED_LAYOUT"),
+            },
             Some(TOKEN | TOKEN_2022) => {
                 let (value, status, token_roles) = token_declaration(parsed, ix.instruction_index);
                 roles = token_roles;
@@ -361,6 +446,7 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
             "Memo payload is deliberately omitted; UTF-8 validity is not authenticity.",
             "Unsupported instructions and unresolved ALT addresses are not safe or zero effects.",
             "Token authority roles and amounts are declarations; multisig, hooks, actual fees and account state are not verified.",
+            "Lookup-table mutations do not establish table state, activation slot, authority or ability to close.",
         ],
     })
 }

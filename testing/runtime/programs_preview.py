@@ -6,6 +6,12 @@ from pathlib import Path
 import subprocess
 
 from jsonschema import Draft202012Validator
+from solders.account import Account
+from solders.token.state import Mint, TokenAccount
+from solders.system_program import (
+    create_lookup_table, extend_lookup_table, freeze_lookup_table,
+    deactivate_lookup_table, close_lookup_table,
+)
 from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
 from solders.instruction import AccountMeta, Instruction
 from solders.keypair import Keypair
@@ -22,6 +28,7 @@ ATA = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 SYSTEM = Pubkey.default()
 TOKEN_2022 = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
+ALT = Pubkey.from_string("AddressLookupTab1e1111111111111111111111111")
 
 
 def main():
@@ -36,13 +43,7 @@ def main():
         (ROOT / "protocol/programs/v1/report.schema.json").read_text()))
     cases = []
 
-    def inspect(instructions, execute=False):
-        svm = LiteSVM()
-        payer = Keypair()
-        assert not isinstance(svm.airdrop(payer.pubkey(), 10_000_000), FailedTransactionMetadata)
-        message = Message.new_with_blockhash(instructions(payer.pubkey()), payer.pubkey(),
-                                             svm.latest_blockhash())
-        tx = Transaction([payer], message, svm.latest_blockhash())
+    def inspect_tx(tx, message):
         wire = bytes(tx)
         process = subprocess.run([str(binary), "programs", "-", "--offline"],
                                  input=wire, capture_output=True, timeout=20)
@@ -51,6 +52,16 @@ def main():
         schema.validate(report)
         assert report["message_sha256"] == hashlib.sha256(bytes(message)).hexdigest()
         assert report["signing_authorization"] == "NOT_AUTHORIZED"
+        return report
+
+    def inspect(instructions, execute=False):
+        svm = LiteSVM()
+        payer = Keypair()
+        assert not isinstance(svm.airdrop(payer.pubkey(), 10_000_000), FailedTransactionMetadata)
+        message = Message.new_with_blockhash(instructions(payer.pubkey()), payer.pubkey(),
+                                             svm.latest_blockhash())
+        tx = Transaction([payer], message, svm.latest_blockhash())
+        report = inspect_tx(tx, message)
         if execute:
             result = svm.send_transaction(tx)
             assert not isinstance(result, FailedTransactionMetadata), str(result)
@@ -148,6 +159,55 @@ def main():
     assert rows[12]["declaration"]["mint"] is None
     record("sdk_token_instruction_inventory")
 
+    def lookup_instructions(payer):
+        create, table = create_lookup_table(dict(authority_address=payer,
+                                                 payer_address=payer, recent_slot=123))
+        params = dict(lookup_table_address=table, authority_address=payer)
+        additions = [Pubkey.new_unique(), Pubkey.new_unique()]
+        return [create,
+                extend_lookup_table(dict(**params, payer_address=payer, new_addresses=additions)),
+                freeze_lookup_table(params), deactivate_lookup_table(params),
+                close_lookup_table(dict(**params, recipient_address=payer)),
+                Instruction(ALT, b"\x02\x00\x00\x00" + (2**64-1).to_bytes(8, "little"),
+                            [AccountMeta(table, False, True), AccountMeta(payer, True, False)])]
+
+    report = inspect(lookup_instructions)
+    rows = report["instructions"]
+    assert [row["declaration"]["operation"] for row in rows[:5]] == [
+        "create_lookup_table", "extend_lookup_table", "freeze_lookup_table",
+        "deactivate_lookup_table", "close_lookup_table"]
+    assert rows[0]["declaration"]["recent_slot_raw"] == "123"
+    assert len(rows[1]["declaration"]["new_addresses"]) == 2
+    assert rows[1]["accounts"][0]["role"] == "lookup_table"
+    assert rows[4]["accounts"][2]["role"] == "recipient"
+    assert rows[5]["layout_status"] == "UNSUPPORTED_LAYOUT"
+    record("sdk_lookup_table_mutations")
+
+    # Actual ATA creation and idempotent repeat on a funded local runtime.
+    svm = LiteSVM()
+    payer = Keypair()
+    assert not isinstance(svm.airdrop(payer.pubkey(), 10_000_000), FailedTransactionMetadata)
+    mint = Pubkey.new_unique()
+    svm.set_account(mint, Account(10_000_000, bytes(Mint(payer.pubkey(), 0, 6, True)), TOKEN))
+    ata, _ = Pubkey.find_program_address([bytes(payer.pubkey()), bytes(TOKEN), bytes(mint)], ATA)
+    accounts = [AccountMeta(payer.pubkey(), True, True), AccountMeta(ata, False, True),
+                AccountMeta(payer.pubkey(), False, False), AccountMeta(mint, False, False),
+                AccountMeta(SYSTEM, False, False), AccountMeta(TOKEN, False, False)]
+    for opcode, operation in [(0, "create"), (1, "create_idempotent")]:
+        message = Message.new_with_blockhash([Instruction(ATA, bytes([opcode]), accounts)],
+                                             payer.pubkey(), svm.latest_blockhash())
+        tx = Transaction([payer], message, svm.latest_blockhash())
+        report = inspect_tx(tx, message)
+        declaration = report["instructions"][0]["declaration"]
+        assert declaration["operation"] == operation and declaration["static_program_roles_match"]
+        outcome = svm.send_transaction(tx)
+        assert not isinstance(outcome, FailedTransactionMetadata), str(outcome)
+        account = svm.get_account(ata)
+        assert account is not None and account.owner == TOKEN
+        state = TokenAccount.from_bytes(account.data)
+        assert state.owner == payer.pubkey() and state.mint == mint and state.amount == 0
+    record("runtime_ata_create_and_idempotent", True)
+
     process = subprocess.run([str(binary), "programs", "-", "--offline"],
                              input=b"\xff", capture_output=True, timeout=20)
     assert process.returncode == 40
@@ -155,8 +215,8 @@ def main():
     record("versioned_input_error")
 
     args.out.write_text(json.dumps({"cases": cases, "acceptance": "PASS",
-                                    "mandatory_count": 6, "passed_count": len(cases)}, indent=2))
-    print("PASS: 6 independent SDK/CLI comparisons; 2 executed in LiteSVM")
+                                    "mandatory_count": 8, "passed_count": len(cases)}, indent=2))
+    print("PASS: 8 independent SDK/CLI comparisons; 3 cases executed in LiteSVM")
 
 
 if __name__ == "__main__":
