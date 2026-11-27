@@ -73,5 +73,5 @@ def run_case(binary, expected_fee=2):
             "runtime_outcome": "REJECTED" if rejected else "EXECUTED",
             "wire_amount": 123, "expected_fee": expected_fee,
             "source_debit": 0 if rejected else 123, "destination_credit": 0 if rejected else 121,
-            "withheld_fee": 0 if rejected else 2, "runtime_validation": "PASS",
+            "withheld_fee": 0 if rejected else 2, "runtime_validation": "PASS", "comparison": "PASS",
             "hguet_effect_coverage": "WIRE_DECLARATION_ONLY"}

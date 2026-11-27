@@ -200,3 +200,19 @@ Tested Rust source SHA-256 (LF-normalized):
 
 - crates/hguet-core/src/lib.rs: 849266f8bc4afc2eb90b45a5c62711d93ce9c30307b3bdb15a852fc66942acb2
 - crates/hguet-cli/src/lib.rs: 2fa074f122b1cc37ead9d888b495c49ba503e340352d35ced4f1d4465e61dc64
+
+## Runtime CI preparation — 2026-11-27
+
+Base c682442 plus the runtime CI/output changes in the accompanying commit.
+All thirteen LiteSVM comparisons ran successfully in WSL Ubuntu-26.04,
+Solders 0.29.0, inside `unshare --user --map-root-user --net`.
+Each case now records comparison=PASS after its assertions. Existing detailed
+fee/runtime fields are retained. Workflow YAML validation passed.
+The new Ubuntu-24.04/Python-3.12 hosted job has not been run here; its status
+is NOT RUN until actual hosted results are available. The job installs pinned
+dependencies, builds locked CLI, isolates runtime networking and uploads
+source/environment/binary-hash/results/log artifacts. Bash pipefail prevents
+tee from masking a harness failure. No release or hosted run was triggered.
+
+Local result: target/phase01-current/runtime-network-isolated.json. SHA-256:
+4a8ddd5f8d51203891436f442debd952e97e3d28e4b718708376f3be35d18277

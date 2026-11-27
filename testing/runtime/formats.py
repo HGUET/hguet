@@ -71,5 +71,5 @@ def run_cases(binary):
             v1_result={"case":case_name,"sdk_roundtrip":"PASS",
                        "runtime_outcome":"EXECUTED","actual_recipient_delta":500,"comparison":"PASS"}
         v1_results.append(v1_result)
-    return [{"case":"v0_sdk_transfer","runtime_execution":"PASS",
+    return [{"case":"v0_sdk_transfer","runtime_execution":"PASS","comparison":"PASS",
              "actual_recipient_delta":500,"message_hash_comparison":"PASS"},*v1_results]

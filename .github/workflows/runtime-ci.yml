@@ -1,0 +1,47 @@
+name: Independent LiteSVM runtime comparisons
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+      - name: Install pinned runtime dependencies
+        run: python -m pip install -r testing/runtime/requirements.txt
+      - name: Build locked read-only CLI
+        run: cargo build --locked -p hguet
+      - name: Record source and runtime environment
+        run: |
+          mkdir -p target/runtime-ci
+          git rev-parse HEAD > target/runtime-ci/source.txt
+          git status --porcelain >> target/runtime-ci/source.txt
+          rustc -Vv > target/runtime-ci/environment.txt
+          python --version >> target/runtime-ci/environment.txt
+          python -m pip freeze >> target/runtime-ci/environment.txt
+          sha256sum target/debug/hguet > target/runtime-ci/cli.sha256
+      - name: Compare actual execution with offline HGUET declarations
+        shell: bash
+        run: |
+          python_path="$(command -v python)"
+          sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/native.py \
+            --hguet "$PWD/target/debug/hguet" --out target/runtime-ci/result.json \
+            2>&1 | tee target/runtime-ci/runtime.log
+      - name: Preserve runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: litesvm-runtime-evidence
+          path: target/runtime-ci/
+          if-no-files-found: error

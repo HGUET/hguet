@@ -35,11 +35,10 @@ token authority and a native transfer with insufficient funds were rejected
 with unchanged destination/token state. HGUET retains wire declarations in
 rejected runtime cases.
 
-Limits remain v0 static accounts without ALT and one default-configuration
-v1 transfer in this pinned local runtime. Live cluster support is unverified.
-Additional legitimate
-and violation variants and runtime rejection cases are required for Phase 1.
-These comparisons do not establish total-spending coverage or an audit.
+Coverage is limited to the thirteen listed cases, including the v0 ALT and
+v1 inline-resource variants described below. Live cluster support is
+unverified. Broader program, state and rejection coverage remains future
+work. These comparisons do not establish total-spending coverage or an audit.
 
 Package documentation https://heavey.dev/solders/tutorials/litesvm.html
 
@@ -57,3 +56,24 @@ The v1 inline-resource case sets a priority fee of 1000, compute limit 200000,
 loaded-data limit 65536 and heap size 32768. The SDK-generated message
 executes and its serialized hash matches HGUET. Coverage remains limited to
 these particular settings and this pinned local runtime.
+
+## Continuous checks
+
+`.github/workflows/runtime-ci.yml` builds the locked CLI on Ubuntu 24.04 and
+runs this harness with Python 3.12 and the pinned requirements on pushes to
+main and pull requests. Dependency installation precedes execution inside a
+separate network namespace (`sudo unshare --net`), which has no external
+network access. LiteSVM executes locally; no wallet credentials or live RPC
+are needed. The harness compares its thirteen cases and exits on an assertion
+failure. CI retains the result JSON, command log, source commit, environment
+and CLI SHA-256 even on a failing runtime step. The hash identifies the tested
+binary; it is not publisher authentication.
+
+This workflow definition is locally validated; a hosted CI pass must be
+observed separately. Local WSL checks use the same harness with an unprivileged
+user/network namespace where supported. Platform/runtime claims remain scoped
+to actual measured runs.
+
+Every case includes comparison=PASS only after its runtime and HGUET
+assertions succeed; existing detailed runtime fields are preserved.
+The CI runtime step uses explicit Bash pipefail so tee cannot mask failure.
