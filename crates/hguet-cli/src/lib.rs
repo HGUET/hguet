@@ -1,4 +1,5 @@
 //! Reusable transaction analysis with explicit trust and opt-in RPC.
+pub mod report_v2;
 use hguet_core::{
     parse_transaction, verify_intent_detailed, Decision, IntentFailure, PaymentIntentPayload,
     ScopeFinding, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus,

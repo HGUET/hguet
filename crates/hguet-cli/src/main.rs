@@ -10,6 +10,7 @@ use std::{env, fs, io::Read, process};
 fn usage() -> &'static str {
     "HGUET unreleased CLI (offline prototype)\n\
 Usage:\n\
+  inspect/check accept --report-v2 for the separately versioned analysis report\n\
   hguet inspect FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet check FILE --mode local --network mainnet|devnet|testnet [--intent FILE --trusted-key BASE58] [--policy TRUSTED.toml] [--rpc-url HTTPS_URL] [--encoding binary|base64|base58] [--json]\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
@@ -38,7 +39,13 @@ struct Args {
     offline: bool,
 }
 fn parse_args() -> Result<Args, String> {
-    let mut a = env::args().skip(1);
+    let raw: Vec<String> = env::args().skip(1).collect();
+    let v2 = raw.iter().filter(|s| s.as_str() == "--report-v2").count();
+    if v2 > 1 || (v2 == 1 && !matches!(raw.first().map(String::as_str), Some("inspect" | "check")))
+    {
+        return Err("--report-v2 requires inspect or check".into());
+    }
+    let mut a = raw.into_iter().filter(|s| s != "--report-v2");
     let cmd = a.next().ok_or("missing command")?;
     if cmd == "doctor" {
         if let Some(option) = a.next() {
@@ -440,7 +447,14 @@ fn main() {
             process::exit(0)
         }
         Ok(v) => {
+            let policy_configured = v.policy.is_some();
             let (output, code) = execute(v);
+            let output = if env::args().any(|arg| arg == "--report-v2") {
+                serde_json::to_value(hguet::report_v2::from_v1(output, code, policy_configured))
+                    .expect("report serialization")
+            } else {
+                output
+            };
             println!(
                 "{}",
                 serde_json::to_string_pretty(&output).expect("JSON serialization")

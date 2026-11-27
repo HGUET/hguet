@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HGUET Analysis Report v2",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "hguet_analysis_report"
+    },
+    "structural_validity": {
+      "enum": [
+        "VALID",
+        "INVALID",
+        "UNKNOWN"
+      ]
+    },
+    "signature_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "policy_compliance": {
+      "enum": [
+        "MATCH",
+        "VIOLATION",
+        "UNKNOWN",
+        "NOT_CONFIGURED"
+      ]
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "status",
+          "limitations"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "status": {
+            "const": "PARTIAL"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "simulation_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "code",
+          "severity",
+          "summary",
+          "evidence_refs",
+          "scope",
+          "limitations"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "signing_authorization": {
+      "const": "NOT_AUTHORIZED"
+    },
+    "exit_code": {
+      "enum": [
+        0,
+        20,
+        30,
+        40
+      ]
+    },
+    "policy_scope": {
+      "const": "configured_local_restrictions_on_original_wire_declarations"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "structural_validity",
+    "signature_status",
+    "policy_compliance",
+    "coverage",
+    "simulation_status",
+    "findings",
+    "evidence",
+    "signing_authorization",
+    "exit_code",
+    "policy_scope"
+  ]
+}
