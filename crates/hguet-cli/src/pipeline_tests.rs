@@ -49,6 +49,10 @@ impl JsonRpcTransport for FakeRpc {
         let result = match request["method"].as_str() {
             Some("getGenesisHash") => json!(self.genesis),
             Some("simulateTransaction") => self.simulation.clone(),
+            Some("getMultipleAccounts") if request["id"] != 3 => {
+                let count = request["params"][0].as_array().unwrap().len();
+                json!({"context":{"slot":900},"value":vec![Value::Null;count]})
+            }
             Some("getMultipleAccounts") => {
                 // One active lookup table holding a single address.
                 let mut data = vec![0u8; 56];
@@ -562,6 +566,52 @@ fn missing_rpc_effect_fields_are_reported_without_inventing_zeroes() {
     assert_never_permits(&report, exit);
     assert!(codes(&report).contains(&"RPC_EFFECT_EVIDENCE_INCOMPLETE".to_owned()));
     assert!(report["rpc_analysis"]["effect_analysis"]["lamport_deltas"].is_null());
+}
+
+#[test]
+fn unpaired_token_balance_is_unknown_instead_of_zero_loss() {
+    let wire = legacy_transfer(75);
+    let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+    response["value"]["preTokenBalances"] = json!([{
+        "accountIndex":1,"mint":b58(&[9;32]),"owner":b58(&payer()),
+        "uiTokenAmount":{"amount":"123","decimals":6}
+    }]);
+    response["value"]["postTokenBalances"] = json!([]);
+    let (report, exit) = execute_with(args(&wire, true), &FakeRpc::new(response));
+    assert_never_permits(&report, exit);
+    assert!(
+        codes(&report).contains(&"RPC_TOKEN_DELTA_UNDETERMINED".to_owned()),
+        "{report}"
+    );
+    assert!(
+        report["rpc_analysis"]["effect_analysis"]["token_deltas"][0]["delta_raw_amount"].is_null()
+    );
+    let mut complete = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+    complete["value"]["preTokenBalances"] = json!([]);
+    complete["value"]["postTokenBalances"] = json!([]);
+    let (report, _) = execute_with(args(&wire, true), &FakeRpc::new(complete));
+    assert!(!codes(&report).contains(&"RPC_TOKEN_DELTA_UNDETERMINED".to_owned()));
+}
+
+#[test]
+fn cpi_outside_signed_program_scope_is_advisory_and_not_authorization() {
+    let wire = legacy_transfer(75);
+    for (program_index, expected) in [(1, true), (2, false)] {
+        let mut request = args(&wire, true);
+        request.intent = Some(intent_file(&wire, "10000"));
+        request.trusted_key = Some(issuer_key());
+        let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+        response["value"]["innerInstructions"] = json!([{"index":0,"instructions":[
+            {"programIdIndex":program_index,"accounts":[0,1],"data":"1"}
+        ]}]);
+        let (report, exit) = execute_with(request, &FakeRpc::new(response));
+        assert_never_permits(&report, exit);
+        assert_eq!(exit, 30);
+        assert_eq!(
+            codes(&report).contains(&"RPC_CPI_OUTSIDE_SIGNED_INTENT".to_owned()),
+            expected
+        );
+    }
 }
 
 #[test]

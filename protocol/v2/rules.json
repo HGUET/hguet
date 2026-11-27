@@ -3403,8 +3403,10 @@
       "summary": "Some token pre/post snapshots are missing or changed identity; exact deltas cannot be inferred",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "unpaired_token_balance_is_unknown_instead_of_zero_loss"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
@@ -3538,8 +3540,10 @@
       "summary": "Simulated inner instructions invoke a program absent from the independently signed intent allowlist; this single-provider observation needs review",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "cpi_outside_signed_program_scope_is_advisory_and_not_authorization"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],

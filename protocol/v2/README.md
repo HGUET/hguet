@@ -50,7 +50,7 @@ not imply independent ground-truth review.
 
 The validator also inventories emitted engine finding codes missing individual
 catalogue entries. The current checkpoint reports zero uncatalogued engine emission codes and
-10 entries with targeted regression references still open. Family-level
+8 entries with targeted regression references still open. Family-level
 references also require individual assertion review. It prints these as OPEN;
 a successful reference check does not mean complete catalogue coverage.
 Aggregate and correlation entries preserve the distinction between original
@@ -64,3 +64,9 @@ unspecified-token-cap finding. The later TOKEN_CAP_INVALID and
 SOURCE_SCOPE_INVALID branches repeat verification already performed during
 intent acceptance; their targeted reachability remains open. No guard was
 weakened to force those paths.
+
+RPC pipeline regressions distinguish an absent token post-balance from a
+zero token loss. The fake provider supplies explicit missing-account results
+for optional state reads. A CPI program outside the signed allowlist emits
+an advisory finding; the allowed program variant does not. Neither changes
+the UNKNOWN result or signing refusal.
