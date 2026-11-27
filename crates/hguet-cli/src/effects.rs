@@ -52,8 +52,19 @@ pub fn original_wire(bytes: &[u8]) -> Vec<Effect> {
             .find(|s| s.instruction_index == ix.instruction_index)
         {
             effect.kind = EffectKind::NativeTransfer;
-            effect.source_account = Some(sol.source.clone());
-            effect.destination_account = Some(sol.destination.clone());
+            effect.source_account = parsed
+                .static_account_keys
+                .contains(&sol.source)
+                .then(|| sol.source.clone());
+            effect.destination_account = parsed
+                .static_account_keys
+                .contains(&sol.destination)
+                .then(|| sol.destination.clone());
+            if effect.destination_account.is_none() || effect.source_account.is_none() {
+                effect
+                    .limitations
+                    .push("Account identity requires unresolved ALT state.".into());
+            }
             effect.amount_raw = Some(sol.lamports.clone());
         } else if let Some(token) = direct.as_ref().and_then(|d| {
             d.recognized

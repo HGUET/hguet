@@ -38,3 +38,10 @@ The harness now records eleven cases. These observations do not establish
 complete v1 support or live cluster compatibility.
 
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md).
+
+
+ALT milestone: a real v0 lookup transfer and a v1 transfer with all four
+inline resource settings executed in the pinned LiteSVM. The ALT recipient
+stays unknown in the offline report and is null in v2 account fields.
+The runtime harness now contains thirteen cases. Broad v1 configuration
+differential testing remains open.

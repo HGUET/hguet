@@ -12,7 +12,7 @@ Transactions are constructed and signed by Solders with disposable keypairs
 inside this harness. HGUET sees serialized bytes and public policy only.
 The harness never contacts an RPC or submits a chain transaction.
 
-Eleven runtime comparisons completed successfully in Ubuntu 26.04 WSL with Python 3.14.4:
+Thirteen runtime comparisons completed successfully in Ubuntu 26.04 WSL with Python 3.14.4:
 native transfer, repeated native debits exceeding a local cap, SPL checked
 transfer, delegate approval and account-owner authority change. The harness
 checks actual balances/delegation/owner state after LiteSVM execution and
@@ -46,3 +46,14 @@ Package documentation https://heavey.dev/solders/tutorials/litesvm.html
 The verified Linux Solders wheel SHA-256 was
 00524baf575ae5edb2ba43cdb1d80491c59efdc16b48fec96a6f929c0401d0e4.
 Local measured output is target/phase01-evidence/runtime-native.json.
+
+
+The v0 ALT case executes against an active, SDK-layout lookup account and
+confirms an actual recipient increase of 500. Offline HGUET retains the
+known declared amount, exposes unresolved addresses and reports UNKNOWN.
+V2 account fields remain null where ALT state is required.
+
+The v1 inline-resource case sets a priority fee of 1000, compute limit 200000,
+loaded-data limit 65536 and heap size 32768. The SDK-generated message
+executes and its serialized hash matches HGUET. Coverage remains limited to
+these particular settings and this pinned local runtime.

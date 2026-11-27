@@ -18,6 +18,7 @@ from solders.transaction_metadata import FailedTransactionMetadata
 from spl_cases import run_case as token_case
 from transfer_fee import run_case as fee_case
 from formats import run_cases as format_cases
+from lookup import run_case as lookup_case
 
 
 def run_case(binary, amounts, insufficient=False):
@@ -75,9 +76,9 @@ def main():
                           ("transfer_checked", "approve", "set_authority")],
                         fee_case(binary), fee_case(binary, 1),
                         token_case(binary,"transfer_checked",True),
-                        run_case(binary,[20_000_000],True), *format_cases(binary)],
-              "limitations": ["v0 runtime case uses static accounts without ALT.",
-                              "v1 comparison covers one native transfer with default inline configuration.",
+                        run_case(binary,[20_000_000],True), *format_cases(binary), lookup_case(binary)],
+              "limitations": ["ALT runtime comparison keeps offline addresses unresolved.",
+                              "v1 comparisons cover native transfers with default and inline resource configurations.",
                               "These local runtime results establish no live cluster support."]}
     Path(args.out).write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
