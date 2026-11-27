@@ -3424,8 +3424,10 @@
       "summary": "The named analysis check could not establish its supported scope.",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "failed_additional_source_reads_preserve_unknown_and_signed_caps"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
@@ -3462,8 +3464,10 @@
       "summary": "The named analysis check could not establish its supported scope.",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "failed_additional_source_reads_preserve_unknown_and_signed_caps"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],

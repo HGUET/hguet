@@ -79,6 +79,86 @@ impl JsonRpcTransport for Unreachable {
     }
 }
 
+struct RejectRead {
+    rpc: FakeRpc,
+    id: u64,
+    invalid_response: bool,
+    rejected: std::cell::Cell<bool>,
+}
+impl JsonRpcTransport for RejectRead {
+    fn post_json(&self, endpoint: &str, request: &Value) -> Result<Value, RpcError> {
+        if request["id"].as_u64() == Some(self.id) {
+            self.rejected.set(true);
+            return if self.invalid_response {
+                Ok(
+                    json!({"jsonrpc":"2.0","id":self.id,"result":{"context":{"slot":900},"value":"malformed"}}),
+                )
+            } else {
+                Err(RpcError::Transport)
+            };
+        }
+        self.rpc.post_json(endpoint, request)
+    }
+}
+
+#[test]
+fn failed_additional_source_reads_preserve_unknown_and_signed_caps() {
+    let wire = STANDARD
+        .decode(
+            include_str!(
+                "../../../tests/fixtures/legacy-spl-transfer-checked-authority-signer.base64"
+            )
+            .trim(),
+        )
+        .unwrap();
+    let parsed = hguet_core::parse_transaction(&wire).unwrap();
+    let envelope: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/signed-direct-token-source-cap-equal.json"
+    ))
+    .unwrap();
+    for (id, code) in [
+        (6, "RPC_SIGNED_SOURCE_ADDITIONAL_READ_UNAVAILABLE"),
+        (7, "RPC_CPI_SOURCE_READ_UNAVAILABLE"),
+    ] {
+        for invalid_response in [false, true] {
+            let count = parsed.static_account_count;
+            let mut response =
+                simulation(900, Value::Null, &vec![10000; count], &vec![10000; count]);
+            let mut request = args(&wire, true);
+            if id == 6 {
+                request.intent = Some(temp_file(
+                    "source-read-intent.json",
+                    include_bytes!(
+                        "../../../tests/fixtures/signed-direct-token-source-cap-equal.json"
+                    ),
+                ));
+                request.trusted_key = Some(envelope["signer_pubkey_b58"].as_str().unwrap().into());
+            } else {
+                let ix = &parsed.compiled_top_level_instructions[0];
+                response["value"]["innerInstructions"] = json!([{"index":0,"instructions":[{
+                    "programIdIndex":ix.program_index,"accounts":ix.account_indices,"data":ix.data_base58
+                }]}]);
+            }
+            let rpc = RejectRead {
+                rpc: FakeRpc::new(response),
+                id,
+                invalid_response,
+                rejected: std::cell::Cell::new(false),
+            };
+            let (report, exit) = execute_with(request, &rpc);
+            assert!(rpc.rejected.get(), "additional read was not exercised");
+            assert_never_permits(&report, exit);
+            assert_eq!(exit, 30);
+            assert!(codes(&report).contains(&code.to_owned()), "{report}");
+            if id == 6 {
+                assert_eq!(report["verdict"]["intent_status"], "signature_verified");
+                assert!(codes(&report)
+                    .contains(&"SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE".to_owned()));
+            }
+        }
+    }
+}
+
 fn temp_file(name: &str, contents: &[u8]) -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let mut path: PathBuf = std::env::temp_dir();

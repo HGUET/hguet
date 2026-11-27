@@ -50,7 +50,7 @@ not imply independent ground-truth review.
 
 The validator also inventories emitted engine finding codes missing individual
 catalogue entries. The current checkpoint reports zero uncatalogued engine emission codes and
-8 entries with targeted regression references still open. Family-level
+6 entries with targeted regression references still open. Family-level
 references also require individual assertion review. It prints these as OPEN;
 a successful reference check does not mean complete catalogue coverage.
 Aggregate and correlation entries preserve the distinction between original
@@ -70,3 +70,9 @@ zero token loss. The fake provider supplies explicit missing-account results
 for optional state reads. A CPI program outside the signed allowlist emits
 an advisory finding; the allowed program variant does not. Neither changes
 the UNKNOWN result or signing refusal.
+
+Additional signed-source and CPI-source read regressions inject both transport
+failure and malformed response payloads. They assert that the actual read
+was attempted, the specific unavailable finding is emitted, UNKNOWN and
+signing refusal persist, and previously verified signed source scope remains
+verified and explicitly partial.
