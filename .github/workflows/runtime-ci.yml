@@ -10,9 +10,6 @@ jobs:
   runtime:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      RUSTUP_HOME: ${{ runner.temp }}/hguet-rustup
-      CARGO_HOME: ${{ runner.temp }}/hguet-cargo
     steps:
       - name: Initialize evidence before setup
         shell: bash
@@ -20,6 +17,8 @@ jobs:
           mkdir -p target/runtime-ci
           printf '%s\n' "$GITHUB_SHA" > target/runtime-ci/source.txt
           uname -a > target/runtime-ci/environment.txt
+          echo "RUSTUP_HOME=$RUNNER_TEMP/hguet-rustup" >> "$GITHUB_ENV"
+          echo "CARGO_HOME=$RUNNER_TEMP/hguet-cargo" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           clean: false
