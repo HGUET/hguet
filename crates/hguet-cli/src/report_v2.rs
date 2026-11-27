@@ -120,6 +120,48 @@ mod tests {
     }
 
     #[test]
+    fn rpc_coverage_distinguishes_missing_observations_from_recorded_empty_views() {
+        let scopes = [
+            "single_provider_compiled_cpi_declarations",
+            "single_provider_native_account_net_changes",
+            "single_provider_token_account_net_changes",
+            "later_non_atomic_rpc_account_state",
+        ];
+        for (rpc, expected) in [
+            (Value::Null, "UNSUPPORTED"),
+            (
+                json!({"effect_analysis":{"cpi":{"captured":false},
+                "lamport_deltas":null,"token_deltas":null}}),
+                "UNSUPPORTED",
+            ),
+            (
+                json!({"effect_analysis":{"cpi":{"captured":true},
+                "lamport_deltas":[],"token_deltas":[]},
+                "token_account_snapshot":{"context_slot":901,"accounts":[]}}),
+                "PARTIAL",
+            ),
+        ] {
+            let report = from_v1(
+                json!({"inspection":{},"rpc_analysis":rpc,
+                "verdict":{"coverage":[],"findings":[]}}),
+                30,
+                false,
+            );
+            for scope in scopes {
+                let entries: Vec<_> = report
+                    .coverage
+                    .iter()
+                    .filter(|entry| entry.scope == scope)
+                    .collect();
+                assert_eq!(entries.len(), 1);
+                assert_eq!(entries[0].status, expected, "{scope}");
+                assert!(!entries[0].limitations.is_empty());
+            }
+            assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
+        }
+    }
+
+    #[test]
     fn catalogue_scopes_match_reported_findings() {
         let catalogue: Value =
             serde_json::from_str(include_str!("../../../protocol/v2/rules.json")).unwrap();
@@ -266,6 +308,38 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
         },
         limitations:vec!["Signature validity does not establish informed intent, blockhash freshness or execution.".into()],
     });
+    let rpc_effects = &output["rpc_analysis"]["effect_analysis"];
+    for (scope, observed, limitation) in [
+        (
+            "single_provider_compiled_cpi_declarations",
+            rpc_effects["cpi"]["captured"].as_bool() == Some(true),
+            "Compiled CPI declarations come from one provider. Recording, including an empty list, does not prove executed effects, completeness or authority.",
+        ),
+        (
+            "single_provider_native_account_net_changes",
+            rpc_effects["lamport_deltas"].is_array(),
+            "Paired provider balances describe net account changes only. Incoming value can hide outgoing spending; network fees and gross spending are not established.",
+        ),
+        (
+            "single_provider_token_account_net_changes",
+            rpc_effects["token_deltas"].is_array(),
+            "Provider token balance rows may have incomplete pairs. Net changes and an empty row list do not prove zero token spending or complete asset coverage.",
+        ),
+        (
+            "later_non_atomic_rpc_account_state",
+            output["rpc_analysis"]["mint_snapshot"].is_object()
+                || output["rpc_analysis"]["token_account_snapshot"].is_object()
+                || output["signed_source_account_snapshot"].is_object()
+                || output["cpi_source_account_snapshot"].is_object(),
+            "Separate account reads have individual RPC slots and cannot reconstruct an authenticated execution bank. Missing accounts do not prove absent restrictions or ownership.",
+        ),
+    ] {
+        coverage.push(CheckCoverage {
+            scope: scope.into(),
+            status: if observed { "PARTIAL" } else { "UNSUPPORTED" },
+            limitations: vec![limitation.into()],
+        });
+    }
     coverage.push(CheckCoverage {
         scope: "whole_transaction_execution_effects".into(),
         status: "UNSUPPORTED",

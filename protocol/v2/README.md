@@ -9,7 +9,7 @@ restrictions on original-wire declarations. MATCH means those restrictions
 were evaluated without violations or unresolved policy findings.
 It provides no execution or total-spending guarantee.
 
-Inherited v1 coverage entries conservatively remain PARTIAL. Three explicit
+Inherited v1 coverage entries conservatively remain PARTIAL. Explicit
 checks distinguish original-wire structural validation, supplied Ed25519
 signatures and whole-transaction execution effects. COMPLETE applies only
 to the named structure/signature check. Unsigned or partial signatures remain
@@ -126,3 +126,15 @@ request id 7 is sent. Both claims retain unobserved authority and no owner;
 the two raw units remain only an advisory CPI declaration view, with gross
 spending unproven and signing blocked. This exercises the missing-address
 constructor guard, not RPC_CPI_SOURCE_CORRELATION_INVALID.
+
+### RPC observation coverage
+
+Four named checks distinguish provider CPI declarations, native account net
+changes, token account net changes and later non-atomic account state.
+Available observations remain PARTIAL; unavailable views are UNSUPPORTED.
+A recorded empty list is an available observation, with explicit limitations;
+it never establishes zero spending or complete execution. Incomplete token
+balance pairs remain partial evidence. Each later snapshot retains its own
+source and slot in embedded evidence. No RPC observation receives COMPLETE.
+These entries are additive to v2 coverage; the v1 evidence and exit contract
+are preserved.

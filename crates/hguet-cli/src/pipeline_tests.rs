@@ -331,6 +331,24 @@ fn successful_simulation_is_reported_but_never_permits_signing() {
     let request = rpc.requests.borrow()[1].clone();
     assert_eq!(request["params"][0], STANDARD.encode(&wire));
     assert_eq!(request["params"][1]["sigVerify"], false);
+    let v2 = hguet::report_v2::from_v1(report.clone(), exit, false);
+    for (scope, expected) in [
+        ("single_provider_compiled_cpi_declarations", "PARTIAL"),
+        ("single_provider_native_account_net_changes", "PARTIAL"),
+        ("single_provider_token_account_net_changes", "UNSUPPORTED"),
+        ("later_non_atomic_rpc_account_state", "UNSUPPORTED"),
+    ] {
+        assert_eq!(
+            v2.coverage
+                .iter()
+                .find(|entry| entry.scope == scope)
+                .unwrap()
+                .status,
+            expected
+        );
+    }
+    assert_eq!(v2.evidence, report);
+    assert_eq!(v2.signing_authorization, "NOT_AUTHORIZED");
 }
 
 #[test]
