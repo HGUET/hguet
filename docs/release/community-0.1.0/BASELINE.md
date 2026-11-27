@@ -38,3 +38,20 @@ Framework self-tests initially stalled without output under the restricted
 launcher and were interrupted. The verbose rerun outside the restricted launcher completed in 63.034 seconds: 101 tests, 15 skipped because the Windows environment lacked the OpenSSL CLI. These mock framework tests do not establish runtime correctness.
 Real Solana SDK/LiteSVM runtime validation is NOT RUN at this milestone.
 Phase 1 acceptance remains OPEN.
+
+
+### WSL framework verification, 2026-11-27
+
+At commit 21c70a0 the complete Python framework ran in Ubuntu 26.04 WSL,
+Python 3.14.4, OpenSSL 3.5.5, using the installed Linux jsonschema and
+PyYAML packages. Command:
+python3 -u -m unittest discover -s testing/tests -v
+
+Result: 101 tests in 66.056 seconds, OK, zero skips. All 15 tests skipped
+in the Windows run executed. Output:
+target/phase01-evidence/framework-wsl-native.log.
+Python emitted ResourceWarning messages for unclosed SSL sockets in the
+test framework. These warnings remain to be addressed. This run tests
+framework/TLS behavior; actual Solana runtime verification remains NOT RUN.
+An initial WSL attempt incorrectly reused Windows PYTHONPATH dependencies
+and was interrupted; it is excluded from the acceptance result.
