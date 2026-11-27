@@ -220,3 +220,5 @@ Local result: target/phase01-current/runtime-network-isolated.json. SHA-256:
 ## Phase 1.1 hardening checkpoint
 
 See [PHASE_01_1.md](PHASE_01_1.md) for exact hosted source attribution, artifact links, measured results, manifest verification and open acceptance items. The historical results above remain unchanged. The final code has not been declared accepted.
+
+Phase 1.1 final hosted acceptance succeeded at `19c24255c41749c90b9c6d9bd8c02158bd97d640`; see [verified evidence](PHASE_01_1.md#final-acceptance--2026-11-27). These results do not close whole-release gates or certify later source revisions.

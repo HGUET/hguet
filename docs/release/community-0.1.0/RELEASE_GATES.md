@@ -42,3 +42,5 @@ See BASELINE.md for commands, source attribution, evidence locations and hashes.
 ## Phase 1.1 checkpoint
 
 Intermediate hosted runs measured 13/13 mandatory LiteSVM comparisons and 227/227 synthetic benchmark cases; the same runs also reported strict formatting/lint failures. See [PHASE_01_1.md](PHASE_01_1.md) for links and later corrective commits. Do not waive G02/G03/G04/G05 on older results. No release gate is marked complete by this checkpoint.
+
+Phase 1.1 final hosted acceptance succeeded at `19c24255c41749c90b9c6d9bd8c02158bd97d640`; see [verified evidence](PHASE_01_1.md#final-acceptance--2026-11-27). These results do not close whole-release gates or certify later source revisions.

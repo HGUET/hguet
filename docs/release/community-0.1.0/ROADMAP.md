@@ -9,9 +9,9 @@ A developer should install a verified binary, run an offline synthetic demo in u
 | Phase | Deliverable | Exit condition |
 | --- | --- | --- |
 | 1 — Foundation | Baseline, reusable engine, scoped report v2, initial effect/rule model, offline demo, first runtime harness | [PHASE_01.md](PHASE_01.md) acceptance |
-| 2 — Security engine | Differential legacy/v0/v1 parsing, system/SPL/Token-2022 effects, bounded graph, provenance, catalogue | No unexplained SDK differences in claimed scope |
+| 2 — Transaction intelligence | Program and asset/authority intelligence, semantic diff, historical audit, standalone reports, runtime validation | [PHASE_02.md](PHASE_02.md): verified vertical slices, no unexplained differences in claimed scope |
 | 3 — Runtime validation | LiteSVM, local validator, optional Devnet with disposable keys, public historical corpus, fuzzing | Actual execution comparisons, documented gaps |
-| 4 — CLI and reports | inspect/check/simulate/audit/diff/explain/doctor/demo, bounded stdin, text/JSON/standalone HTML/DOT | Golden and end-to-end tests, no hidden network, portable UX |
+| 4 — CLI and reports | Polish inspect/check/simulate/audit/diff/explain/doctor/demo, portable CLI and reports (initial diff/audit/HTML moved to Phase 2) | Golden and end-to-end tests, no hidden network, portable UX |
 | 5 — Intent and policy | Semantic mandate (recipient/asset/cap/fee payer/expiry), trusted issuer boundary, token policies, templates | Adversarial positive/negative runtime cases |
 | 6 — Payments | x402 V2 exact SVM verification with official SDK fixture, destination ownership and extra effects | Reproducible valid/violating examples; no facilitator, signing or real funds |
 | 7 — Integration | Rust library, typed TypeScript CLI wrapper, optional read-only MCP preview | External example builds; operator trust outside agent input |
@@ -31,3 +31,5 @@ Milestones: alpha.1 (foundation), beta.1 (validated engine and reports), rc.1 (i
 - MPP, autonomous signer, wallet, GUI, other blockchains, broader DeFi support and commercial Cloud expansion are deferred unless explicitly reprioritized.
 
 [Baseline](BASELINE.md) · [Coverage matrix](COVERAGE_MATRIX.md) · [Release gates](RELEASE_GATES.md) · [Phase 1](PHASE_01.md).
+
+Phase 1.1 accepted at the measured snapshot in [PHASE_01_1.md](PHASE_01_1.md). Phase 2 sequencing supersedes the earlier allocation of first diff, historical audit and HTML report implementations to Phase 4; release gates are unchanged.

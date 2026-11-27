@@ -47,3 +47,5 @@ The runtime harness now contains thirteen cases. Broad v1 configuration
 differential testing remains open.
 
 Phase 1.1: hosted runtime and benchmark evidence exists for intermediate snapshots. Typed policy compliance, parse reuse, direct finding evidence, mandatory runtime acceptance and targeted defensive-stage tests are implemented. Final verification remains open; see [PHASE_01_1.md](PHASE_01_1.md).
+
+Phase 1.1 final hosted acceptance succeeded at `19c24255c41749c90b9c6d9bd8c02158bd97d640`; see [verified evidence](PHASE_01_1.md#final-acceptance--2026-11-27). These results do not close whole-release gates or certify later source revisions.
