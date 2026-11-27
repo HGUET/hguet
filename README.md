@@ -49,6 +49,8 @@ Fixtures are synthetic and use placeholder signatures. Inspection/check decision
 
 ## Community Edition 0.1.0
 
+Phase 1.1 hardening is in progress. See the [acceptance record](docs/release/community-0.1.0/PHASE_01_1.md) for source-attributed hosted evidence and remaining gates. No product release or complete security assurance is claimed.
+
 Run `hguet demo` for three synthetic offline cases through the actual engine.
 Use `hguet demo --json` for the versioned reports and evidence. The demo
 contains an expected 500-lamport declaration, an additional transfer exceeding

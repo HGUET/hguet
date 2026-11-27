@@ -1420,23 +1420,23 @@ fn analyze_internal<T: JsonRpcTransport>(
                                     format!("Supplemental signed source account read failed ({:?}); no omitted source account may be treated as observed",err.code()));
                             }
                         }
-                        let stage_result = hguet_rpc::correlate_signed_source_authority_with_additional_sources(
-                            review,
-                            evidence.token_account_snapshot.as_ref(),
-                            signed_source_account_snapshot.as_ref(),
-                            evidence.mint_snapshot.as_ref(),
-                            evidence.context_slot,
-                        );
+                        let stage_result =
+                            hguet_rpc::correlate_signed_source_authority_with_additional_sources(
+                                review,
+                                evidence.token_account_snapshot.as_ref(),
+                                signed_source_account_snapshot.as_ref(),
+                                evidence.mint_snapshot.as_ref(),
+                                evidence.context_slot,
+                            );
                         if let Some(result) = record_advisory_stage(
                             &mut verdict,
                             stage_result,
                             AdvisoryStage::SourceAuthority,
                         ) {
-                            verdict.coverage.push(
-                                "rpc_signed_source_authority_correlations_advisory".into(),
-                            );
-                            for (code, severity, message) in source_authority_findings(&result)
-                            {
+                            verdict
+                                .coverage
+                                .push("rpc_signed_source_authority_correlations_advisory".into());
+                            for (code, severity, message) in source_authority_findings(&result) {
                                 verdict.finding(code, severity, message);
                             }
                             signed_source_authority_evidence = Some(result);
@@ -1478,11 +1478,9 @@ fn analyze_internal<T: JsonRpcTransport>(
                         signed_source_account_snapshot.as_ref(),
                         cpi_source_account_snapshot.as_ref(),
                     );
-                    if let Some(review) = record_advisory_stage(
-                        &mut verdict,
-                        stage_result,
-                        AdvisoryStage::CpiSource,
-                    ) {
+                    if let Some(review) =
+                        record_advisory_stage(&mut verdict, stage_result, AdvisoryStage::CpiSource)
+                    {
                         if !review.entries.is_empty() {
                             verdict
                                 .coverage
@@ -1506,11 +1504,9 @@ fn analyze_internal<T: JsonRpcTransport>(
                         cpi_source_coverage.as_ref(),
                         verified_intent.as_ref(),
                     );
-                    if let Some(report) = record_advisory_stage(
-                        &mut verdict,
-                        stage_result,
-                        AdvisoryStage::Aggregate,
-                    ) {
+                    if let Some(report) =
+                        record_advisory_stage(&mut verdict, stage_result, AdvisoryStage::Aggregate)
+                    {
                         verdict
                             .coverage
                             .push("rpc_aggregate_token_views_advisory".into());
@@ -2818,7 +2814,9 @@ mod rpc_intent_tests {
 #[cfg(test)]
 mod advisory_stage_tests {
     use super::*;
-    use hguet_rpc::{CpiObservation, DirectTokenAnalysis, SimulationEffects, TokenAccountRpcSnapshot};
+    use hguet_rpc::{
+        CpiObservation, DirectTokenAnalysis, SimulationEffects, TokenAccountRpcSnapshot,
+    };
 
     fn empty_effects() -> SimulationEffects {
         SimulationEffects {
@@ -2912,13 +2910,11 @@ mod advisory_stage_tests {
             accounts: Vec::new(),
             limitation: "test".into(),
         };
-        let good = hguet_rpc::correlate_cpi_source_coverage(
-            600, &effects, Some(&snapshot), None, None,
-        );
+        let good =
+            hguet_rpc::correlate_cpi_source_coverage(600, &effects, Some(&snapshot), None, None);
         snapshot.context_slot = 599;
-        let bad = hguet_rpc::correlate_cpi_source_coverage(
-            600, &effects, Some(&snapshot), None, None,
-        );
+        let bad =
+            hguet_rpc::correlate_cpi_source_coverage(600, &effects, Some(&snapshot), None, None);
         assert_pair(
             good,
             bad,
@@ -2937,11 +2933,21 @@ mod advisory_stage_tests {
             limitation: "test",
         };
         let good = hguet_rpc::analyze_aggregate_token_spending(
-            "rpc_succeeded", 600, &direct, &effects, None, None,
+            "rpc_succeeded",
+            600,
+            &direct,
+            &effects,
+            None,
+            None,
         );
         direct.total_token_program_instructions = 1;
         let bad = hguet_rpc::analyze_aggregate_token_spending(
-            "rpc_succeeded", 600, &direct, &effects, None, None,
+            "rpc_succeeded",
+            600,
+            &direct,
+            &effects,
+            None,
+            None,
         );
         assert_pair(
             good,

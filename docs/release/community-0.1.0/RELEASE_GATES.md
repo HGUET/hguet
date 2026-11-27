@@ -38,3 +38,7 @@ These are partial release-gate observations, scoped to the recorded local tests.
 | G13 | Baseline records measured results and runtime limits; full release documentation remains open |
 
 See BASELINE.md for commands, source attribution, evidence locations and hashes.
+
+## Phase 1.1 checkpoint
+
+Intermediate hosted runs measured 13/13 mandatory LiteSVM comparisons and 227/227 synthetic benchmark cases; the same runs also reported strict formatting/lint failures. See [PHASE_01_1.md](PHASE_01_1.md) for links and later corrective commits. Do not waive G02/G03/G04/G05 on older results. No release gate is marked complete by this checkpoint.

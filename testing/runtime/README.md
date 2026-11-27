@@ -77,3 +77,7 @@ to actual measured runs.
 Every case includes comparison=PASS only after its runtime and HGUET
 assertions succeed; existing detailed runtime fields are preserved.
 The CI runtime step uses explicit Bash pipefail so tee cannot mask failure.
+
+## Fail-closed acceptance (Phase 1.1)
+
+Run the pure acceptance unit tests with `python -m unittest discover -s testing/runtime -p test_acceptance.py -v`. The harness writes an incremental report, checks the exact mandatory inventory and exits nonzero for failed/missing/duplicate/unexpected/incomplete cases. Python optimization disabling assertions is refused. Expected runtime rejection checks verify instruction index and specific custom error; the runtime evidence remains local and does not establish live cluster support. Hosted results and artifact links: [Phase 1.1](../../docs/release/community-0.1.0/PHASE_01_1.md).

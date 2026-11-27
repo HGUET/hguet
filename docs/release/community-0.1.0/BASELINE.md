@@ -1,4 +1,4 @@
-# Documentation baseline — 2026-11-27
+# Documentation baseline â€” 2026-11-27
 
 Source snapshot: `b34924ee6e665dacf2253cecad0e200dc764fce5`. This is not a tested build record.
 
@@ -138,7 +138,7 @@ Other finding families still require individual catalogue review.
 Phase 1 acceptance remains open for that work and complete evidence/coverage
 review. The archive is a local artifact, without a public release or tag.
 
-## WSL regression refresh � 2026-11-27
+## WSL regression refresh — 2026-11-27
 
 Source: base commit 3faa940 plus the cross-program CPI regression and
 catalogue/docs changes in the accompanying commit. This run is independent
@@ -159,7 +159,7 @@ pq-tests-wsl.txt and clippy-wsl.txt. Tested source SHA-256:
 - crates/hguet-cli/src/pipeline_tests.rs: 2835650f9ba9346a480604c89012af796d6c0a9b3b4f9cc1ad1f9a8927211063
 - protocol/v2/rules.json: bc5dcfd7a58a5045220e84d72432ca980ad7fea76142dd6ed29ac8a6baa9e298
 
-## Catalogue CI and portability refresh � 2026-11-27
+## Catalogue CI and portability refresh — 2026-11-27
 
 Base ba9f735 plus the catalogue CI/portability changes in the accompanying
 commit. The validator and seven mutation/portability tests passed on Windows.
@@ -176,7 +176,7 @@ CI now invokes the catalogue validator and its regressions. Local full log:
 target/phase01-current/framework-tests-wsl.txt. SHA-256:
 52314ac98a60c7aad3e63dec091419f4aa1728214aa2d90b3bdd2eec2d84ba0b
 
-## Verified-review reuse � 2026-11-27
+## Verified-review reuse — 2026-11-27
 
 Base da28a8b plus the review-reuse changes in the accompanying commit.
 CLI consumes the exact bounded mint/source reviews produced during intent
@@ -201,7 +201,7 @@ Tested Rust source SHA-256 (LF-normalized):
 - crates/hguet-core/src/lib.rs: 849266f8bc4afc2eb90b45a5c62711d93ce9c30307b3bdb15a852fc66942acb2
 - crates/hguet-cli/src/lib.rs: 2fa074f122b1cc37ead9d888b495c49ba503e340352d35ced4f1d4465e61dc64
 
-## Runtime CI preparation � 2026-11-27
+## Runtime CI preparation — 2026-11-27
 
 Base c682442 plus the runtime CI/output changes in the accompanying commit.
 All thirteen LiteSVM comparisons ran successfully in WSL Ubuntu-26.04,
@@ -216,3 +216,7 @@ tee from masking a harness failure. No release or hosted run was triggered.
 
 Local result: target/phase01-current/runtime-network-isolated.json. SHA-256:
 4a8ddd5f8d51203891436f442debd952e97e3d28e4b718708376f3be35d18277
+
+## Phase 1.1 hardening checkpoint
+
+See [PHASE_01_1.md](PHASE_01_1.md) for exact hosted source attribution, artifact links, measured results, manifest verification and open acceptance items. The historical results above remain unchanged. The final code has not been declared accepted.

@@ -391,15 +391,20 @@ fn finding_refs(output: &Value, index: usize, code: &str) -> Vec<String> {
             "/inspection/declared_system_transfer_lamports",
             "/inspection/system_transfers",
         ],
-        "POLICY_BLOCKED_SOL_RECIPIENT" | "POLICY_UNAPPROVED_SOL_RECIPIENT"
+        "POLICY_BLOCKED_SOL_RECIPIENT"
+        | "POLICY_UNAPPROVED_SOL_RECIPIENT"
         | "POLICY_UNRESOLVED_RECIPIENT" => &["/inspection/system_transfers"],
-        "POLICY_BLOCKED_PROGRAM" | "POLICY_UNAPPROVED_PROGRAM"
-        | "POLICY_UNRESOLVED_PROGRAM" => &["/inspection/program_ids"],
+        "POLICY_BLOCKED_PROGRAM" | "POLICY_UNAPPROVED_PROGRAM" | "POLICY_UNRESOLVED_PROGRAM" => {
+            &["/inspection/program_ids"]
+        }
         "INVALID_TRANSACTION_SIGNATURE" => &["/inspection/transaction_signature_status"],
         _ => &[],
     };
     for pointer in candidates {
-        if output.pointer(pointer).is_some_and(|value| !value.is_null()) {
+        if output
+            .pointer(pointer)
+            .is_some_and(|value| !value.is_null())
+        {
             refs.push(format!("/evidence{pointer}"));
         }
     }

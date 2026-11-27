@@ -11,3 +11,5 @@
 - No release platform, binary, publisher signature, SBOM or external review is claimed until actual evidence is published.
 
 [Implementation](docs/implementation/README.md) · [Coverage matrix](docs/release/community-0.1.0/COVERAGE_MATRIX.md) · [Release gates](docs/release/community-0.1.0/RELEASE_GATES.md).
+
+Phase 1.1 adds bounded stdin, report v2 and a reusable engine. Hosted results apply only to their source snapshots; see the [acceptance record](docs/release/community-0.1.0/PHASE_01_1.md). A scoped MATCH never proves safety, actual execution or total spending. No final release readiness is claimed.

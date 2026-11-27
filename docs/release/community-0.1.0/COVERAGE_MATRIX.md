@@ -14,8 +14,8 @@ Source baseline, not independently verified effectiveness. Update with exact tes
 | Effect graph | Implemented advisory | Unified provenance, export and conflict reporting |
 | RPC simulation | Implemented advisory | Real validator tests; no execution guarantee |
 | Signing boundary | Implemented BLOCK-only | Preserve; no authorization |
-| Engine API / report v2 | Planned | Typed public API, v1 compatibility |
-| Terminal / stdin / HTML / DOT | Planned | Verified offline UX and escaping |
+| Engine API / report v2 | Implemented, hardening/verification in progress | Typed public API, v1 compatibility |
+| Terminal / stdin / HTML / DOT | Terminal and bounded stdin implemented; HTML/DOT planned | Verified offline UX and escaping |
 | Historical audit and diff | Planned | Provenance-aware audit and semantic diff |
 | x402 exact SVM | Planned | Official SDK sandbox fixtures |
 | Rust / TS integrations | Planned | Tested public examples |
@@ -45,3 +45,5 @@ inline resource settings executed in the pinned LiteSVM. The ALT recipient
 stays unknown in the offline report and is null in v2 account fields.
 The runtime harness now contains thirteen cases. Broad v1 configuration
 differential testing remains open.
+
+Phase 1.1: hosted runtime and benchmark evidence exists for intermediate snapshots. Typed policy compliance, parse reuse, direct finding evidence, mandatory runtime acceptance and targeted defensive-stage tests are implemented. Final verification remains open; see [PHASE_01_1.md](PHASE_01_1.md).
