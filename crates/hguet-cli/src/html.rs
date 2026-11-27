@@ -30,7 +30,6 @@ fn text(value: &Value) -> String {
     match value {
         Value::Null => "Not available / not applicable".into(),
         Value::String(s) => escape(s),
-        Value::Array(_) | Value::Object(_) => escape(&value.to_string()),
         _ => escape(&value.to_string()),
     }
 }
@@ -390,6 +389,21 @@ mod tests {
         assert!(html.contains("&lt;script&gt;"));
         assert!(html.contains("\\u{202E}"));
         assert!(html.contains("default-src 'none'"));
+    }
+
+    #[test]
+    fn evidence_links_use_resolved_local_hash_anchors() {
+        let report = json!({
+            "schema_version":1,"kind":"hguet_program_intelligence",
+            "signing_authorization":"NOT_AUTHORIZED",
+            "instructions":[{"instruction_index":0,"family":"<unsafe>","declaration":{"kind":"unsupported"}}],
+            "limitations":[]
+        });
+        let html = render(&report).unwrap();
+        let id = evidence_id("/instructions/0");
+        assert!(html.contains(&format!("href=\"#{id}\"")));
+        assert!(html.contains(&format!("id=\"{id}\"")));
+        assert!(!html.contains("<unsafe>"));
     }
 
     #[test]

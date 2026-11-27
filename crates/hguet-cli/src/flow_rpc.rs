@@ -267,6 +267,10 @@ mod tests {
         assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "500");
         assert!(!report.execution_proven);
         assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
+        let html = crate::html::render(&report).unwrap();
+        assert!(html.contains("Advisory simulation observations"));
+        assert!(html.contains("Original instruction evidence"));
+        assert!(html.contains("NOT_AUTHORIZED"));
         let value = serde_json::to_value(report).unwrap();
         assert_eq!(
             value["rpc_evidence"]["effect_analysis"]["simulated_fee_lamports"],

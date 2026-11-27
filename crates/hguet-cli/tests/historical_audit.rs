@@ -120,6 +120,10 @@ fn signed_legacy_historical_metadata_is_separate_from_wire() {
     assert!(report.signatures_verified);
     assert!(!report.execution_proven);
     assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
+    let html = hguet::html::render(&report).unwrap();
+    assert!(html.contains("Historical provider observations"));
+    assert!(html.contains("Reported fee (lamports)"));
+    assert!(!html.contains("<script"));
     let value = serde_json::to_value(report).unwrap();
     assert_eq!(
         value["wire"]["asset_totals"][0]["declared_debit_raw"],

@@ -27,3 +27,5 @@ cryptographically authenticated report.
 No external dependencies added. No browser automation, DOT export or public
 release claim. Independent tests cover injection, local anchors and output
 format selection. See the Phase 2 roadmap for acceptance status.
+
+The SDK/CLI suite `testing/runtime/html_preview.py` generates four actual HTML files from synthetic transactions and validates a passive tag allowlist, local anchor resolution, restrictive CSP, unchanged JSON and invalid format/input handling. It runs with the network namespace isolated and saves the HTML files inside the source-attributed CI evidence artifact. Additional Rust tests cover escaped malicious values and HTML rendering of typed historical and simulation fixture reports. A test pass is not equivalent to a browser rendering or accessibility audit.
