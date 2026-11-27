@@ -81,9 +81,7 @@ fn historical_lookup(
             .iter()
             .map(|v| {
                 let key = v.as_str().ok_or(RpcError::InvalidResponse)?;
-                if key.len() > 44
-                    || !bs58::decode(key).into_vec().is_ok_and(|v| v.len() == 32)
-                {
+                if key.len() > 44 || !bs58::decode(key).into_vec().is_ok_and(|v| v.len() == 32) {
                     return Err(RpcError::InvalidResponse);
                 }
                 Ok(key.to_owned())

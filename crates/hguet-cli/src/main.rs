@@ -18,12 +18,12 @@ Usage:\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
-  hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet audit SIGNATURE --network mainnet|devnet|testnet --rpc-url HTTPS_URL [--json]\n\
-  hguet diff BEFORE AFTER --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet authority FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
-  hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json]\n\
+  hguet programs FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
+  hguet audit SIGNATURE --network mainnet|devnet|testnet --rpc-url HTTPS_URL [--json|--html]\n\
+  hguet diff BEFORE AFTER --offline [--encoding binary|base64|base58] [--json|--html]\n\
+  hguet authority FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
+  hguet flow FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
+  hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json|--html]\n\
   hguet doctor [--json]  (offline environment report)\n\
   hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
@@ -394,8 +394,18 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
     };
     (json!({"signer_refusal":refusal}), 20)
 }
+fn format_inventory<T: serde::Serialize>(report: &T, html: bool) -> Result<String, String> {
+    if html {
+        hguet::html::render(report)
+    } else {
+        serde_json::to_string_pretty(report).map_err(|_| "report serialization failed".to_owned())
+    }
+}
+
 fn inventory_command(command: &str) -> i32 {
     let mut args = env::args().skip(2);
+    let mut html = false;
+    let mut json_output = false;
     let result = (|| {
         let file = args.next().ok_or("missing transaction path")?;
         let mut encoding = "binary".to_owned();
@@ -403,7 +413,8 @@ fn inventory_command(command: &str) -> i32 {
         while let Some(flag) = args.next() {
             match flag.as_str() {
                 "--offline" => offline = true,
-                "--json" => {}
+                "--html" if !json_output => html = true,
+                "--json" if !html => json_output = true,
                 "--encoding" => encoding = args.next().ok_or("missing encoding")?,
                 _ => return Err(format!("unsupported {command} option")),
             }
@@ -413,11 +424,10 @@ fn inventory_command(command: &str) -> i32 {
         }
         let bytes = read_transaction(&file, &encoding)?;
         match command {
-            "flow" => serde_json::to_string_pretty(&hguet::flow::inspect(&bytes)?),
-            "authority" => serde_json::to_string_pretty(&hguet::authority::inspect(&bytes)?),
-            _ => serde_json::to_string_pretty(&hguet::programs::inspect(&bytes)?),
+            "flow" => format_inventory(&hguet::flow::inspect(&bytes)?, html),
+            "authority" => format_inventory(&hguet::authority::inspect(&bytes)?, html),
+            _ => format_inventory(&hguet::programs::inspect(&bytes)?, html),
         }
-        .map_err(|_| "report serialization failed".to_owned())
     })();
     match result {
         Ok(report) => {
@@ -440,6 +450,8 @@ fn inventory_command(command: &str) -> i32 {
 }
 
 fn rpc_flow_command() -> i32 {
+    let mut html = false;
+    let mut json_output = false;
     let result = (|| {
         let mut args = env::args().skip(2);
         let file = args.next().ok_or("missing transaction path")?;
@@ -457,26 +469,26 @@ fn rpc_flow_command() -> i32 {
                 "--encoding" if encoding.is_none() => {
                     encoding = Some(args.next().ok_or("missing encoding")?);
                 }
-                "--json" => {}
+                "--html" if !json_output => html = true,
+                "--json" if !html => json_output = true,
                 _ => return Err("unsupported or duplicate flow-rpc option".to_owned()),
             }
         }
         let endpoint = endpoint.ok_or("explicit --rpc-url required")?;
         let network = network.ok_or("explicit --network required")?;
         let bytes = read_transaction(&file, encoding.as_deref().unwrap_or("binary"))?;
-        hguet::flow_rpc::inspect(&bytes, &network, &endpoint, &HttpsTransport::default())
+        let report =
+            hguet::flow_rpc::inspect(&bytes, &network, &endpoint, &HttpsTransport::default())?;
+        let code = if report.status == "RPC_SIMULATION_SUCCEEDED" {
+            0
+        } else {
+            30
+        };
+        Ok((format_inventory(&report, html)?, code))
     })();
     match result {
-        Ok(report) => {
-            let code = if report.status == "RPC_SIMULATION_SUCCEEDED" {
-                0
-            } else {
-                30
-            };
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&report).expect("serialization")
-            );
+        Ok((report, code)) => {
+            println!("{report}");
             code
         }
         Err(error) => {
@@ -490,6 +502,8 @@ fn rpc_flow_command() -> i32 {
 }
 
 fn diff_command() -> i32 {
+    let mut html = false;
+    let mut json_output = false;
     let result = (|| {
         let mut args = env::args().skip(2);
         let before = args.next().ok_or("missing before transaction")?;
@@ -502,7 +516,8 @@ fn diff_command() -> i32 {
         while let Some(flag) = args.next() {
             match flag.as_str() {
                 "--offline" if !offline => offline = true,
-                "--json" => {}
+                "--html" if !json_output => html = true,
+                "--json" if !html => json_output = true,
                 "--encoding" if encoding.is_none() => {
                     encoding = Some(args.next().ok_or("missing encoding")?);
                 }
@@ -515,14 +530,11 @@ fn diff_command() -> i32 {
         let encoding = encoding.as_deref().unwrap_or("binary");
         let before = read_transaction(&before, encoding).map_err(|e| format!("before: {e}"))?;
         let after = read_transaction(&after, encoding).map_err(|e| format!("after: {e}"))?;
-        hguet::diff::compare(&before, &after)
+        format_inventory(&hguet::diff::compare(&before, &after)?, html)
     })();
     match result {
         Ok(report) => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&report).expect("serialization")
-            );
+            println!("{report}");
             0
         }
         Err(error) => {
@@ -536,6 +548,8 @@ fn diff_command() -> i32 {
 }
 
 fn audit_command() -> i32 {
+    let mut html = false;
+    let mut json_output = false;
     let result = (|| {
         let mut args = env::args().skip(2);
         let signature = args.next().ok_or("missing transaction signature")?;
@@ -549,25 +563,25 @@ fn audit_command() -> i32 {
                 "--network" if network.is_none() => {
                     network = Some(args.next().ok_or("missing network")?);
                 }
-                "--json" => {}
+                "--html" if !json_output => html = true,
+                "--json" if !html => json_output = true,
                 _ => return Err("unsupported or duplicate audit option".to_owned()),
             }
         }
         let endpoint = endpoint.ok_or("explicit --rpc-url required")?;
         let network = network.ok_or("explicit --network required")?;
-        hguet::audit::inspect(&signature, &network, &endpoint, &HttpsTransport::default())
+        let report =
+            hguet::audit::inspect(&signature, &network, &endpoint, &HttpsTransport::default())?;
+        let code = if report.status == "FOUND_SIGNATURE_VERIFIED" {
+            0
+        } else {
+            30
+        };
+        Ok((format_inventory(&report, html)?, code))
     })();
     match result {
-        Ok(report) => {
-            let code = if report.status == "FOUND_SIGNATURE_VERIFIED" {
-                0
-            } else {
-                30
-            };
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&report).expect("serialization")
-            );
+        Ok((report, code)) => {
+            println!("{report}");
             code
         }
         Err(error) => {

@@ -68,7 +68,9 @@ fn signed_wire(v0: bool) -> (String, Vec<u8>) {
     wire.extend(signature);
     wire.extend(message);
     assert_eq!(
-        parse_transaction(&wire).unwrap().transaction_signature_status,
+        parse_transaction(&wire)
+            .unwrap()
+            .transaction_signature_status,
         TransactionSignatureStatus::Verified
     );
     (bs58::encode(signature).into_string(), wire)
@@ -87,7 +89,9 @@ fn signed_v1() -> (String, Vec<u8>) {
     let signature = signer.sign(&wire[..message_end]).to_bytes();
     wire[message_end..].copy_from_slice(&signature);
     assert_eq!(
-        parse_transaction(&wire).unwrap().transaction_signature_status,
+        parse_transaction(&wire)
+            .unwrap()
+            .transaction_signature_status,
         TransactionSignatureStatus::Verified
     );
     (bs58::encode(signature).into_string(), wire)
@@ -117,7 +121,10 @@ fn signed_legacy_historical_metadata_is_separate_from_wire() {
     assert!(!report.execution_proven);
     assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
     let value = serde_json::to_value(report).unwrap();
-    assert_eq!(value["wire"]["asset_totals"][0]["declared_debit_raw"], "500");
+    assert_eq!(
+        value["wire"]["asset_totals"][0]["declared_debit_raw"],
+        "500"
+    );
     assert!(value["wire"]["actual_network_fee_lamports"].is_null());
     assert_eq!(value["historical"]["reported_fee_lamports"], "5000");
     assert_eq!(
@@ -148,7 +155,10 @@ fn failed_execution_keeps_reported_fee_and_wire_declaration() {
     let historical = report.historical.unwrap();
     assert_eq!(historical.status, "RPC_REPORTED_FAILURE");
     assert_eq!(historical.reported_fee_lamports.as_deref(), Some("5000"));
-    assert_eq!(report.wire.unwrap().asset_totals[0].declared_debit_raw, "500");
+    assert_eq!(
+        report.wire.unwrap().asset_totals[0].declared_debit_raw,
+        "500"
+    );
     assert!(!report.execution_proven);
 }
 
