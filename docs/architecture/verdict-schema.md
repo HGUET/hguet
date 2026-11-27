@@ -1,6 +1,8 @@
 # HGUET CLI — Public SecurityVerdict contract
 
-**Design only.** Proposed JSON schema `schema_version=1`; version control will stabilize it before implementation. A JSON output is an **evidence-bearing advisory opinion**, never a transaction authorization on its own.
+> **Community Edition direction (2026-11-27):** Scoped positive policy evidence in proposed report v2 must not become ALLOW; preserve v1 output and BLOCK-only semantics. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
+**v1 contract and historical design reference.** Consult the checked-in schema and implementation for actual fields and decision behavior. Proposed report v2 is separately versioned. A JSON output is an **evidence-bearing advisory opinion**, never a transaction authorization on its own.
 
 ## Relationship to CloudAssessment
 

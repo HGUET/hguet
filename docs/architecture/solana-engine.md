@@ -1,5 +1,7 @@
 # HGUET CLI — Solana decoding and simulation engine
 
+> **Community Edition direction (2026-11-27):** Use this as the detailed engine design reference. Prioritize independent SDK/runtime validation, scoped effect provenance and explicit gaps. Do not infer live v1 support, total spending or safety. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Status:** unreleased Rust prototype, with a bounded evidence-only correlation graph implemented in `hguet-rpc`. Full semantic effects, independently verified execution and signer-enforced spending authorization are **not** implemented. Official references: [references](references.md).
 
 ## 1. Engine responsibilities

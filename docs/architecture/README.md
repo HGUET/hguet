@@ -1,7 +1,9 @@
 # HGUET CLI — Architecture specification (unreleased)
 
+> **Community Edition direction (2026-11-27):** Free Community Edition is the primary product. This is the component architecture reference, not the release plan. Existing implemented contracts and limitations remain binding; future Cloud work is not a release gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Status:** Unreleased design draft · **Compatibility review:** 2026-11-15 · **Implementation:** partial public Rust CLI and private loopback/server primitives exist; no production Cloud or complete paid interoperability  
-**Repository:** `HGUET/hguet` (public, Apache-2.0)  
+**Repository:** `HGUET/hguet` (public, MIT)  
 **Commercial counterpart:** `HGUET/server` (private, proprietary)
 
 > This is the authoritative **proposed architecture** for the open-source CLI. This specification includes both implemented offline CLI components and unimplemented target capabilities. It is **not** evidence of production security, public Cloud deployment or a completed CLI-to-server paid Devnet flow. Consult [current implementation](../implementation/README.md) and [cross-repository compatibility](server-compatibility.md) for tested versus planned behavior.

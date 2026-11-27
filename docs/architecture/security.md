@@ -1,5 +1,7 @@
 # HGUET CLI — Security architecture and threat model
 
+> **Community Edition direction (2026-11-27):** Community release remains non-custodial and BLOCK-only; no general ALLOW. Separate trusted operator configuration from agent input and keep findings scoped to evidence. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Design status:** pre-alpha proposal. This document defines assumptions and failure boundaries, **not audited security claims**.
 
 ## 1. Security goal

@@ -1,6 +1,8 @@
 # First Rust implementation slice — unreleased
 
-This is a **working offline wire-format prototype**, not a security-ready Solana policy agent and **not** a released version.
+> **Community Edition direction (2026-11-27):** Detailed implementation record, including historical slices. Current commands are in [QUICKSTART.md](../../QUICKSTART.md). Phase 1 must reconcile historical descriptions against code and actual test results. Cloud sandbox instructions are preserved in [previous-readme.md](previous-readme.md). See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
+This is a **working but partial transaction analysis prototype**, not a security-ready Solana policy agent and **not** a released version. Later sections document implemented opt-in RPC and other capabilities; early slice descriptions are historical.
 
 Run:
 ```sh
@@ -12,7 +14,7 @@ cargo run -p hguet -- check transaction.bin --network devnet --mode local \
   --intent signed-intent.json --trusted-key PINNED_PUBKEY --json
 ```
 
-The `inspect` command now parses **legacy, v0 and v1** Solana wire structures using format-specific layouts. The v1 decoder reads its explicit resource config (including the **total** priority fee in lamports), fixed-width instruction headers and trailing signature array. It verifies any **nonzero Ed25519 transaction signatures** against the exact wire message, while accepting zero-filled unsigned placeholders in pre-signature workflows. v0 Address Lookup Table addresses remain **unresolved** until trusted RPC resolution is implemented. The decoder identifies top-level native **System Program Transfer** instructions and their integer lamports as a *lower bound* only. It cannot infer CPI, token movements, non-transfer System operations or the full amount of funds at risk. No RPC simulation, blockhash validity, wallet signing or Cloud calls are implemented.
+The `inspect` command now parses **legacy, v0 and v1** Solana wire structures using format-specific layouts. The v1 decoder reads its explicit resource config (including the **total** priority fee in lamports), fixed-width instruction headers and trailing signature array. It verifies any **nonzero Ed25519 transaction signatures** against the exact wire message, while accepting zero-filled unsigned placeholders in pre-signature workflows. v0 Address Lookup Table addresses remain **unresolved offline**; see the later opt-in RPC resolution section. The decoder identifies top-level native **System Program Transfer** instructions and their integer lamports as a *lower bound* only. It cannot infer CPI, token movements, non-transfer System operations or the full amount of funds at risk. This offline parser does not perform RPC simulation, blockhash validity checks, wallet signing or Cloud calls; later sections describe optional RPC and sandbox Cloud functionality.
 
 `check` verifies **Ed25519 signed payment intent** using a separately configured trusted public key. Signed message = ASCII `HGUET-PAYMENT-INTENT`, one zero byte, and the exact UTF-8 JSON bytes contained inside the Base64 `payload_b64`; it is intentionally NOT reserialized before checking the signature. This prevents JSON formatting ambiguity. After strict signature verification, the payload must bind the parsed **Solana message SHA-256**, network and validity window.
 

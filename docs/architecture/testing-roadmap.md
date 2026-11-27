@@ -1,5 +1,7 @@
 # HGUET CLI — Testing, milestones and release gates
 
+> **Community Edition direction (2026-11-27):** The older milestone sequence below is a design reference; the Community release gates and Phase 1 task supersede delivery order. Runtime comparisons, SDK differential testing and reviewed corpus are mandatory; Cloud interop is not a free release dependency. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Status:** targets for implementation; none of these checks are claimed to have passed.
 
 ## 1. Development sequence (each milestone independently demonstrable)

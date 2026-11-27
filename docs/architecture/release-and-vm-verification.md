@@ -1,5 +1,7 @@
 # Release readiness: independent-environment verification and reproducible builds
 
+> **Community Edition direction (2026-11-27):** Preserve historical environment evidence and failures; Community release artifacts require fresh per-target verification, SBOM, provenance and publisher authentication. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 BLOCK-only. These artifacts hold no key, cannot sign, and cannot broadcast.
 They are **unsigned test builds**: `SHA256SUMS` lets anyone compare their own
 build with CI's; it is not a publisher signature.

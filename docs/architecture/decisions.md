@@ -1,5 +1,7 @@
 # HGUET CLI — Architecture decisions (unreleased)
 
+> **Community Edition direction (2026-11-27):** Community Edition decisions below govern delivery priority without changing existing wire contracts. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Status:** current design decisions, **no product release**. Superseded proposals must not be implemented alongside current architecture.
 
 | ADR | Current choice | Engineering consequence |
@@ -39,3 +41,15 @@
 ## Change control
 
 The [public protocol](../../protocol/v1/README.md) and [shared interoperability specification](interoperability.md) define current consumer behavior. A protocol change requires a matching fixture/CI update and explicit re-pin in `HGUET/server`. Protocol-number `v1` is **not** the HGUET product version. No product version until first real release.
+
+
+## Community Edition delivery decisions (2026-11-27)
+
+| ADR | Decision |
+| --- | --- |
+| CE-001 | MIT free toolkit is primary; Cloud opt-in and non-blocking |
+| CE-002 | Extract reusable engine with separate trusted configuration and untrusted input |
+| CE-003 | Versioned scoped report v2; preserve v1 and BLOCK-only signing |
+| CE-004 | Runtime and differential evidence before advertising semantics |
+| CE-005 | x402 exact SVM first; MPP, production signer and expanded Cloud deferred |
+| CE-006 | Local reports, audit, SDK and open benchmark remain free |

@@ -1,5 +1,7 @@
 # HGUET CLI — Rust implementation blueprint
 
+> **Community Edition direction (2026-11-27):** Retain the workspace; extract reusable orchestration incrementally, with v1 compatibility and separately versioned report v2. Avoid speculative crate proliferation. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
+
 **Status:** proposed interfaces. This document is **not compilable code** and does not claim these crates currently exist.
 
 ## 1. Dependency direction
