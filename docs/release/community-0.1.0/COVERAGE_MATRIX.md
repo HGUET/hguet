@@ -23,4 +23,10 @@ Source baseline, not independently verified effectiveness. Update with exact tes
 | Benchmark | Synthetic framework exists | Runtime and independently reviewable corpus/adapters |
 | Cloud / MPP | Experimental / planned | Not release dependencies |
 
+Runtime milestone measured on 2026-11-27 using Solders 0.29.0 and embedded
+LiteSVM in WSL: five actual execution comparisons passed. Native transfer
+and repeated debit cap, SPL TransferChecked, approve and set_authority were
+checked against resulting account state. See testing/runtime/README.md.
+Token-2022 fees and independent v1 runtime compatibility remain open.
+
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md).
