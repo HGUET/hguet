@@ -1,6 +1,6 @@
 # Standalone HTML reports — developer preview
 
-The six inventory commands programs, flow, authority, diff, flow-rpc and audit
+The seven inventory commands report, programs, flow, authority, diff, flow-rpc and audit
 accept an explicit --html flag. JSON is still the default, with its existing
 contract. --json and --html are mutually exclusive. Output is written to stdout;
 use redirection to save a file. Exit codes remain unchanged. Configuration and
@@ -28,4 +28,6 @@ No external dependencies added. No browser automation, DOT export or public
 release claim. Independent tests cover injection, local anchors and output
 format selection. See the Phase 2 roadmap for acceptance status.
 
-The SDK/CLI suite `testing/runtime/html_preview.py` generates four actual HTML files from synthetic transactions and validates a passive tag allowlist, local anchor resolution, restrictive CSP, unchanged JSON and invalid format/input handling. It runs with the network namespace isolated and saves the HTML files inside the source-attributed CI evidence artifact. Additional Rust tests cover escaped malicious values and HTML rendering of typed historical and simulation fixture reports. A test pass is not equivalent to a browser rendering or accessibility audit.
+The SDK/CLI suite `testing/runtime/html_preview.py` generates five actual HTML files from synthetic transactions and validates a passive tag allowlist, local anchor resolution, restrictive CSP, unchanged JSON and invalid format/input handling. It runs with the network namespace isolated and saves the HTML files inside the source-attributed CI evidence artifact. Additional Rust tests cover escaped malicious values and HTML rendering of typed historical and simulation fixture reports. A test pass is not equivalent to a browser rendering or accessibility audit.
+
+The combined `report` command renders one offline dossier of flow, authority and program inventory. Both nested views derive from one program decode and preserve their standalone JSON contracts. The test suite verifies their exact equality with separately generated views.

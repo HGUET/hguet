@@ -11,7 +11,7 @@ const TOKEN: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const TOKEN_2022: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const ALT: &str = "AddressLookupTab1e1111111111111111111111111";
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AccountRole {
     pub role: &'static str,
     pub message_index: usize,
@@ -19,7 +19,7 @@ pub struct AccountRole {
     pub required_signer: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Declaration {
     ComputeBudget {
@@ -79,7 +79,7 @@ pub enum Declaration {
     Unsupported,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProgramInstruction {
     pub instruction_index: usize,
     pub program_index: usize,
@@ -90,7 +90,7 @@ pub struct ProgramInstruction {
     pub declaration: Declaration,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProgramReport {
     pub schema_version: u8,
     pub kind: &'static str,

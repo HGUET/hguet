@@ -7,6 +7,7 @@ pub mod flow;
 pub mod flow_rpc;
 pub mod html;
 pub mod programs;
+pub mod report;
 pub mod report_v2;
 
 /// Analyze once and retain typed original-wire declarations in report v2.

@@ -199,7 +199,10 @@ fn quantity(raw: &str) -> Result<u128, String> {
 /// At most one quantity edge per original instruction. Mint/burn are supply
 /// changes, not transfers between invented accounts. No fee is added to debit.
 pub fn inspect(bytes: &[u8]) -> Result<FlowReport, String> {
-    let report = programs::inspect(bytes)?;
+    from_program_report(programs::inspect(bytes)?)
+}
+
+pub(crate) fn from_program_report(report: ProgramReport) -> Result<FlowReport, String> {
     let mut flows = Vec::new();
     let mut totals = BTreeMap::<Asset, Totals>::new();
     let mut unknown_asset_instruction_indices = Vec::new();

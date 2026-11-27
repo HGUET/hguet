@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:report:v1",
+  "title": "HGUET Transaction Intelligence v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "source",
+        "message_sha256",
+        "execution_proven",
+        "signing_authorization",
+        "wire",
+        "authority",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_transaction_report"
+        },
+        "source": {
+          "const": "original_wire"
+        },
+        "message_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "execution_proven": {
+          "const": false
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "wire": {
+          "allOf": [
+            {
+              "$ref": "urn:hguet:flow:v1"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "hguet_asset_flow"
+                }
+              }
+            }
+          ]
+        },
+        "authority": {
+          "allOf": [
+            {
+              "$ref": "urn:hguet:authority:v1"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "hguet_authority_intelligence"
+                }
+              }
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_report_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}

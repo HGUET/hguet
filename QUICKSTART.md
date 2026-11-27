@@ -92,3 +92,11 @@ hguet audit SIGNATURE --network mainnet --rpc-url https://YOUR_RPC --html > audi
 ```
 
 Open locally in a browser. `programs` and `flow-rpc` also accept `--html`. No JavaScript or remote assets; existing JSON remains the default. Do not combine `--json` and `--html`. Check the exit code: invalid inputs/configuration emit the existing JSON error envelope (40), while valid reports with unavailable RPC data remain renderable (30). HTML may contain account identities and transaction details; share only with intended recipients. See [HTML contract](protocol/html/README.md).
+
+For a single offline dossier combining declared asset movement, authority changes and program inventory:
+
+```sh
+hguet report transaction.base64 --offline --encoding base64 --html > transaction.html
+```
+
+The default JSON output has its own [combined report contract](protocol/report/v1/README.md); both nested views derive from the same parsed original message.

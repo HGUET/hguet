@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 from solders.hash import Hash
 from solders.instruction import AccountMeta, Instruction
 from solders.keypair import Keypair
@@ -14,6 +16,7 @@ from solders.pubkey import Pubkey
 from solders.system_program import TransferParams, transfer
 from solders.transaction import Transaction
 
+ROOT = Path(__file__).resolve().parents[2]
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
 
@@ -64,6 +67,13 @@ def main():
     report_dir = args.out.parent / "html-reports"
     report_dir.mkdir(exist_ok=True)
     cases = []
+    registry = Registry()
+    for name in ("programs", "flow", "authority"):
+        schema = json.loads((ROOT / "protocol" / name / "v1" / "report.schema.json").read_text())
+        registry = registry.with_resource(f"urn:hguet:{name}:v1", Resource.from_contents(schema))
+    schema = json.loads((ROOT / "protocol/report/v1/report.schema.json").read_text())
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema, registry=registry)
 
     payer = Keypair()
     receiver, source, delegate = (Pubkey.new_unique() for _ in range(3))
@@ -91,6 +101,7 @@ def main():
         path = Path(directory) / "before.bin"
         path.write_bytes(before)
         for command, inputs, title, expected in [
+            ("report", ["-"], "Transaction Intelligence", ["Declared asset movements", "Declared authority changes", "set_delegate", "1000"]),
             ("programs", ["-"], "Program Intelligence", ["DECODED_DECLARATION", "system"]),
             ("flow", ["-"], "Asset Flow Intelligence", ["Declared asset movements", "1000", str(receiver)]),
             ("authority", ["-"], "Authority Intelligence", ["set_delegate", str(delegate), "99"]),
@@ -100,7 +111,13 @@ def main():
             default = run(arguments, after)
             explicit = run([*arguments, "--json"], after)
             assert default.returncode == explicit.returncode == 0
-            assert json.loads(default.stdout) == json.loads(explicit.stdout)
+            data = json.loads(default.stdout)
+            assert data == json.loads(explicit.stdout)
+            if command == "report":
+                validator.validate(data)
+                assert data["message_sha256"] == data["wire"]["message_sha256"] == data["authority"]["message_sha256"]
+                assert data["wire"] == json.loads(run(["flow", "-", "--offline"], after).stdout)
+                assert data["authority"] == json.loads(run(["authority", "-", "--offline"], after).stdout)
             p = run([*arguments, "--html"], after)
             assert p.returncode == 0, p.stderr
             html = p.stdout.decode("utf-8")
@@ -116,7 +133,7 @@ def main():
             (report_dir / f"{command}.html").write_text(html, encoding="utf-8")
             record(command + "_standalone_html")
 
-        for command, inputs in [("programs", ["-"]), ("flow", ["-"]),
+        for command, inputs in [("report", ["-"]), ("programs", ["-"]), ("flow", ["-"]),
                                 ("authority", ["-"]), ("diff", [str(path), "-"])]:
             p = run([command, *inputs, "--offline", "--html", "--json"], after)
             assert p.returncode == 40
@@ -127,9 +144,9 @@ def main():
         assert p.returncode == 40 and json.loads(p.stdout)["kind"] == "hguet_flow_error"
         record("invalid_wire_is_not_a_successful_html_report")
 
-    args.out.write_text(json.dumps({"cases":cases,"mandatory_count":6,
+    args.out.write_text(json.dumps({"cases":cases,"mandatory_count":7,
                                     "passed_count":len(cases),"acceptance":"PASS"},indent=2))
-    print("PASS: 6 standalone HTML CLI comparisons; 4 actual generated reports preserved")
+    print("PASS: 7 standalone HTML CLI comparisons; 5 actual generated reports preserved")
 
 
 if __name__ == "__main__":

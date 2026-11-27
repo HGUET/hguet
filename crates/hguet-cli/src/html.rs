@@ -305,6 +305,7 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
     }
     let kind = root["kind"].as_str().ok_or("missing report kind")?;
     let title = match kind {
+        "hguet_transaction_report" => "Transaction Intelligence",
         "hguet_program_intelligence" => "Program Intelligence",
         "hguet_asset_flow" => "Asset Flow Intelligence",
         "hguet_authority_intelligence" => "Authority Intelligence",
@@ -328,6 +329,11 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
     }
     out.push_str("</dl>");
     match kind {
+        "hguet_transaction_report" => {
+            flows(&mut out, &root, &root["wire"], "/wire");
+            authorities(&mut out, &root, &root["authority"], "/authority");
+            programs(&mut out, &root, &root["wire"]["program_report"], "/wire/program_report");
+        }
         "hguet_program_intelligence" => programs(&mut out, &root, &root, ""),
         "hguet_asset_flow" => {
             flows(&mut out, &root, &root, "");

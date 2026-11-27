@@ -18,6 +18,7 @@ Usage:\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
+  hguet report FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
   hguet audit SIGNATURE --network mainnet|devnet|testnet --rpc-url HTTPS_URL [--json|--html]\n\
   hguet diff BEFORE AFTER --offline [--encoding binary|base64|base58] [--json|--html]\n\
@@ -424,6 +425,7 @@ fn inventory_command(command: &str) -> i32 {
         }
         let bytes = read_transaction(&file, &encoding)?;
         match command {
+            "report" => format_inventory(&hguet::report::inspect(&bytes)?, html),
             "flow" => format_inventory(&hguet::flow::inspect(&bytes)?, html),
             "authority" => format_inventory(&hguet::authority::inspect(&bytes)?, html),
             _ => format_inventory(&hguet::programs::inspect(&bytes)?, html),
@@ -436,6 +438,7 @@ fn inventory_command(command: &str) -> i32 {
         }
         Err(error) => {
             let kind = match command {
+                "report" => "hguet_report_error",
                 "flow" => "hguet_flow_error",
                 "authority" => "hguet_authority_error",
                 _ => "hguet_program_error",
@@ -595,6 +598,9 @@ fn audit_command() -> i32 {
 }
 
 fn main() {
+    if env::args().nth(1).as_deref() == Some("report") {
+        process::exit(inventory_command("report"));
+    }
     if env::args().nth(1).as_deref() == Some("audit") {
         process::exit(audit_command());
     }

@@ -157,7 +157,10 @@ pub(crate) fn change(row: &ProgramInstruction) -> Option<AuthorityChange> {
 }
 
 pub fn inspect(bytes: &[u8]) -> Result<AuthorityReport, String> {
-    let report = programs::inspect(bytes)?;
+    Ok(from_program_report(programs::inspect(bytes)?))
+}
+
+pub(crate) fn from_program_report(report: ProgramReport) -> AuthorityReport {
     let mut changes = Vec::new();
     let mut unclassified_instruction_indices = Vec::new();
     for row in &report.instructions {
@@ -170,7 +173,7 @@ pub fn inspect(bytes: &[u8]) -> Result<AuthorityReport, String> {
             unclassified_instruction_indices.push(row.instruction_index);
         }
     }
-    Ok(AuthorityReport {
+    AuthorityReport {
         schema_version: 1,
         kind: "hguet_authority_intelligence",
         message_sha256: report.message_sha256.clone(),
@@ -189,7 +192,7 @@ pub fn inspect(bytes: &[u8]) -> Result<AuthorityReport, String> {
             "Unknown authority types, opaque instructions and lookup gaps do not imply absence of control changes.",
             "No ownership, multisig authorization, CPI coverage, effective hook or final state is established.",
         ],
-    })
+    }
 }
 
 #[cfg(test)]
