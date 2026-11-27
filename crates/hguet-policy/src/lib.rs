@@ -394,4 +394,19 @@ mod tests {
         assert!(result.hard_denies.is_empty());
         assert_eq!(result.unknowns[0].code, "POLICY_UNRESOLVED_PROGRAM");
     }
+
+    #[test]
+    fn unresolvable_recipient_stays_unknown() {
+        let policy = LocalPolicy::parse_and_validate("version=1\nnetwork='devnet'").unwrap();
+        let mut tx = parsed();
+        let resolved = policy.evaluate("devnet", &tx);
+        assert!(resolved.hard_denies.is_empty() && resolved.unknowns.is_empty());
+        tx.system_transfers[0].destination = "<unresolved-ALT-recipient>".into();
+        let unresolved = policy.evaluate("devnet", &tx);
+        assert!(unresolved.hard_denies.is_empty());
+        assert!(unresolved
+            .unknowns
+            .iter()
+            .any(|f| f.code == "POLICY_UNRESOLVED_RECIPIENT"));
+    }
 }
