@@ -39,6 +39,23 @@ launcher and were interrupted. The verbose rerun outside the restricted launcher
 Real Solana SDK/LiteSVM runtime validation is NOT RUN at this milestone.
 Phase 1 acceptance remains OPEN.
 
+### Engine extraction verification
+
+Analysis orchestration now lives in the existing hguet package's library
+target, with AnalysisInput, TrustedConfig, Operation and analyze. The caller
+supplies an RPC transport and a clock closure. The CLI owns bounded input
+loading and output. Input loading errors are retained until the original
+policy/intent evaluation point to preserve v1 precedence.
+
+All 47 pre-existing package tests pass after the move. Five persisted golden
+cases compare baseline JSON and exit codes, including file, policy and intent
+errors. A sixth one-time comparison covered an existing restrictive policy.
+The complete benchmark passed 227/227 after extraction, with zero FAIL,
+XFAIL or XPASS. Output is target/phase01-evidence/engine-benchmark.
+Contract validators and strict workspace Clippy passed.
+Cloud remains compiled as before; optional feature isolation is deferred
+until its dependency and platform implications are tested.
+
 
 ### WSL framework verification, 2026-11-27
 

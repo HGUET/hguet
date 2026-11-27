@@ -1,0 +1,333 @@
+[
+  {
+    "args": [
+      "inspect",
+      "tests/fixtures/legacy-noop.base64",
+      "--offline",
+      "--encoding",
+      "base64",
+      "--json"
+    ],
+    "exit": 0,
+    "output": {
+      "coverage_gaps": null,
+      "inspection": {
+        "address_table_lookups": [],
+        "compiled_top_level_instructions": [],
+        "declared_system_transfer_lamports": "0",
+        "instruction_count": 0,
+        "limitations": [
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "lookup_table_count": 0,
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "program_ids": [],
+        "required_signatures": 1,
+        "resource_config": null,
+        "signature_count": 1,
+        "static_account_count": 1,
+        "static_account_keys": [
+          "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
+        ],
+        "system_transfers": [],
+        "total_address_count": 1,
+        "transaction_bytes": 134,
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92",
+        "transaction_signature_status": "unsigned",
+        "unresolved_lookup_addresses": 0,
+        "wire_format": "legacy"
+      },
+      "intent_scope_review": null,
+      "signed_token_source_review": null,
+      "signed_token_spend_review": null,
+      "signing_boundary": {
+        "automated_signing_permitted": false,
+        "block_reasons": [
+          "EXECUTION_BANK_NOT_AUTHENTICATED",
+          "NO_INDEPENDENT_VERIFIED_INTENT",
+          "RPC_EFFECT_COVERAGE_UNAVAILABLE",
+          "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED",
+          "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN",
+          "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN"
+        ],
+        "direct_mint_declaration_bound_checked": false,
+        "direct_source_declaration_bound_checked": false,
+        "direct_token_program_present": false,
+        "direct_token_semantics_incomplete": false,
+        "execution_bank_authenticated": false,
+        "independent_intent_verified_by_caller": false,
+        "limitation": "This read-only gate never authorizes or signs. Only separately verified signed message/direct checked token declarations can be locally bounded. Missing intent, ALT, custom programs, Token-2022 extensions, unknown CPI, fees, account ownership, RPC simulation and final execution prevent proof of transaction-wide gross spending. A trusted, enforceable customer signer is not integrated; BLOCK is unconditional.",
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "native_sol_direct_transfer_declared_raw": "0",
+        "original_wire_lookup_identity_unresolved": false,
+        "original_wire_program_allowlist_checked": false,
+        "rpc_advisory_aggregate_available": false,
+        "rpc_advisory_cap_anomalies": false,
+        "signer_side_enforcement_integrated": false,
+        "signing_gate": "block",
+        "total_gross_token_spending_proven": false,
+        "total_native_sol_spending_proven": false,
+        "transaction_signature_status": "unsigned",
+        "unsupported_program_execution_surface": false,
+        "version": 1
+      },
+      "verdict": {
+        "coverage": [
+          "wire_structure",
+          "wire_top_level_instruction_bytes",
+          "block_only_signing_boundary"
+        ],
+        "decision": "UNKNOWN",
+        "findings": [
+          {
+            "code": "NO_SIMULATION",
+            "severity": "high",
+            "summary": "Wire inspection does not prove transfers, CPI effects, execution or wallet authorization"
+          }
+        ],
+        "intent_status": "not_checked",
+        "kind": "security_verdict",
+        "limitations": [
+          "No onchain execution simulation or customer-controlled signer enforcement has been performed",
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "network": "mainnet",
+        "schema_version": 1,
+        "simulation_status": "not_performed",
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92"
+      }
+    }
+  },
+  {
+    "args": [
+      "check",
+      "tests/fixtures/legacy-noop.base64",
+      "--mode",
+      "local",
+      "--network",
+      "devnet",
+      "--encoding",
+      "base64",
+      "--json"
+    ],
+    "exit": 30,
+    "output": {
+      "coverage_gaps": null,
+      "inspection": {
+        "address_table_lookups": [],
+        "compiled_top_level_instructions": [],
+        "declared_system_transfer_lamports": "0",
+        "instruction_count": 0,
+        "limitations": [
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "lookup_table_count": 0,
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "program_ids": [],
+        "required_signatures": 1,
+        "resource_config": null,
+        "signature_count": 1,
+        "static_account_count": 1,
+        "static_account_keys": [
+          "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
+        ],
+        "system_transfers": [],
+        "total_address_count": 1,
+        "transaction_bytes": 134,
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92",
+        "transaction_signature_status": "unsigned",
+        "unresolved_lookup_addresses": 0,
+        "wire_format": "legacy"
+      },
+      "intent_scope_review": null,
+      "signed_token_source_review": null,
+      "signed_token_spend_review": null,
+      "signing_boundary": {
+        "automated_signing_permitted": false,
+        "block_reasons": [
+          "EXECUTION_BANK_NOT_AUTHENTICATED",
+          "NO_INDEPENDENT_VERIFIED_INTENT",
+          "RPC_EFFECT_COVERAGE_UNAVAILABLE",
+          "SIGNER_SIDE_ENFORCEMENT_NOT_INTEGRATED",
+          "TOTAL_GROSS_TOKEN_SPEND_NOT_PROVEN",
+          "TOTAL_NATIVE_SOL_SPEND_NOT_PROVEN"
+        ],
+        "direct_mint_declaration_bound_checked": false,
+        "direct_source_declaration_bound_checked": false,
+        "direct_token_program_present": false,
+        "direct_token_semantics_incomplete": false,
+        "execution_bank_authenticated": false,
+        "independent_intent_verified_by_caller": false,
+        "limitation": "This read-only gate never authorizes or signs. Only separately verified signed message/direct checked token declarations can be locally bounded. Missing intent, ALT, custom programs, Token-2022 extensions, unknown CPI, fees, account ownership, RPC simulation and final execution prevent proof of transaction-wide gross spending. A trusted, enforceable customer signer is not integrated; BLOCK is unconditional.",
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "native_sol_direct_transfer_declared_raw": "0",
+        "original_wire_lookup_identity_unresolved": false,
+        "original_wire_program_allowlist_checked": false,
+        "rpc_advisory_aggregate_available": false,
+        "rpc_advisory_cap_anomalies": false,
+        "signer_side_enforcement_integrated": false,
+        "signing_gate": "block",
+        "total_gross_token_spending_proven": false,
+        "total_native_sol_spending_proven": false,
+        "transaction_signature_status": "unsigned",
+        "unsupported_program_execution_surface": false,
+        "version": 1
+      },
+      "verdict": {
+        "coverage": [
+          "wire_structure",
+          "wire_top_level_instruction_bytes",
+          "block_only_signing_boundary"
+        ],
+        "decision": "UNKNOWN",
+        "findings": [
+          {
+            "code": "INTENT_UNVERIFIED",
+            "severity": "high",
+            "summary": "--trusted-key is required to verify independent authorization"
+          },
+          {
+            "code": "NO_SIMULATION",
+            "severity": "high",
+            "summary": "Wire inspection does not prove transfers, CPI effects, execution or wallet authorization"
+          }
+        ],
+        "intent_status": "unverified_no_independent_trust_key",
+        "kind": "security_verdict",
+        "limitations": [
+          "No onchain execution simulation or customer-controlled signer enforcement has been performed",
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "network": "devnet",
+        "schema_version": 1,
+        "simulation_status": "not_performed",
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92"
+      }
+    }
+  },
+  {
+    "args": [
+      "check",
+      "tests/fixtures/legacy-noop.base64",
+      "--mode",
+      "local",
+      "--network",
+      "devnet",
+      "--encoding",
+      "base64",
+      "--policy",
+      "missing-policy",
+      "--json"
+    ],
+    "exit": 40,
+    "output": {
+      "code": "BAD_POLICY",
+      "error": "cannot open input file"
+    }
+  },
+  {
+    "args": [
+      "check",
+      "tests/fixtures/legacy-noop.base64",
+      "--mode",
+      "local",
+      "--network",
+      "devnet",
+      "--encoding",
+      "base64",
+      "--intent",
+      "missing-intent",
+      "--trusted-key",
+      "invalid",
+      "--json"
+    ],
+    "exit": 20,
+    "output": {
+      "inspection": {
+        "address_table_lookups": [],
+        "compiled_top_level_instructions": [],
+        "declared_system_transfer_lamports": "0",
+        "instruction_count": 0,
+        "limitations": [
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "lookup_table_count": 0,
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "program_ids": [],
+        "required_signatures": 1,
+        "resource_config": null,
+        "signature_count": 1,
+        "static_account_count": 1,
+        "static_account_keys": [
+          "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx"
+        ],
+        "system_transfers": [],
+        "total_address_count": 1,
+        "transaction_bytes": 134,
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92",
+        "transaction_signature_status": "unsigned",
+        "unresolved_lookup_addresses": 0,
+        "wire_format": "legacy"
+      },
+      "intent_scope_review": null,
+      "verdict": {
+        "coverage": [
+          "wire_structure",
+          "wire_top_level_instruction_bytes"
+        ],
+        "decision": "DENY",
+        "findings": [
+          {
+            "code": "INTENT_REJECTED",
+            "severity": "critical",
+            "summary": "cannot open input file"
+          }
+        ],
+        "intent_status": "rejected",
+        "kind": "security_verdict",
+        "limitations": [
+          "No onchain execution simulation or customer-controlled signer enforcement has been performed",
+          "Structural parsing and local Ed25519 checks do not prove transaction execution or authorize signing",
+          "No RPC simulation, onchain state inspection, blockhash validity or CPI analysis",
+          "Declared System lamport movements (Transfer, CreateAccount, CreateAccountWithSeed, WithdrawNonceAccount, TransferWithSeed) are top-level instructions only; total spend and network fees are NOT fully verified",
+          "The transaction is unsigned, partly signed or has invalid signature bytes"
+        ],
+        "message_sha256": "bf06af00fed4033bffc7c07901f3a0c6759859b7e8d318ba616dee71a5c7205a",
+        "network": "devnet",
+        "schema_version": 1,
+        "simulation_status": "not_performed",
+        "transaction_sha256": "27ff4f421786e082ba6f536c6e626e7cd4f173da7619e05e6ef0834489799b92"
+      }
+    }
+  },
+  {
+    "args": [
+      "inspect",
+      "missing-file",
+      "--offline",
+      "--json"
+    ],
+    "exit": 40,
+    "output": {
+      "code": "BAD_INPUT",
+      "error": "cannot open input file"
+    }
+  }
+]
