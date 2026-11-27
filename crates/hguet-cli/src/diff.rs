@@ -24,6 +24,8 @@ pub struct InstructionIdentity {
 #[derive(Debug, Serialize)]
 pub struct InstructionSnapshot {
     pub identity: InstructionIdentity,
+    pub compiled_program_index: usize,
+    pub compiled_account_indices: Vec<usize>,
     pub fingerprint_sha256: String,
     pub layout_status: &'static str,
     pub declaration: Value,
@@ -42,6 +44,7 @@ pub struct Snapshot {
     pub required_signers: Vec<String>,
     pub message_accounts: Vec<AccountIdentity>,
     pub recent_blockhash_sha256: String,
+    pub address_table_lookups: Value,
     pub resource_config: Value,
     pub instructions: Vec<InstructionSnapshot>,
     pub coverage_gap_indices: Vec<usize>,
@@ -135,8 +138,12 @@ fn message_context(
     let blockhash_offset = if parsed.wire_format == "v1" {
         8
     } else {
-        header + 3 + if parsed.static_account_count < 128 { 1 } else { 2 }
-            + parsed.static_account_count * 32
+        let count_bytes = if parsed.static_account_count < 128 {
+            1
+        } else {
+            2
+        };
+        header + 3 + count_bytes + parsed.static_account_count * 32
     };
     let blockhash = raw
         .get(blockhash_offset..blockhash_offset + 32)
@@ -192,6 +199,8 @@ fn snapshot(raw: &[u8]) -> Result<Snapshot, String> {
         }
         instructions.push(InstructionSnapshot {
             identity,
+            compiled_program_index: ix.program_index,
+            compiled_account_indices: ix.account_indices.clone(),
             fingerprint_sha256,
             layout_status: row.layout_status,
             declaration: json!(row.declaration),
@@ -209,6 +218,7 @@ fn snapshot(raw: &[u8]) -> Result<Snapshot, String> {
         required_signers: parsed.static_account_keys[..parsed.required_signatures].to_vec(),
         message_accounts: accounts,
         recent_blockhash_sha256,
+        address_table_lookups: json!(parsed.address_table_lookups),
         resource_config: json!(parsed.resource_config),
         instructions,
         coverage_gap_indices,
@@ -240,6 +250,9 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<DiffReport, String> {
     }
     if before.recent_blockhash_sha256 != after.recent_blockhash_sha256 {
         message_fields_changed.push("recent_blockhash");
+    }
+    if before.address_table_lookups != after.address_table_lookups {
+        message_fields_changed.push("address_table_lookups");
     }
     if before.resource_config != after.resource_config {
         message_fields_changed.push("resource_config");
@@ -273,6 +286,11 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<DiffReport, String> {
                 if a.identity.accounts != b.identity.accounts {
                     fields.push("accounts_or_privileges");
                 }
+                if a.compiled_program_index != b.compiled_program_index
+                    || a.compiled_account_indices != b.compiled_account_indices
+                {
+                    fields.push("compiled_indices");
+                }
                 if a.identity.data_sha256 != b.identity.data_sha256 {
                     fields.push("instruction_data");
                 }
@@ -305,6 +323,15 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<DiffReport, String> {
             before_ref: a.map(|_| format!("/before/instructions/{index}")),
             after_ref: b.map(|_| format!("/after/instructions/{index}")),
         });
+    }
+    if instruction_changes
+        .iter()
+        .any(|change| change.changed_fields.contains(&"compiled_indices"))
+    {
+        message_fields_changed.push("compiled_instruction_indices");
+    }
+    if before.message_sha256 != after.message_sha256 && message_fields_changed.is_empty() {
+        message_fields_changed.push("unclassified_message_bytes");
     }
     Ok(DiffReport {
         schema_version: 1,

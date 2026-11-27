@@ -28,3 +28,5 @@ Signing is always NOT_AUTHORIZED. Existing report contracts unchanged.
 
 This is the initial Phase 2.3 slice, not a release. SDK fixtures and full
 hosted regression checks are required for acceptance.
+
+The [JSON schema](report.schema.json) validates the diff envelope, snapshots, identity and pointer shapes, and refusal invariants. The nested decoder summaries are intentionally open objects, not exhaustive independent contracts. The SDK suite also checks v1 inline resource changes, exact message and blockhash digests, and lookup references. Compiled indices and the entire lookup declaration list are preserved separately from normalized fingerprints; a remaining unexplained byte change is explicitly classified as unclassified_message_bytes. Hosted test results must be recorded before acceptance.

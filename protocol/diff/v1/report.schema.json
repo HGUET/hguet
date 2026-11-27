@@ -1,0 +1,811 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:diff:v1",
+  "title": "HGUET Semantic Transaction Diff v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "relation",
+        "signing_authorization",
+        "semantic_equivalence_proven",
+        "message_fields_changed",
+        "ordered_instruction_fingerprints_equal",
+        "instruction_multiset_equal",
+        "instruction_changes",
+        "before",
+        "after",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_transaction_diff"
+        },
+        "relation": {
+          "enum": [
+            "IDENTICAL_TRANSACTION_BYTES",
+            "IDENTICAL_MESSAGE_BYTES",
+            "MESSAGE_CHANGED"
+          ]
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "semantic_equivalence_proven": {
+          "const": false
+        },
+        "message_fields_changed": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "wire_format",
+              "fee_payer",
+              "required_signers",
+              "message_accounts",
+              "recent_blockhash",
+              "address_table_lookups",
+              "resource_config",
+              "ordered_instruction_fingerprints",
+              "compiled_instruction_indices",
+              "unclassified_message_bytes"
+            ]
+          }
+        },
+        "ordered_instruction_fingerprints_equal": {
+          "type": "boolean"
+        },
+        "instruction_multiset_equal": {
+          "type": "boolean"
+        },
+        "instruction_changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "before_index",
+              "after_index",
+              "status",
+              "changed_fields",
+              "before_ref",
+              "after_ref"
+            ],
+            "properties": {
+              "before_index": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "after_index": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "status": {
+                "enum": [
+                  "CHANGED_AT_POSITION",
+                  "REMOVED_AT_POSITION",
+                  "ADDED_AT_POSITION"
+                ]
+              },
+              "changed_fields": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "program",
+                    "accounts_or_privileges",
+                    "compiled_indices",
+                    "instruction_data",
+                    "decoded_declaration",
+                    "asset_movement",
+                    "authority_change",
+                    "layout_status"
+                  ]
+                }
+              },
+              "before_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^/before/instructions/[0-9]+$"
+              },
+              "after_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^/after/instructions/[0-9]+$"
+              }
+            }
+          },
+          "maxItems": 64
+        },
+        "before": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "transaction_sha256",
+            "message_sha256",
+            "wire_format",
+            "signature_status",
+            "signature_count",
+            "fee_payer",
+            "required_signers",
+            "message_accounts",
+            "recent_blockhash_sha256",
+            "address_table_lookups",
+            "resource_config",
+            "instructions",
+            "coverage_gap_indices"
+          ],
+          "properties": {
+            "transaction_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "message_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "wire_format": {
+              "enum": [
+                "legacy",
+                "v0",
+                "v1"
+              ]
+            },
+            "signature_status": {
+              "enum": [
+                "unsigned",
+                "partially_signed",
+                "verified",
+                "invalid"
+              ]
+            },
+            "signature_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fee_payer": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "required_signers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 64
+            },
+            "message_accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "address",
+                  "lookup_table",
+                  "lookup_index",
+                  "required_signer",
+                  "writable"
+                ],
+                "properties": {
+                  "address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "lookup_table": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "lookup_index": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "required_signer": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "maxItems": 256
+            },
+            "recent_blockhash_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "address_table_lookups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "table_address",
+                  "writable_indexes",
+                  "readonly_indexes"
+                ],
+                "properties": {
+                  "table_address": {
+                    "type": "string"
+                  },
+                  "writable_indexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  },
+                  "readonly_indexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  }
+                }
+              }
+            },
+            "resource_config": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "instructions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "identity",
+                  "compiled_program_index",
+                  "compiled_account_indices",
+                  "fingerprint_sha256",
+                  "layout_status",
+                  "declaration",
+                  "asset_movement",
+                  "authority_change"
+                ],
+                "properties": {
+                  "identity": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "program",
+                      "accounts",
+                      "data_sha256",
+                      "data_bytes"
+                    ],
+                    "properties": {
+                      "program": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "address",
+                          "lookup_table",
+                          "lookup_index",
+                          "required_signer",
+                          "writable"
+                        ],
+                        "properties": {
+                          "address": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lookup_table": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lookup_index": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          "required_signer": {
+                            "type": "boolean"
+                          },
+                          "writable": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "accounts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "address",
+                            "lookup_table",
+                            "lookup_index",
+                            "required_signer",
+                            "writable"
+                          ],
+                          "properties": {
+                            "address": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "lookup_table": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "lookup_index": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            "required_signer": {
+                              "type": "boolean"
+                            },
+                            "writable": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "maxItems": 256
+                      },
+                      "data_sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "data_bytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "compiled_program_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "compiled_account_indices": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  },
+                  "fingerprint_sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "layout_status": {
+                    "enum": [
+                      "DECODED_DECLARATION",
+                      "INVALID_UTF8",
+                      "UNSUPPORTED_LAYOUT",
+                      "UNRESOLVED_PROGRAM",
+                      "UNRESOLVED_ACCOUNTS",
+                      "DECODER_UNAVAILABLE",
+                      "PREFIX_ONLY"
+                    ]
+                  },
+                  "declaration": {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  "asset_movement": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "authority_change": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "maxItems": 64
+            },
+            "coverage_gap_indices": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "maxItems": 64
+            }
+          }
+        },
+        "after": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "transaction_sha256",
+            "message_sha256",
+            "wire_format",
+            "signature_status",
+            "signature_count",
+            "fee_payer",
+            "required_signers",
+            "message_accounts",
+            "recent_blockhash_sha256",
+            "address_table_lookups",
+            "resource_config",
+            "instructions",
+            "coverage_gap_indices"
+          ],
+          "properties": {
+            "transaction_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "message_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "wire_format": {
+              "enum": [
+                "legacy",
+                "v0",
+                "v1"
+              ]
+            },
+            "signature_status": {
+              "enum": [
+                "unsigned",
+                "partially_signed",
+                "verified",
+                "invalid"
+              ]
+            },
+            "signature_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fee_payer": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "required_signers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 64
+            },
+            "message_accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "address",
+                  "lookup_table",
+                  "lookup_index",
+                  "required_signer",
+                  "writable"
+                ],
+                "properties": {
+                  "address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "lookup_table": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "lookup_index": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "required_signer": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "maxItems": 256
+            },
+            "recent_blockhash_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "address_table_lookups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "table_address",
+                  "writable_indexes",
+                  "readonly_indexes"
+                ],
+                "properties": {
+                  "table_address": {
+                    "type": "string"
+                  },
+                  "writable_indexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  },
+                  "readonly_indexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  }
+                }
+              }
+            },
+            "resource_config": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "instructions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "identity",
+                  "compiled_program_index",
+                  "compiled_account_indices",
+                  "fingerprint_sha256",
+                  "layout_status",
+                  "declaration",
+                  "asset_movement",
+                  "authority_change"
+                ],
+                "properties": {
+                  "identity": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "program",
+                      "accounts",
+                      "data_sha256",
+                      "data_bytes"
+                    ],
+                    "properties": {
+                      "program": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "address",
+                          "lookup_table",
+                          "lookup_index",
+                          "required_signer",
+                          "writable"
+                        ],
+                        "properties": {
+                          "address": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lookup_table": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lookup_index": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          "required_signer": {
+                            "type": "boolean"
+                          },
+                          "writable": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "accounts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "address",
+                            "lookup_table",
+                            "lookup_index",
+                            "required_signer",
+                            "writable"
+                          ],
+                          "properties": {
+                            "address": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "lookup_table": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "lookup_index": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            "required_signer": {
+                              "type": "boolean"
+                            },
+                            "writable": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "maxItems": 256
+                      },
+                      "data_sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "data_bytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "compiled_program_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "compiled_account_indices": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxItems": 256
+                  },
+                  "fingerprint_sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "layout_status": {
+                    "enum": [
+                      "DECODED_DECLARATION",
+                      "INVALID_UTF8",
+                      "UNSUPPORTED_LAYOUT",
+                      "UNRESOLVED_PROGRAM",
+                      "UNRESOLVED_ACCOUNTS",
+                      "DECODER_UNAVAILABLE",
+                      "PREFIX_ONLY"
+                    ]
+                  },
+                  "declaration": {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  "asset_movement": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "authority_change": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "maxItems": 64
+            },
+            "coverage_gap_indices": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "maxItems": 64
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_diff_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}
