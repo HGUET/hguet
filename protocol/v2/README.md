@@ -30,7 +30,7 @@ Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
 
-rules.json now contains 111 rules spanning local policy, intent trust,
+rules.json now contains 125 rules spanning local policy, intent trust,
 signature/wire checks, direct tokens, RPC CPI, Token-2022 extension
 observations, later mint/token-account snapshots, aggregate spending,
 source authority, CPI source coverage and effect correlation. Its status is
@@ -138,3 +138,10 @@ balance pairs remain partial evidence. Each later snapshot retains its own
 source and slot in embedded evidence. No RPC observation receives COMPLETE.
 These entries are additive to v2 coverage; the v1 evidence and exit contract
 are preserved.
+
+Catalogue discovery also covers dynamically forwarded RpcError codes and
+account-control scope findings from hguet-core. Missing emitted-code entries
+now fail validation. Signing-boundary reason strings remain a separate
+contract. The fourteen additional entries document their actual scope and
+limits; RPC typed-error injection verifies code forwarding and refusal,
+without claiming to reproduce every underlying transport failure cause.

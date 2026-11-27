@@ -374,6 +374,30 @@ mod tests {
     }
 
     #[test]
+    fn missing_roles_and_malformed_control_encoding_remain_coverage_gaps() {
+        for (data, accounts, code) in [
+            (
+                vec![6, 2, 0],
+                vec![1],
+                "TOKEN_ACCOUNT_CONTROL_UNRESOLVED_ACCOUNTS",
+            ),
+            (
+                vec![6, 2, 2],
+                vec![1, 0],
+                "TOKEN_ACCOUNT_CONTROL_UNSUPPORTED_ENCODING",
+            ),
+        ] {
+            let found = review_account_control(&wire(&[(data, accounts)]), "i");
+            assert_eq!(found.len(), 1);
+            assert_eq!(found[0].code, code);
+            assert!(!found[0].violation);
+            assert!(found[0].gap_reason.is_some());
+            let normal = review_account_control(&wire(&[set_authority(2, Some(4))]), "i");
+            assert!(normal.iter().all(|finding| finding.code != code));
+        }
+    }
+
+    #[test]
     fn unrelated_token_operations_produce_no_scope_findings() {
         let transfer = wire(&[(vec![12, 1, 0, 0, 0, 0, 0, 0, 0, 6], vec![1, 3, 2, 0])]);
         assert!(review_account_control(&transfer, "i").is_empty());

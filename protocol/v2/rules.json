@@ -3605,6 +3605,307 @@
         "testing\\scenarios\\U-011.json",
         "testing\\scenarios\\U-012.json"
       ]
+    },
+    {
+      "rule_id": "HGUET.INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "legacy_code": "INTENT_SCOPE_AUTHORITY_TRANSFER",
+      "severity": "critical",
+      "scope": "intent_trust_and_binding",
+      "summary": "SetAuthority targets neither the current authority nor a required transaction signer; PaymentIntent v1 grants no such control transfer.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "set_authority_to_a_non_signing_third_party_is_a_proven_violation_with_evidence",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.INTENT_SCOPE_CLOSE_DESTINATION",
+      "legacy_code": "INTENT_SCOPE_CLOSE_DESTINATION",
+      "severity": "critical",
+      "scope": "intent_trust_and_binding",
+      "summary": "CloseAccount sends balance and rent to a destination outside the required transaction signers and outside PaymentIntent account-control scope.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "close_account_destination_decides_violation_versus_gap",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.TOKEN_AUTHORITY_CHANGE_UNPROVEN",
+      "legacy_code": "TOKEN_AUTHORITY_CHANGE_UNPROVEN",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Authority change targets the current authority or a transaction signer, whose principal identity is not proven offline.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "set_authority_toward_a_signer_or_revocation_is_only_a_coverage_gap",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.TOKEN_AUTHORITY_REVOKE_IRREVERSIBLE",
+      "legacy_code": "TOKEN_AUTHORITY_REVOKE_IRREVERSIBLE",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Authority revocation is irreversible and outside the account-control grants of PaymentIntent v1.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "set_authority_toward_a_signer_or_revocation_is_only_a_coverage_gap",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.TOKEN_CLOSE_DESTINATION_UNPROVEN",
+      "legacy_code": "TOKEN_CLOSE_DESTINATION_UNPROVEN",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Account closure returns funds to a transaction signer, whose principal identity is not proven offline.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "close_account_destination_decides_violation_versus_gap",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.TOKEN_ACCOUNT_CONTROL_UNRESOLVED_ACCOUNTS",
+      "legacy_code": "TOKEN_ACCOUNT_CONTROL_UNRESOLVED_ACCOUNTS",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "SetAuthority or CloseAccount account roles cannot be resolved from supported static message accounts.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "missing_roles_and_malformed_control_encoding_remain_coverage_gaps",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.TOKEN_ACCOUNT_CONTROL_UNSUPPORTED_ENCODING",
+      "legacy_code": "TOKEN_ACCOUNT_CONTROL_UNSUPPORTED_ENCODING",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "SetAuthority bytes use an encoding the account-control reviewer cannot interpret.",
+      "source": "crates/hguet-core/src/intent_scope.rs",
+      "test_source": "crates/hguet-core/src/intent_scope.rs",
+      "tests": [
+        "missing_roles_and_malformed_control_encoding_remain_coverage_gaps",
+        "unrelated_token_operations_produce_no_scope_findings"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "original instruction index, account/control roles and independently verified intent reference"
+      ],
+      "limitations": [
+        "A PaymentIntent v1 grants no general account-control authority. Coverage gaps do not prove a violation, ownership or permission to sign."
+      ],
+      "fixture_review": "Referenced core assertions distinguish violations and coverage gaps; CLI emission review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_ENDPOINT_INVALID",
+      "legacy_code": "RPC_ENDPOINT_INVALID",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The selected RPC endpoint does not satisfy endpoint validation.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_GENESIS_MISMATCH",
+      "legacy_code": "RPC_GENESIS_MISMATCH",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The provider genesis identity does not match the independently selected network.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_NETWORK_UNSUPPORTED",
+      "legacy_code": "RPC_NETWORK_UNSUPPORTED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The requested network has no supported expected genesis identity.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_REQUEST_REJECTED",
+      "legacy_code": "RPC_REQUEST_REJECTED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The selected RPC provider rejected the JSON-RPC request.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_RESPONSE_INVALID",
+      "legacy_code": "RPC_RESPONSE_INVALID",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "RPC response evidence is malformed or inconsistent with the required request and analysis contract.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_RESPONSE_TOO_LARGE",
+      "legacy_code": "RPC_RESPONSE_TOO_LARGE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "RPC evidence exceeded a configured size or resource bound.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TRANSPORT_FAILURE",
+      "legacy_code": "RPC_TRANSPORT_FAILURE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The selected RPC transport failed to provide evidence.",
+      "source": "crates/hguet-rpc/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "typed_rpc_errors_preserve_their_finding_codes_and_refusal"
+      ],
+      "test_status": "TARGETED_REGRESSION",
+      "evidence": [
+        "typed RPC error forwarded to the CLI verdict; simulation_status rpc_unavailable"
+      ],
+      "limitations": [
+        "Injected typed-error tests verify CLI mapping and refusal, not every network or parser cause of the error. No execution, zero effects or signer permission follows from unavailable RPC evidence."
+      ],
+      "fixture_review": "Paired injected error and successful transport checks; underlying failure-cause coverage is separate.",
+      "benchmark_fixtures": []
     }
   ]
 }

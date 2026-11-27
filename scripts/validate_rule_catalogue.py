@@ -35,10 +35,17 @@ def validate():
     engine = (ROOT / "crates/hguet-cli/src/lib.rs").read_text().split("#[cfg(test)]")[0]
     emitted = set(re.findall(r'\.finding\(\s*"([A-Z][A-Z0-9_]+)"',engine))
     emitted.update(re.findall(r'\("([A-Z][A-Z0-9_]+)"\s*,\s*"(?:high|medium|critical)"\s*,',engine))
+    # These modules return typed codes which the CLI forwards dynamically.
+    # Signing-boundary reason strings are a different contract, not findings.
+    scope_source = (ROOT / "crates/hguet-core/src/intent_scope.rs").read_text().split("#[cfg(test)]")[0]
+    emitted.update(re.findall(r'(?:code:\s*|gap\(\s*)"([A-Z][A-Z0-9_]+)"', scope_source))
+    rpc_source = (ROOT / "crates/hguet-rpc/src/lib.rs").read_text().split("#[cfg(test)]")[0]
+    emitted.update(re.findall(r'Self::[A-Za-z]+\s*=>\s*"(RPC_[A-Z_]+)"', rpc_source))
     missing=sorted(emitted-seen)
     print(f"OPEN: {len(missing)} engine finding codes without individual catalogue entries")
     for code in missing:
         print("  "+code)
+    assert not missing, "finding catalogue is incomplete: " + ", ".join(missing)
     gaps=[rule["legacy_code"] for rule in catalogue["rules"] if rule.get("test_status")=="TARGETED_REGRESSION_OPEN"]
     print(f"OPEN: {len(gaps)} catalogue entries without targeted regression references")
     for code in gaps:

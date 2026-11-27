@@ -978,3 +978,35 @@ fn conflicting_cpi_token_programs_do_not_invent_source_authority() {
         );
     }
 }
+
+#[test]
+fn typed_rpc_errors_preserve_their_finding_codes_and_refusal() {
+    struct ErrorRpc(RpcError);
+    impl JsonRpcTransport for ErrorRpc {
+        fn post_json(&self, _: &str, _: &Value) -> Result<Value, RpcError> {
+            Err(self.0.clone())
+        }
+    }
+    for (error, code) in [
+        (RpcError::InvalidEndpoint, "RPC_ENDPOINT_INVALID"),
+        (RpcError::UnsupportedNetwork, "RPC_NETWORK_UNSUPPORTED"),
+        (RpcError::Transport, "RPC_TRANSPORT_FAILURE"),
+        (RpcError::TooLarge, "RPC_RESPONSE_TOO_LARGE"),
+        (RpcError::InvalidResponse, "RPC_RESPONSE_INVALID"),
+        (RpcError::RpcRejected, "RPC_REQUEST_REJECTED"),
+        (RpcError::GenesisMismatch, "RPC_GENESIS_MISMATCH"),
+    ] {
+        let wire = legacy_transfer(75);
+        let (report, exit) = execute_with(args(&wire, true), &ErrorRpc(error));
+        assert_eq!(exit, 30);
+        assert_never_permits(&report, exit);
+        assert!(codes(&report).contains(&code.to_owned()), "{report}");
+        assert_eq!(report["verdict"]["simulation_status"], "rpc_unavailable");
+        let (normal, normal_exit) = execute_with(
+            args(&wire, true),
+            &FakeRpc::new(simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1])),
+        );
+        assert_never_permits(&normal, normal_exit);
+        assert!(!codes(&normal).contains(&code.to_owned()));
+    }
+}
