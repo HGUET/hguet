@@ -391,7 +391,8 @@
                       "declared_amount_raw",
                       "expected_fee_raw",
                       "fee_basis_points",
-                      "maximum_fee_raw"
+                      "maximum_fee_raw",
+                      "decimals"
                     ],
                     "properties": {
                       "kind": {
@@ -481,6 +482,14 @@
                           "null"
                         ],
                         "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "decimals": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 255
                       }
                     }
                   },

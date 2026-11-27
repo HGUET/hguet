@@ -16,9 +16,10 @@ from solders.compute_budget import set_compute_unit_limit, set_compute_unit_pric
 from solders.instruction import AccountMeta, Instruction
 from solders.keypair import Keypair
 from solders.litesvm import LiteSVM
-from solders.message import Message
+from solders.address_lookup_table_account import AddressLookupTableAccount
+from solders.message import Message, MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
-from solders.transaction import Transaction
+from solders.transaction import Transaction, VersionedTransaction
 from solders.transaction_metadata import FailedTransactionMetadata
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,7 +51,7 @@ def main():
         assert process.returncode == 0, process.stderr
         report = json.loads(process.stdout)
         schema.validate(report)
-        assert report["message_sha256"] == hashlib.sha256(bytes(message)).hexdigest()
+        assert report["message_sha256"] == hashlib.sha256(to_bytes_versioned(message)).hexdigest()
         assert report["signing_authorization"] == "NOT_AUTHORIZED"
         return report
 
@@ -159,6 +160,38 @@ def main():
     assert rows[12]["declaration"]["mint"] is None
     record("sdk_token_instruction_inventory")
 
+    def mixed_token_instructions(payer):
+        source, mint, destination = (Pubkey.new_unique() for _ in range(3))
+        accounts = [AccountMeta(source, False, True), AccountMeta(mint, False, False),
+                    AccountMeta(destination, False, True), AccountMeta(payer, True, False)]
+        valid = b"\x0c" + (21).to_bytes(8, "little") + b"\x06"
+        return [Instruction(TOKEN, b"\xff" * 600, accounts),
+                Instruction(TOKEN, valid, accounts)]
+
+    report = inspect(mixed_token_instructions)
+    assert report["instructions"][0]["layout_status"] == "DECODER_UNAVAILABLE"
+    assert report["instructions"][1]["declaration"]["amount_raw"] == "21"
+    record("sdk_token_decoder_isolation")
+
+    svm = LiteSVM()
+    payer = Keypair()
+    source1, source2, mint, destination, table = (Pubkey.new_unique() for _ in range(5))
+    def checked_transfer(source):
+        return Instruction(TOKEN, b"\x0c" + (21).to_bytes(8, "little") + b"\x06",
+                           [AccountMeta(source, False, True), AccountMeta(mint, False, False),
+                            AccountMeta(destination, False, True), AccountMeta(payer.pubkey(), True, False)])
+
+    message = MessageV0.try_compile(payer.pubkey(), [checked_transfer(source1), checked_transfer(source2)],
+                                    [AddressLookupTableAccount(table, [source2])], svm.latest_blockhash())
+    assert len(message.address_table_lookups) == 1
+    report = inspect_tx(VersionedTransaction(message, [payer]), message)
+    a, b = report["instructions"]
+    assert a["declaration"]["amount_raw"] == "21"
+    assert a["declaration"]["source_account"] == str(source1)
+    assert b["layout_status"] == "UNRESOLVED_ACCOUNTS"
+    assert b["accounts"][0]["address"] is None
+    record("sdk_v0_unresolved_token_isolation")
+
     def lookup_instructions(payer):
         create, table = create_lookup_table(dict(authority_address=payer,
                                                  payer_address=payer, recent_slot=123))
@@ -215,8 +248,8 @@ def main():
     record("versioned_input_error")
 
     args.out.write_text(json.dumps({"cases": cases, "acceptance": "PASS",
-                                    "mandatory_count": 8, "passed_count": len(cases)}, indent=2))
-    print("PASS: 8 independent SDK/CLI comparisons; 3 cases executed in LiteSVM")
+                                    "mandatory_count": 10, "passed_count": len(cases)}, indent=2))
+    print("PASS: 10 independent SDK/CLI comparisons; 3 cases executed in LiteSVM")
 
 
 if __name__ == "__main__":

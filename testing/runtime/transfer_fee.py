@@ -80,7 +80,7 @@ def run_case(binary, expected_fee=2):
     assert declaration["operation"] == "transfer_checked_with_fee" and declaration["layout_checked"]
     assert declaration["source_account"] == str(source) and declaration["destination_account"] == str(destination)
     assert declaration["mint"] == str(mint) and declaration["declared_amount_raw"] == "123"
-    assert declaration["expected_fee_raw"] == str(expected_fee)
+    assert declaration["expected_fee_raw"] == str(expected_fee) and declaration["decimals"] == 6
     assert program["signing_authorization"] == "NOT_AUTHORIZED"
     return {"program_inventory": "PASS", "case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
             "runtime_outcome": "REJECTED" if rejected else "EXECUTED",

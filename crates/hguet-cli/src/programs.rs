@@ -65,6 +65,7 @@ pub enum Declaration {
         new_authority: Option<String>,
         hook_program_id: Option<String>,
         declared_amount_raw: Option<String>,
+        decimals: Option<u8>,
         expected_fee_raw: Option<String>,
         fee_basis_points: Option<u16>,
         maximum_fee_raw: Option<String>,
@@ -231,6 +232,7 @@ fn token_roles(operation: &str) -> &'static [&'static str] {
 fn token_declaration(
     parsed: &ParsedTransaction,
     index: usize,
+    data: &[u8],
 ) -> (Declaration, &'static str, &'static [&'static str]) {
     use hguet_rpc::StaticTokenDeclaration;
     let decoded = hguet_rpc::inspect_static_token_instruction(parsed, index);
@@ -285,6 +287,11 @@ fn token_declaration(
                     new_authority: value.new_authority,
                     hook_program_id: value.hook_program_id,
                     declared_amount_raw: value.declared_amount_raw,
+                    decimals: if checked && value.operation == "transfer_checked_with_fee" {
+                        data.get(10).copied()
+                    } else {
+                        None
+                    },
                     expected_fee_raw: value.expected_fee_raw,
                     fee_basis_points: value.fee_basis_points,
                     maximum_fee_raw: value.maximum_fee_raw,
@@ -403,7 +410,8 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
                 None => (Declaration::Unsupported, "UNSUPPORTED_LAYOUT"),
             },
             Some(TOKEN | TOKEN_2022) => {
-                let (value, status, token_roles) = token_declaration(parsed, ix.instruction_index);
+                let (value, status, token_roles) =
+                    token_declaration(parsed, ix.instruction_index, &data);
                 roles = token_roles;
                 (value, status)
             }
