@@ -63,6 +63,14 @@ jobs:
           sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/programs_preview.py \
             --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/programs-preview.json" \
             2>&1 | tee "$HGUET_EVIDENCE/programs-preview.log"
+      - name: Verify asset flow with SDK fixtures
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          python_path="$(command -v python)"
+          sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/flow_preview.py \
+            --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/flow-preview.json" \
+            2>&1 | tee "$HGUET_EVIDENCE/flow-preview.log"
       - name: Verify Phase 1 local acceptance contracts
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash

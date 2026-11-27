@@ -41,3 +41,11 @@ cargo run --locked -p hguet -- programs tests/fixtures/v1-system-transfer.base64
 ```
 
 Separate offline declaration inventory; no verdict or signing permission. See [contract](protocol/programs/v1/README.md).
+
+## Asset Flow preview (Phase 2.1)
+
+```sh
+cargo run --locked -p hguet -- flow tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline
+```
+
+This offline preview groups raw, declared quantities by SOL or exact token program and mint. It reports supply changes separately and leaves actual fees and net changes unknown. See [flow contract](protocol/flow/v1/README.md).

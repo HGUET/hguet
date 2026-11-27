@@ -19,6 +19,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
+  hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet doctor [--json]  (offline environment report)\n\
   hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
@@ -389,38 +390,46 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
     };
     (json!({"signer_refusal":refusal}), 20)
 }
-fn program_command() -> i32 {
+fn inventory_command(flow: bool) -> i32 {
     let mut args = env::args().skip(2);
     let result = (|| {
         let file = args.next().ok_or("missing transaction path")?;
         let mut encoding = "binary".to_owned();
         let mut offline = false;
+        let command = if flow { "flow" } else { "programs" };
         while let Some(flag) = args.next() {
             match flag.as_str() {
                 "--offline" => offline = true,
                 "--json" => {}
                 "--encoding" => encoding = args.next().ok_or("missing encoding")?,
-                _ => return Err("unsupported programs option".to_owned()),
+                _ => return Err(format!("unsupported {command} option")),
             }
         }
         if !offline {
-            return Err("programs requires --offline".to_owned());
+            return Err(format!("{command} requires --offline"));
         }
         let bytes = read_transaction(&file, &encoding)?;
-        hguet::programs::inspect(&bytes)
+        if flow {
+            serde_json::to_string_pretty(&hguet::flow::inspect(&bytes)?)
+        } else {
+            serde_json::to_string_pretty(&hguet::programs::inspect(&bytes)?)
+        }
+        .map_err(|_| "report serialization failed".to_owned())
     })();
     match result {
         Ok(report) => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&report).expect("serialization")
-            );
+            println!("{report}");
             0
         }
         Err(error) => {
+            let kind = if flow {
+                "hguet_flow_error"
+            } else {
+                "hguet_program_error"
+            };
             println!(
                 "{}",
-                json!({"schema_version":1,"kind":"hguet_program_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+                json!({"schema_version":1,"kind":kind,"error":error,"signing_authorization":"NOT_AUTHORIZED"})
             );
             40
         }
@@ -429,7 +438,10 @@ fn program_command() -> i32 {
 
 fn main() {
     if env::args().nth(1).as_deref() == Some("programs") {
-        process::exit(program_command());
+        process::exit(inventory_command(false));
+    }
+    if env::args().nth(1).as_deref() == Some("flow") {
+        process::exit(inventory_command(true));
     }
     let mut arguments = env::args().skip(1);
     let command = (arguments.next(), arguments.next());

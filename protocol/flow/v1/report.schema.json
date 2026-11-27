@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:flow:v1",
+  "title": "HGUET Asset Flow v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "source",
+        "message_sha256",
+        "execution_status",
+        "signing_authorization",
+        "flows",
+        "asset_totals",
+        "unknown_asset_instruction_indices",
+        "unresolved_endpoint_instruction_indices",
+        "unquantified_instruction_indices",
+        "actual_network_fee_lamports",
+        "observed_net_changes",
+        "program_report",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_asset_flow"
+        },
+        "source": {
+          "const": "original_wire"
+        },
+        "message_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "execution_status": {
+          "const": "NOT_PERFORMED"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction_index",
+              "operation",
+              "category",
+              "source",
+              "asset",
+              "from",
+              "to",
+              "amount_raw",
+              "declared_decimals",
+              "expected_fee_raw",
+              "evidence_ref"
+            ],
+            "properties": {
+              "instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "operation": {
+                "type": "string"
+              },
+              "category": {
+                "enum": [
+                  "transfer",
+                  "funding",
+                  "nonce_withdrawal",
+                  "mint",
+                  "burn"
+                ]
+              },
+              "source": {
+                "const": "original_wire"
+              },
+              "asset": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "token_program",
+                  "mint"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "sol",
+                      "token"
+                    ]
+                  },
+                  "token_program": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "from": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "message_index",
+                      "address"
+                    ],
+                    "properties": {
+                      "message_index": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "address": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "to": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "message_index",
+                      "address"
+                    ],
+                    "properties": {
+                      "message_index": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "address": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "amount_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_decimals": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 255
+              },
+              "expected_fee_raw": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "evidence_ref": {
+                "type": "string",
+                "pattern": "^/program_report/instructions/[0-9]+$"
+              }
+            }
+          },
+          "maxItems": 64
+        },
+        "asset_totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "asset",
+              "instruction_indices",
+              "declared_debit_raw",
+              "declared_transfer_raw",
+              "declared_funding_raw",
+              "declared_nonce_withdrawal_raw",
+              "declared_mint_raw",
+              "declared_burn_raw",
+              "declared_expected_fee_raw",
+              "expected_fee_instruction_count",
+              "declared_decimals",
+              "conflicting_declared_decimals"
+            ],
+            "properties": {
+              "asset": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "token_program",
+                  "mint"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "sol",
+                      "token"
+                    ]
+                  },
+                  "token_program": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "instruction_indices": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "declared_debit_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_transfer_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_funding_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_nonce_withdrawal_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_mint_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_burn_raw": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "declared_expected_fee_raw": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "expected_fee_instruction_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "declared_decimals": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                }
+              },
+              "conflicting_declared_decimals": {
+                "type": "boolean"
+              }
+            }
+          },
+          "maxItems": 64
+        },
+        "unknown_asset_instruction_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "unresolved_endpoint_instruction_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "unquantified_instruction_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "actual_network_fee_lamports": {
+          "type": "null"
+        },
+        "observed_net_changes": {
+          "type": "null"
+        },
+        "program_report": {
+          "allOf": [
+            {
+              "$ref": "urn:hguet:programs:v1"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "hguet_program_intelligence"
+                }
+              }
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_flow_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}
