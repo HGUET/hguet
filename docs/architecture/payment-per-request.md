@@ -1,5 +1,7 @@
 # HGUET Cloud — SOL pay-per-request and automatic USD quotation
 
+> **Community Edition direction (2026-11-27):** This is the optional HGUET Cloud billing design, not the free toolkit's x402 verification integration. Do not require payment for local analysis. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** Unreleased architecture draft, **not implemented**. Updated 2026-11-13.  
 **Current design authority:** this public document supersedes earlier CLI/server discussions of registered accounts, prepaid credits and USDC top-ups. The private server must follow the same rules.
 

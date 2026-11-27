@@ -1,5 +1,7 @@
 # HGUET CLI — Primary technical references and fact-check notes
 
+> **Community Edition direction (2026-11-27):** Phase 1 must pin SDK and LiteSVM versions and record independent runtime support rather than assume network support from design references. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Checked:** 2026-11-13. These are external specifications and docs; link targets may evolve. Design choices remain HGUET proposals until implemented and tested.
 
 ## Solana

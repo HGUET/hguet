@@ -1,5 +1,7 @@
 # Protected signer launch and one-use intent journal
 
+> **Community Edition direction (2026-11-27):** Experimental signer research remains BLOCK-only; replay reservations are not a spending authorization or production signer deliverable. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status: implemented BLOCK-only prototype; no private keys, device signing, transfer approval or Solana broadcast.** This path adds operator-controlled launch data and a durable one-use intent-ID journal before invoking the existing Linux Bubblewrap sandbox. It is not a production signer.
 
 ## Operator policy

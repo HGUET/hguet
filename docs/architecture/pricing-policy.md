@@ -1,5 +1,7 @@
 # HGUET — Competitive complexity-based SOL pricing
 
+> **Community Edition direction (2026-11-27):** Commercial pricing is a draft for optional Cloud only. Local security features are free and no tariff is a release dependency. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** Proposed pre-release tariff policy, **not a published binding offer** (2026-11-13).  
 **Authority:** this public document describes what the CLI is allowed to quote and what the private server must calculate. See [accountless payment architecture](payment-per-request.md).
 

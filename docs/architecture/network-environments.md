@@ -1,5 +1,7 @@
 # HGUET — Solana network environments
 
+> **Community Edition direction (2026-11-27):** Keep network separation and opt-in RPC. The free release uses disposable test accounts for runtime tests; public historical mainnet access is read-only. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** Unreleased design draft. The [anonymous SOL payment contract](payment-per-request.md) and [pricing rules](pricing-policy.md) supersede any historical top-up/credit proposals.
 
 ## Supported clusters

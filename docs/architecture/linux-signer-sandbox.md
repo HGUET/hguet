@@ -1,5 +1,7 @@
 # Linux signer sandbox — mandatory Bubblewrap launcher
 
+> **Community Edition direction (2026-11-27):** Experimental Linux signer research remains BLOCK-only; preserve isolation guarantees and failure behavior; not a production signer deliverable for 0.1.0. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status: optional operator-controlled Linux launcher implemented; all signing remains BLOCK.** A stricter [protected operator launch with a durable one-use replay journal](protected-signer-replay.md) is available as a separate prototype entrypoint. It requires root-owned policy/code/ELF and a dedicated non-root service identity; it does not turn this sandbox into a trusted signing enclave. This is not a wallet, hardware signer, secure enclave, signed release or complete OS security proof. The standalone Rust refusal binary still exists and can be run directly without a sandbox; that path likewise cannot sign.
 
 ## How to run

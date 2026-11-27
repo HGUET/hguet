@@ -1,5 +1,7 @@
 # HGUET CLI ↔ Server — Unified interoperability contract
 
+> **Community Edition direction (2026-11-27):** Preserve exact public v1 contracts and private-server compatibility. Paid Cloud interoperability is not a prerequisite for the free release. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status: Unreleased architecture draft. No HGUET product releases exist.** `protocol/v1` is a wire-format draft, not a v1.0 product release. The private Rust `HGUET/server` currently pins public commit `18736c0c09a5adba3b7b798addcaa76b2051bf57` for its reviewed contract; do not mistake the public `main` HEAD for the pinned server version. See [current server compatibility](server-compatibility.md).
 
 ## Responsibility

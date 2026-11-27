@@ -1,5 +1,7 @@
 # Replay-journal rollback protection — design proposal (not implemented)
 
+> **Community Edition direction (2026-11-27):** Experimental signer research remains BLOCK-only; no wallet access or signing authority. It is not a production signer deliverable for 0.1.0. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 Status: **proposal for review**. Nothing here is implemented and no new
 cryptographic protocol is introduced. HGUET stays BLOCK-only: no keys, no
 signing, no broadcast.

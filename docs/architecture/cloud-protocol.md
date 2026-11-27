@@ -1,5 +1,7 @@
 # HGUET CLI — Cloud transport and paid-check protocol
 
+> **Community Edition direction (2026-11-27):** Optional Cloud protocol remains separate research. Its compatibility and security constraints remain binding but deployment is not a Community Edition gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** unreleased intended paid-cloud workflow. A private loopback-only PQ TLS prototype and a documented older VPS sandbox exist, but the public CLI ↔ server end-to-end paid flow, production trust setup and live Cloud API are **not** verified or enabled. See [compatibility matrix](server-compatibility.md).
 
 > Canonical protocol: [Protobuf](../../protocol/v1/hguet.proto), [signed price quote](../../protocol/v1/payment-quote.schema.json), [signed CloudAssessment](../../protocol/v1/cloud-assessment.schema.json), [signed payment receipt](../../protocol/v1/payment-receipt.schema.json), [price rules](pricing-policy.md). This document replaces all earlier account/enrollment/USDC/credit flows.

@@ -1,5 +1,7 @@
 # HGUET CLI → private Server: public contract change notice
 
+> **Community Edition direction (2026-11-27):** Preserve this historical compatibility notice; Cloud and server are not prerequisites for Community Edition. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status:** historical request recorded during development; public `HGUET/hguet` owns the wire contract and private `HGUET/server` consumes an exact pin. The current state is tracked in [server compatibility](../architecture/server-compatibility.md). This notice does **not** authorize any production infrastructure changes.
 
 The CLI now has a **read-only, explicit opt-in** `hguet-rpc` module, including network-genesis verification, v0 address lookup table account validation and Solana `simulateTransaction` evidence.

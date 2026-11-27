@@ -1,5 +1,7 @@
 # HGUET CLI ↔ Server — compatibility snapshot (2026-11-15)
 
+> **Community Edition direction (2026-11-27):** This is a dated compatibility snapshot. Preserve pinned revisions and test evidence; do not infer deployment or update wire contracts to match product marketing. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status: unreleased draft, not a full end-to-end certification.** This page tracks the public/privately pinned contract and separates implemented primitives from enabled network behavior. Public `protocol/v1` is authoritative. A protocol major of 1 is **not** a product release.
 
 ## Source of truth and exact revision

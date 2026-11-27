@@ -1,5 +1,7 @@
 # Trusted Signer Isolation — threat model and blocked prototype
 
+> **Community Edition direction (2026-11-27):** Experimental signer research remains BLOCK-only, with no wallet access or signing authority; preserve existing security invariants. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+
 **Status: implemented input separation, no-sign process and an optional mandatory Linux Bubblewrap launch path; still NOT an authenticated or device-protecting production signer.** HGUET has no released signer, key material, hardware wallet integration, Solana broadcast capability, spending-permission token or enforced onchain gross-spend limit. Every current path is **BLOCK**.
 
 ## Trust domains
