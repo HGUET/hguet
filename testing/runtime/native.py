@@ -18,7 +18,7 @@ from solders.transaction_metadata import FailedTransactionMetadata
 from runtime_errors import assert_instruction_error
 from spl_cases import run_case as token_case
 from transfer_fee import run_case as fee_case
-from formats import run_cases as format_cases
+from formats import run_v0, run_v1
 from lookup import run_case as lookup_case
 
 
@@ -85,7 +85,9 @@ def main():
         (("token2022_wrong_fee",), partial(fee_case, binary, 1)),
         (("transfer_checked_wrong_authority",), partial(token_case, binary, "transfer_checked", True)),
         (("native_insufficient_balance",), partial(run_case, binary, [20_000_000], True)),
-        (("v0_sdk_transfer", "v1_sdk_transfer", "v1_inline_resources"), partial(format_cases, binary)),
+        (("v0_sdk_transfer",), partial(run_v0, binary)),
+        (("v1_sdk_transfer",), partial(run_v1, binary)),
+        (("v1_inline_resources",), partial(run_v1, binary, True)),
         (("v0_alt_native_transfer",), partial(lookup_case, binary)),
     ]
     metadata = {"schema_version": 1, "python": platform.python_version(),

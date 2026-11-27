@@ -83,6 +83,24 @@ mod tests {
     }
 
     #[test]
+    fn policy_finding_refs_resolve_to_wire_observations() {
+        let report = from_v1(
+            json!({
+                "inspection":{"declared_system_transfer_lamports":"501","system_transfers":[]},
+                "verdict":{"findings":[{"code":"POLICY_SOL_TRANSFER_CAP","severity":"critical","summary":"cap exceeded"}]}
+            }),
+            20,
+            true,
+        );
+        let value = serde_json::to_value(report).unwrap();
+        let refs = value["findings"][0]["evidence_refs"].as_array().unwrap();
+        assert_eq!(refs.len(), 3);
+        for reference in refs {
+            assert!(value.pointer(reference.as_str().unwrap()).is_some());
+        }
+    }
+
+    #[test]
     fn scoped_match_requires_completed_policy_evaluation() {
         let report = from_v1(
             json!({"inspection":{},"verdict":{"coverage":["local_restrictive_policy"],"findings":[]}}),
@@ -239,7 +257,7 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
             code: f["code"].as_str().unwrap_or("UNKNOWN").into(),
             severity: f["severity"].as_str().unwrap_or("unknown").into(),
             summary: f["summary"].as_str().unwrap_or("").into(),
-            evidence_refs: vec![format!("/evidence/verdict/findings/{index}")],
+            evidence_refs: finding_refs(&output, index, f["code"].as_str().unwrap_or("UNKNOWN")),
             scope: rule_scope(f["code"].as_str().unwrap_or("UNKNOWN")),
             limitations: {
                 let mut limits = limitations.clone();
@@ -362,6 +380,30 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
         signing_authorization: "NOT_AUTHORIZED",
         exit_code,
     }
+}
+
+// Include only pointers that resolve in this report. Keep the legacy finding
+// pointer for compatibility; direct observations provide a stronger anchor.
+fn finding_refs(output: &Value, index: usize, code: &str) -> Vec<String> {
+    let mut refs = vec![format!("/evidence/verdict/findings/{index}")];
+    let candidates: &[&str] = match code {
+        "POLICY_SOL_TRANSFER_CAP" => &[
+            "/inspection/declared_system_transfer_lamports",
+            "/inspection/system_transfers",
+        ],
+        "POLICY_BLOCKED_SOL_RECIPIENT" | "POLICY_UNAPPROVED_SOL_RECIPIENT"
+        | "POLICY_UNRESOLVED_RECIPIENT" => &["/inspection/system_transfers"],
+        "POLICY_BLOCKED_PROGRAM" | "POLICY_UNAPPROVED_PROGRAM"
+        | "POLICY_UNRESOLVED_PROGRAM" => &["/inspection/program_ids"],
+        "INVALID_TRANSACTION_SIGNATURE" => &["/inspection/transaction_signature_status"],
+        _ => &[],
+    };
+    for pointer in candidates {
+        if output.pointer(pointer).is_some_and(|value| !value.is_null()) {
+            refs.push(format!("/evidence{pointer}"));
+        }
+    }
+    refs
 }
 
 fn rule_scope(code: &str) -> &'static str {

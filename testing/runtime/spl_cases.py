@@ -23,7 +23,9 @@ def run_case(binary, operation, wrong_authority=False):
     svm = LiteSVM()
     owner, delegate = Keypair(), Keypair()
     mint, source, destination = (Keypair().pubkey() for _ in range(3))
-    svm.airdrop(owner.pubkey(), 10_000_000)
+    assert not isinstance(svm.airdrop(owner.pubkey(), 10_000_000), FailedTransactionMetadata)
+    if wrong_authority:
+        assert not isinstance(svm.airdrop(delegate.pubkey(), 1_000_000), FailedTransactionMetadata)
     svm.set_account(mint, Account(10_000_000, bytes(Mint(owner.pubkey(), 1000, 6, True)), TOKEN))
     for address, amount in [(source, 1000), (destination, 0)]:
         state = TokenAccount(mint, owner.pubkey(), amount, None,
