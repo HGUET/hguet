@@ -16,6 +16,7 @@ from solders.system_program import transfer, TransferParams
 from solders.transaction import Transaction
 from solders.transaction_metadata import FailedTransactionMetadata
 from spl_cases import run_case as token_case
+from transfer_fee import run_case as fee_case
 
 
 def run_case(binary, amounts):
@@ -68,9 +69,9 @@ def main():
               "solders": importlib.metadata.version("solders"),
               "cases": [run_case(binary, [500]), run_case(binary, [300, 201]),
                         *[token_case(binary, operation) for operation in
-                          ("transfer_checked", "approve", "set_authority")]],
+                          ("transfer_checked", "approve", "set_authority")],
+                        fee_case(binary), fee_case(binary, 1)],
               "limitations": ["Legacy SDK transactions only.",
-                              "Token-2022 transfer fee runtime case remains NOT RUN.",
                               "v1 runtime compatibility remains NOT VERIFIED."]}
     Path(args.out).write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

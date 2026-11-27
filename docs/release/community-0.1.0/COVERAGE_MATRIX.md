@@ -27,6 +27,9 @@ Runtime milestone measured on 2026-11-27 using Solders 0.29.0 and embedded
 LiteSVM in WSL: five actual execution comparisons passed. Native transfer
 and repeated debit cap, SPL TransferChecked, approve and set_authority were
 checked against resulting account state. See testing/runtime/README.md.
-Token-2022 fees and independent v1 runtime compatibility remain open.
+Two additional Token-2022 fee cases executed: correct fee transfers and
+incorrect fee runtime rejection. HGUET reports the expected wire fee through
+the existing checked extension decoder. Seven runtime cases now pass.
+Independent v1 runtime compatibility remains open.
 
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md).

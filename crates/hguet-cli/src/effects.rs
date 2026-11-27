@@ -27,6 +27,7 @@ pub struct Effect {
     pub new_authority: Option<String>,
     pub authority_type: Option<u8>,
     pub amount_raw: Option<String>,
+    pub expected_fee_raw: Option<String>,
     pub evidence_ref: String,
     pub limitations: Vec<String>,
 }
@@ -41,7 +42,7 @@ pub fn original_wire(bytes: &[u8]) -> Vec<Effect> {
         let mut effect=Effect {
             kind:EffectKind::Unknown,instruction_index:ix.instruction_index,source:"original_wire",
             program_id:parsed.program_ids.get(ix.instruction_index).cloned(),
-            source_account:None,destination_account:None,mint:None,authority:None,amount_raw:None,delegate:None,new_authority:None,authority_type:None,
+            source_account:None,destination_account:None,mint:None,authority:None,amount_raw:None,delegate:None,new_authority:None,authority_type:None,expected_fee_raw:None,
             evidence_ref:format!("/evidence/inspection/compiled_top_level_instructions/{}",ix.instruction_index),
             limitations:vec!["Declared instruction bytes do not prove execution, account ownership or total spending.".into()],
         };
@@ -78,6 +79,30 @@ pub fn original_wire(bytes: &[u8]) -> Vec<Effect> {
             effect.mint = t.mint.clone();
             effect.authority = t.authority.clone();
             effect.amount_raw = t.amount_raw.clone();
+        }
+        if let Some(hint) = direct
+            .as_ref()
+            .and_then(|analysis| {
+                analysis
+                    .opaque
+                    .iter()
+                    .find(|item| item.instruction_index == ix.instruction_index)
+            })
+            .and_then(|item| item.extension_hint.as_ref())
+            .filter(|hint| hint.layout_checked && hint.operation == "transfer_checked_with_fee")
+        {
+            effect.kind = EffectKind::CheckedTokenTransfer;
+            effect.source_account = hint.source_account.clone();
+            effect.mint = hint.mint.clone();
+            effect.authority = hint.authority.clone();
+            effect.amount_raw = hint.declared_amount_raw.clone();
+            effect.expected_fee_raw = hint.expected_fee_raw.clone();
+            effect.destination_account = ix
+                .account_indices
+                .get(2)
+                .and_then(|index| parsed.static_account_keys.get(*index))
+                .cloned();
+            effect.limitations.push("Expected fee is declared in wire bytes; actual fees require mint state and execution.".into());
         }
         if effect.kind == EffectKind::Unknown {
             effect.limitations.push(

@@ -212,6 +212,12 @@
             ],
             "minimum": 0,
             "maximum": 255
+          },
+          "expected_fee_raw": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -228,7 +234,8 @@
           "source",
           "evidence_ref",
           "limitations",
-          "authority_type"
+          "authority_type",
+          "expected_fee_raw"
         ],
         "additionalProperties": false
       }
