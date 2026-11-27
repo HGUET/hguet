@@ -357,7 +357,13 @@ mod tests {
             report.endpoint_links[3].observation_ref
         );
         assert_eq!(
-            report.rpc_evidence.unwrap().effect_analysis.lamport_deltas.unwrap().len(),
+            report
+                .rpc_evidence
+                .unwrap()
+                .effect_analysis
+                .lamport_deltas
+                .unwrap()
+                .len(),
             2
         );
     }
@@ -394,13 +400,18 @@ mod tests {
         assert_eq!(report.status, "RPC_SIMULATION_SUCCEEDED");
         assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "1234");
         assert_eq!(report.endpoint_links[0].status, "ACCOUNT_MINT_ROW_MATCH");
-        assert_eq!(report.endpoint_links[1].status, "INCOMPLETE_ACCOUNT_MINT_ROW");
+        assert_eq!(
+            report.endpoint_links[1].status,
+            "INCOMPLETE_ACCOUNT_MINT_ROW"
+        );
         assert_eq!(report.cpi_links.len(), 1);
         let value = serde_json::to_value(report).unwrap();
         let link = &value["cpi_links"][0];
         assert!(value.pointer(link["wire_ref"].as_str().unwrap()).is_some());
         assert_eq!(
-            value.pointer(link["observation_ref"].as_str().unwrap()).unwrap()["amount_raw"],
+            value
+                .pointer(link["observation_ref"].as_str().unwrap())
+                .unwrap()["amount_raw"],
             "1234"
         );
         assert!(!value["execution_proven"].as_bool().unwrap());

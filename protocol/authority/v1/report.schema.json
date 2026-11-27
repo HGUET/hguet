@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:authority:v1",
+  "title": "HGUET Authority Intelligence v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "message_sha256",
+        "source",
+        "execution_proven",
+        "authorization_proven",
+        "signing_authorization",
+        "changes",
+        "unclassified_instruction_indices",
+        "program_report",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_authority_intelligence"
+        },
+        "message_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source": {
+          "const": "original_wire"
+        },
+        "execution_proven": {
+          "const": false
+        },
+        "authorization_proven": {
+          "const": false
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "changes": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction_index",
+              "operation",
+              "control_scope",
+              "action",
+              "target",
+              "declared_authority",
+              "authority_required_signer",
+              "proposed_authority",
+              "proposed_hook_program",
+              "declared_delegate_limit_raw",
+              "authority_type_raw",
+              "recipient",
+              "evidence_ref"
+            ],
+            "properties": {
+              "instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "operation": {
+                "type": "string"
+              },
+              "control_scope": {
+                "enum": [
+                  "token_delegate",
+                  "mint_authority",
+                  "freeze_authority",
+                  "token_account_owner",
+                  "token_close_authority",
+                  "unclassified_authority_type",
+                  "token_account",
+                  "token_account_state",
+                  "mint_permanent_delegate",
+                  "mint_transfer_hook",
+                  "mint_transfer_fee_config",
+                  "lookup_table"
+                ]
+              },
+              "action": {
+                "enum": [
+                  "set_delegate",
+                  "revoke_delegate",
+                  "set_authority",
+                  "request_authority_removal",
+                  "close_account",
+                  "freeze",
+                  "thaw",
+                  "initialize",
+                  "update",
+                  "extend",
+                  "deactivate"
+                ]
+              },
+              "target": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "declared_authority": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "authority_required_signer": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "proposed_authority": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "proposed_hook_program": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "declared_delegate_limit_raw": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "authority_type_raw": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 255
+              },
+              "recipient": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_ref": {
+                "type": "string",
+                "pattern": "^/program_report/instructions/[0-9]+$"
+              }
+            }
+          }
+        },
+        "unclassified_instruction_indices": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "program_report": {
+          "allOf": [
+            {
+              "$ref": "urn:hguet:programs:v1"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "hguet_program_intelligence"
+                }
+              }
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_authority_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}

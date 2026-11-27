@@ -21,3 +21,5 @@ broadcasting, account custody, real funds or mandatory Cloud. Runtime checks
 for existing SPL approval and account-owner change fixtures compare actual
 state to the new declaration report; all other operations require their own
 runtime evidence. Phase 2.2 remains open.
+
+The [JSON schema](report.schema.json) is separate from all existing reports; register the local program schema at urn:hguet:programs:v1. The network-isolated SDK suite checks runtime delegate revocation, freeze/thaw, mint authority removal, empty-account close, and offline unknown/control classification, ordered approval replacement declarations, and versioned errors. This is a mandatory test suite, not a claim that the tests already passed. Additional Token-2022 and ALT runtime coverage remains open.
