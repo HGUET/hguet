@@ -74,12 +74,35 @@ fn report_v2_input_errors_keep_the_versioned_contract() {
     let binary = env!("CARGO_BIN_EXE_hguet");
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     for args in [
-        vec!["inspect", "tests/fixtures/nonexistent-input.bin", "--offline", "--report-v2"],
-        vec!["inspect", "-", "--offline", "--encoding", "invalid", "--report-v2"],
-        vec!["check", "tests/fixtures/v1-system-transfer.base64", "--encoding", "base64",
-             "--policy", "tests/fixtures/nonexistent-policy.toml", "--report-v2"],
+        vec![
+            "inspect",
+            "tests/fixtures/nonexistent-input.bin",
+            "--offline",
+            "--report-v2",
+        ],
+        vec![
+            "inspect",
+            "-",
+            "--offline",
+            "--encoding",
+            "invalid",
+            "--report-v2",
+        ],
+        vec![
+            "check",
+            "tests/fixtures/v1-system-transfer.base64",
+            "--encoding",
+            "base64",
+            "--policy",
+            "tests/fixtures/nonexistent-policy.toml",
+            "--report-v2",
+        ],
     ] {
-        let result = Command::new(binary).current_dir(&root).args(args).output().unwrap();
+        let result = Command::new(binary)
+            .current_dir(&root)
+            .args(args)
+            .output()
+            .unwrap();
         assert_eq!(result.status.code(), Some(40));
         let report: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
         assert_eq!(report["schema_version"], 2);
@@ -88,12 +111,24 @@ fn report_v2_input_errors_keep_the_versioned_contract() {
         assert_eq!(report["effects"], serde_json::json!([]));
     }
     let mut child = Command::new(binary)
-        .args(["inspect", "-", "--offline", "--encoding", "base64", "--report-v2"])
+        .args([
+            "inspect",
+            "-",
+            "--offline",
+            "--encoding",
+            "base64",
+            "--report-v2",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
-    child.stdin.take().unwrap().write_all(b"not valid base64!").unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"not valid base64!")
+        .unwrap();
     let result = child.wait_with_output().unwrap();
     assert_eq!(result.status.code(), Some(40));
     let report: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();

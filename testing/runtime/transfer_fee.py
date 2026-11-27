@@ -13,6 +13,7 @@ from solders.message import Message
 from solders.pubkey import Pubkey
 from solders.transaction import Transaction
 from solders.transaction_metadata import FailedTransactionMetadata
+from runtime_errors import assert_instruction_error
 
 TOKEN_2022 = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 
@@ -54,6 +55,7 @@ def run_case(binary, expected_fee=2):
     after_source, after_destination = svm.get_account(source).data, svm.get_account(destination).data
     rejected = expected_fee != 2
     assert isinstance(result, FailedTransactionMetadata) == rejected, str(result)
+    rejection = assert_instruction_error(result, 0, 32) if rejected else None
     if rejected:
         assert (before_source, before_destination) == (after_source, after_destination)
     else:
@@ -71,7 +73,7 @@ def run_case(binary, expected_fee=2):
     assert effect["expected_fee_raw"] == str(expected_fee)
     return {"case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
             "runtime_outcome": "REJECTED" if rejected else "EXECUTED",
-            "wire_amount": 123, "expected_fee": expected_fee,
+            "runtime_error": rejection, "wire_amount": 123, "expected_fee": expected_fee,
             "source_debit": 0 if rejected else 123, "destination_credit": 0 if rejected else 121,
             "withheld_fee": 0 if rejected else 2, "runtime_validation": "PASS", "comparison": "PASS",
             "hguet_effect_coverage": "WIRE_DECLARATION_ONLY"}

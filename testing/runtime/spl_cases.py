@@ -14,6 +14,7 @@ from solders.pubkey import Pubkey
 from solders.token.state import Mint, TokenAccount, TokenAccountState
 from solders.transaction import Transaction
 from solders.transaction_metadata import FailedTransactionMetadata
+from runtime_errors import assert_instruction_error
 
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
@@ -45,6 +46,7 @@ def run_case(binary, operation, wrong_authority=False):
     before = svm.get_account(source).data
     result = svm.send_transaction(tx)
     assert isinstance(result, FailedTransactionMetadata) == wrong_authority, str(result)
+    rejection = assert_instruction_error(result, 0, 4) if wrong_authority else None
     state = TokenAccount.from_bytes(svm.get_account(source).data)
     if wrong_authority:
         assert svm.get_account(source).data == before
@@ -75,5 +77,5 @@ def run_case(binary, operation, wrong_authority=False):
         assert effect["amount_raw"] == "123"
     return {"case": operation + ("_wrong_authority" if wrong_authority else ""),
             "runtime_outcome": "REJECTED" if wrong_authority else "EXECUTED",
-            "comparison":"PASS", "hguet_effect": expected,
+            "runtime_error": rejection, "comparison":"PASS", "hguet_effect": expected,
             "source_amount_after": state.amount}

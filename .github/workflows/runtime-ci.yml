@@ -11,17 +11,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Initialize evidence before setup
+      - name: Initialize evidence outside checkout
         shell: bash
         run: |
-          mkdir -p target/runtime-ci
-          printf '%s\n' "$GITHUB_SHA" > target/runtime-ci/source.txt
-          uname -a > target/runtime-ci/environment.txt
+          evidence="$RUNNER_TEMP/hguet-runtime-evidence"
+          mkdir -p "$evidence"
+          echo "HGUET_EVIDENCE=$evidence" >> "$GITHUB_ENV"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/source.txt"
+          uname -a > "$evidence/environment.txt"
           echo "RUSTUP_HOME=$RUNNER_TEMP/hguet-rustup" >> "$GITHUB_ENV"
           echo "CARGO_HOME=$RUNNER_TEMP/hguet-cargo" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
-        with:
-          clean: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -29,41 +29,48 @@ jobs:
         shell: bash
         working-directory: ${{ runner.temp }}
         run: |
-          rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy 2>&1 | tee "$GITHUB_WORKSPACE/target/runtime-ci/rustup.log"
-          rustc +1.100.0 -Vv >> "$GITHUB_WORKSPACE/target/runtime-ci/environment.txt"
+          rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy 2>&1 | tee "$HGUET_EVIDENCE/rustup.log"
+          rustc +1.100.0 -Vv >> "$HGUET_EVIDENCE/environment.txt"
       - name: Install pinned runtime dependencies
         shell: bash
-        run: python -m pip install -r testing/runtime/requirements.txt 2>&1 | tee target/runtime-ci/pip.log
+        run: python -m pip install -r testing/runtime/requirements.txt -r testing/requirements.txt 2>&1 | tee "$HGUET_EVIDENCE/pip.log"
       - name: Test fail-closed runtime acceptance
-        run: python -m unittest discover -s testing/runtime -p test_acceptance.py -v
-      - name: Build locked read-only CLI
         shell: bash
-        run: cargo +1.100.0 build --locked -p hguet 2>&1 | tee target/runtime-ci/build.log
+        run: python -m unittest discover -s testing/runtime -p test_acceptance.py -v 2>&1 | tee "$HGUET_EVIDENCE/acceptance-tests.log"
+      - name: Build locked read-only CLI
+        id: build
+        shell: bash
+        run: cargo +1.100.0 build --locked -p hguet 2>&1 | tee "$HGUET_EVIDENCE/build.log"
       - name: Record source and runtime environment
         run: |
-          git rev-parse HEAD >> target/runtime-ci/source.txt
-          git status --porcelain >> target/runtime-ci/source.txt
-          python --version >> target/runtime-ci/environment.txt
-          python -m pip freeze >> target/runtime-ci/environment.txt
-          sha256sum target/debug/hguet > target/runtime-ci/cli.sha256
+          git rev-parse HEAD >> "$HGUET_EVIDENCE/source.txt"
+          git status --porcelain >> "$HGUET_EVIDENCE/source.txt"
+          python --version >> "$HGUET_EVIDENCE/environment.txt"
+          python -m pip freeze >> "$HGUET_EVIDENCE/environment.txt"
+          sha256sum target/debug/hguet > "$HGUET_EVIDENCE/cli.sha256"
       - name: Compare actual execution with offline HGUET declarations
         shell: bash
         run: |
           python_path="$(command -v python)"
           sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/native.py \
-            --hguet "$PWD/target/debug/hguet" --out target/runtime-ci/result.json \
-            2>&1 | tee target/runtime-ci/runtime.log
+            --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/result.json" \
+            2>&1 | tee "$HGUET_EVIDENCE/runtime.log"
+      - name: Verify Phase 1 local acceptance contracts
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          python scripts/run_phase01_checks.py --evidence "$HGUET_EVIDENCE" --hguet target/debug/hguet
       - name: Hash evidence
         if: always()
         shell: bash
         run: |
-          mkdir -p target/runtime-ci
-          cd target/runtime-ci
+          mkdir -p "$HGUET_EVIDENCE"
+          cd "$HGUET_EVIDENCE"
           find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
       - name: Preserve runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: litesvm-runtime-evidence
-          path: target/runtime-ci/
+          path: ${{ runner.temp }}/hguet-runtime-evidence/
           if-no-files-found: error

@@ -15,6 +15,7 @@ from solders.message import Message
 from solders.system_program import transfer, TransferParams
 from solders.transaction import Transaction
 from solders.transaction_metadata import FailedTransactionMetadata
+from runtime_errors import assert_instruction_error
 from spl_cases import run_case as token_case
 from transfer_fee import run_case as fee_case
 from formats import run_cases as format_cases
@@ -36,6 +37,7 @@ def run_case(binary, amounts, insufficient=False):
     before = svm.get_balance(recipient.pubkey())
     result = svm.send_transaction(tx)
     assert isinstance(result, FailedTransactionMetadata) == insufficient, str(result)
+    rejection = assert_instruction_error(result, 0, 1) if insufficient else None
     delta = svm.get_balance(recipient.pubkey()) - before
     assert delta == (0 if insufficient else sum(amounts))
     with tempfile.TemporaryDirectory(prefix="hguet-runtime-") as directory:
@@ -60,10 +62,12 @@ def run_case(binary, amounts, insufficient=False):
             "amounts": amounts, "actual_recipient_delta": delta,
             "wire_sha256": hashlib.sha256(wire).hexdigest(),
             "policy_compliance": expected, "runtime_outcome": "REJECTED" if insufficient else "EXECUTED",
-            "comparison":"PASS"}
+            "runtime_error": rejection, "comparison":"PASS"}
 
 
 def main():
+    if not __debug__:
+        raise SystemExit("runtime assertions must be enabled")
     parser = argparse.ArgumentParser()
     parser.add_argument("--hguet", required=True)
     parser.add_argument("--out", required=True)
