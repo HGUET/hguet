@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HGUET Program Intelligence v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "message_sha256",
+        "wire_format",
+        "resource_config",
+        "instructions",
+        "signing_authorization",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_program_intelligence"
+        },
+        "message_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "wire_format": {
+          "enum": [
+            "legacy",
+            "v0",
+            "v1"
+          ]
+        },
+        "resource_config": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "config_mask",
+                "priority_fee_lamports",
+                "compute_unit_limit",
+                "loaded_accounts_data_size_limit",
+                "requested_heap_size"
+              ],
+              "properties": {
+                "config_mask": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "priority_fee_lamports": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "compute_unit_limit": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "loaded_accounts_data_size_limit": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "requested_heap_size": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              }
+            }
+          ]
+        },
+        "instructions": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction_index",
+              "program_index",
+              "program_id",
+              "family",
+              "layout_status",
+              "accounts",
+              "declaration"
+            ],
+            "properties": {
+              "instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "program_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "program_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "family": {
+                "enum": [
+                  "system",
+                  "compute_budget",
+                  "memo",
+                  "associated_token_account",
+                  "spl_token",
+                  "token_2022",
+                  "address_lookup_table",
+                  "unknown_program",
+                  "unresolved_lookup_program"
+                ]
+              },
+              "layout_status": {
+                "enum": [
+                  "DECODED_DECLARATION",
+                  "INVALID_UTF8",
+                  "UNSUPPORTED_LAYOUT",
+                  "UNRESOLVED_PROGRAM"
+                ]
+              },
+              "accounts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "role",
+                    "message_index",
+                    "address",
+                    "required_signer"
+                  ],
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "message_index": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "address": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "required_signer": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "declaration": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "operation",
+                      "value_raw",
+                      "unit",
+                      "message_v1"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "compute_budget"
+                      },
+                      "operation": {
+                        "enum": [
+                          "request_heap_frame",
+                          "set_compute_unit_limit",
+                          "set_compute_unit_price",
+                          "set_loaded_accounts_data_size_limit"
+                        ]
+                      },
+                      "value_raw": {
+                        "type": "string",
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "unit": {
+                        "enum": [
+                          "bytes",
+                          "compute_units",
+                          "micro_lamports_per_compute_unit"
+                        ]
+                      },
+                      "message_v1": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "byte_length",
+                      "valid_utf8"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "memo"
+                      },
+                      "byte_length": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "valid_utf8": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "operation",
+                      "lamports"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "system_movement"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "lamports": {
+                        "type": "string",
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "operation",
+                      "static_program_roles_match"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "associated_token_account"
+                      },
+                      "operation": {
+                        "enum": [
+                          "create",
+                          "create_idempotent"
+                        ]
+                      },
+                      "static_program_roles_match": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "unsupported"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_program_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}

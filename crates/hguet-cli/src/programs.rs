@@ -115,14 +115,16 @@ fn family(id: Option<&str>) -> &'static str {
 /// Parse once, inspect only original wire bytes, and never invoke RPC.
 pub fn inspect(bytes: &[u8]) -> Result<ProgramReport, String> {
     let parsed = parse_transaction(bytes)?;
-    Ok(from_parsed(&parsed))
+    from_parsed(&parsed)
 }
 
-fn from_parsed(parsed: &ParsedTransaction) -> ProgramReport {
+fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
     let mut instructions = Vec::with_capacity(parsed.instruction_count);
     for ix in &parsed.compiled_top_level_instructions {
         let program_id = parsed.static_account_keys.get(ix.program_index).cloned();
-        let data = bs58::decode(&ix.data_base58).into_vec().unwrap_or_default();
+        let data = bs58::decode(&ix.data_base58)
+            .into_vec()
+            .map_err(|_| "invalid parsed instruction data".to_owned())?;
         let mut roles: &[&str] = &[];
         let (declaration, layout_status) = match program_id.as_deref() {
             Some(COMPUTE) => match compute(&data, parsed.wire_format == "v1") {
@@ -179,7 +181,11 @@ fn from_parsed(parsed: &ParsedTransaction) -> ProgramReport {
                 };
                 (
                     Declaration::AssociatedTokenAccount {
-                        operation: if data == [1] { "create_idempotent" } else { "create" },
+                        operation: if data == [1] {
+                            "create_idempotent"
+                        } else {
+                            "create"
+                        },
                         static_program_roles_match,
                     },
                     "DECODED_DECLARATION",
@@ -209,7 +215,7 @@ fn from_parsed(parsed: &ParsedTransaction) -> ProgramReport {
             declaration,
         });
     }
-    ProgramReport {
+    Ok(ProgramReport {
         schema_version: 1,
         kind: "hguet_program_intelligence",
         message_sha256: parsed.message_sha256.clone(),
@@ -224,7 +230,7 @@ fn from_parsed(parsed: &ParsedTransaction) -> ProgramReport {
             "Memo payload is deliberately omitted; UTF-8 validity is not authenticity.",
             "Unsupported instructions and unresolved ALT addresses are not safe or zero effects.",
         ],
-    }
+    })
 }
 
 #[cfg(test)]
@@ -235,11 +241,30 @@ mod tests {
     #[test]
     fn exact_compute_layouts_and_units() {
         for (data, op, raw, unit) in [
-            (vec![1, 0, 0, 1, 0], "request_heap_frame", "65536", "bytes"),
-            (vec![2, 64, 13, 3, 0], "set_compute_unit_limit", "200000", "compute_units"),
-            (vec![3, 255, 255, 255, 255, 255, 255, 255, 255], "set_compute_unit_price",
-                "18446744073709551615", "micro_lamports_per_compute_unit"),
-            (vec![4, 0, 0, 1, 0], "set_loaded_accounts_data_size_limit", "65536", "bytes"),
+            (
+                vec![1, 0, 0, 1, 0],
+                "request_heap_frame",
+                "65536",
+                "bytes",
+            ),
+            (
+                vec![2, 64, 13, 3, 0],
+                "set_compute_unit_limit",
+                "200000",
+                "compute_units",
+            ),
+            (
+                vec![3, 255, 255, 255, 255, 255, 255, 255, 255],
+                "set_compute_unit_price",
+                "18446744073709551615",
+                "micro_lamports_per_compute_unit",
+            ),
+            (
+                vec![4, 0, 0, 1, 0],
+                "set_loaded_accounts_data_size_limit",
+                "65536",
+                "bytes",
+            ),
         ] {
             let value = serde_json::to_value(compute(&data, true).unwrap()).unwrap();
             assert_eq!(value["operation"], op);

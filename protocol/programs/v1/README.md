@@ -29,3 +29,5 @@ References:
 Initial unit tests cover exact compute declarations and malformed lengths,
 plus the existing System fixture. Independent SDK/runtime checks are required
 before Phase 2.0 acceptance. No claim of live compatibility or a release.
+
+The separate [JSON Schema](report.schema.json) covers both success and error envelopes. The independent SDK test script `testing/runtime/programs_preview.py` checks five cases, including actual LiteSVM execution of Compute Budget and Memo, ATA declared roles, unknown/malformed layouts and invalid transaction input. It runs in a network-isolated hosted workflow. ATA runtime execution is not claimed by this slice.

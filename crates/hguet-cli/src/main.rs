@@ -411,11 +411,17 @@ fn program_command() -> i32 {
     })();
     match result {
         Ok(report) => {
-            println!("{}", serde_json::to_string_pretty(&report).expect("serialization"));
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).expect("serialization")
+            );
             0
         }
         Err(error) => {
-            println!("{}", json!({"schema_version":1,"kind":"hguet_program_error","error":error,"signing_authorization":"NOT_AUTHORIZED"}));
+            println!(
+                "{}",
+                json!({"schema_version":1,"kind":"hguet_program_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+            );
             40
         }
     }
