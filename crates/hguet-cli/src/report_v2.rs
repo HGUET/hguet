@@ -118,6 +118,18 @@ mod tests {
         assert_eq!(status("whole_transaction_execution_effects"), "UNSUPPORTED");
         assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
     }
+
+    #[test]
+    fn catalogue_scopes_match_reported_findings() {
+        let catalogue: Value =
+            serde_json::from_str(include_str!("../../../protocol/v2/rules.json")).unwrap();
+        for rule in catalogue["rules"].as_array().unwrap() {
+            assert_eq!(
+                rule_scope(rule["legacy_code"].as_str().unwrap()),
+                rule["scope"].as_str().unwrap()
+            );
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -279,7 +291,9 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
 }
 
 fn rule_scope(code: &str) -> &'static str {
-    if code.starts_with("POLICY_") {
+    if code == "MALFORMED_TRANSACTION" {
+        "original_wire_structural_validation"
+    } else if code.starts_with("POLICY_") {
         "configured_local_restrictions_on_original_wire_declarations"
     } else if code.starts_with("RPC_") {
         "single_provider_advisory_observations"

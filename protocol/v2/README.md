@@ -30,7 +30,14 @@ Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
 
-rules.json covers all eight current local-policy rules and links
+rules.json covers all eight current local-policy rules plus signature,
+malformed wire and five direct-token findings. It links
 their existing positive/negative Rust tests, severity, scope and limitations.
-Its status is local_policy_catalogue. Other codes retain stable identifiers and generic
+Its status is policy_signature_structure_and_direct_token_subset. Other codes retain stable identifiers and generic
 scope mapping until their individual catalogue entries are reviewed.
+
+Run `python scripts/validate_rule_catalogue.py` to check unique identities,
+source definitions and referenced regression tests and benchmark fixtures.
+The report tests also compare catalogue scopes with the emitted scopes.
+Fixture references identify existing synthetic cases. Their presence does
+not imply independent ground-truth review.
