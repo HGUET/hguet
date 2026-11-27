@@ -41,8 +41,8 @@ pub use cpi_source_rpc::{
     CpiSourceRpcSnapshot,
 };
 pub use direct_token::{
-    inspect_direct_tokens, DirectTokenAnalysis, DirectTokenInstruction,
-    OpaqueDirectTokenInstruction,
+    inspect_direct_tokens, inspect_static_token_instruction, DirectTokenAnalysis,
+    DirectTokenInstruction, OpaqueDirectTokenInstruction, StaticTokenDeclaration,
 };
 pub use effect_graph::{EffectEdge, EffectGraph, EffectNode, GraphSourceSlot};
 pub use effects::{CpiObservation, NativeBalanceDelta, SimulationEffects, TokenBalanceDelta};

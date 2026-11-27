@@ -40,6 +40,35 @@ pub enum Declaration {
         operation: &'static str,
         static_program_roles_match: Option<bool>,
     },
+    Token {
+        operation: String,
+        source_account: Option<String>,
+        destination_account: Option<String>,
+        mint: Option<String>,
+        authority: Option<String>,
+        delegate: Option<String>,
+        amount_raw: Option<String>,
+        decimals: Option<u8>,
+        authority_type: Option<u8>,
+        new_authority: Option<String>,
+    },
+    Token2022Extension {
+        family: &'static str,
+        operation: &'static str,
+        opcode: u8,
+        sub_opcode: Option<u8>,
+        layout_checked: bool,
+        mint: Option<String>,
+        source_account: Option<String>,
+        destination_account: Option<String>,
+        authority: Option<String>,
+        new_authority: Option<String>,
+        hook_program_id: Option<String>,
+        declared_amount_raw: Option<String>,
+        expected_fee_raw: Option<String>,
+        fee_basis_points: Option<u16>,
+        maximum_fee_raw: Option<String>,
+    },
     Unsupported,
 }
 
@@ -112,6 +141,103 @@ fn family(id: Option<&str>) -> &'static str {
     }
 }
 
+fn token_roles(operation: &str) -> &'static [&'static str] {
+    match operation {
+        "transfer" => &["source", "destination", "authority"],
+        "transfer_checked" | "transfer_checked_with_fee" => {
+            &["source", "mint", "destination", "authority"]
+        }
+        "approve" => &["source", "delegate", "authority"],
+        "approve_checked" => &["source", "mint", "delegate", "authority"],
+        "mint_to" | "mint_to_checked" => &["mint", "destination", "authority"],
+        "burn" | "burn_checked" => &["source", "mint", "authority"],
+        "revoke" | "set_authority" => &["target", "authority"],
+        "close_account" => &["source", "destination", "authority"],
+        "freeze_account" | "thaw_account" => &["target", "mint", "authority"],
+        "sync_native" => &["target"],
+        "set_transfer_fee" | "update_transfer_hook" => &["mint", "authority"],
+        "initialize_transfer_hook" | "initialize_permanent_delegate" => &["mint"],
+        _ => &[],
+    }
+}
+
+fn token_declaration(
+    parsed: &ParsedTransaction,
+    index: usize,
+) -> (Declaration, &'static str, &'static [&'static str]) {
+    use hguet_rpc::StaticTokenDeclaration;
+    let decoded = hguet_rpc::inspect_static_token_instruction(parsed, index);
+    match decoded {
+        Ok(Some(StaticTokenDeclaration::Base(value))) => {
+            let roles = token_roles(&value.operation);
+            (
+                Declaration::Token {
+                    operation: value.operation,
+                    source_account: value.source_account,
+                    destination_account: value.destination_account,
+                    mint: value.mint,
+                    authority: value.authority,
+                    delegate: value.delegate,
+                    amount_raw: value.amount_raw,
+                    decimals: value.decimals,
+                    authority_type: value.authority_type,
+                    new_authority: value.new_authority,
+                },
+                "DECODED_DECLARATION",
+                roles,
+            )
+        }
+        Ok(Some(StaticTokenDeclaration::Extension(value))) => {
+            let checked = value.layout_checked;
+            let roles = if checked {
+                token_roles(value.operation)
+            } else {
+                &[]
+            };
+            let destination_account = if checked && value.operation == "transfer_checked_with_fee" {
+                parsed.compiled_top_level_instructions[index]
+                    .account_indices
+                    .get(2)
+                    .and_then(|i| parsed.static_account_keys.get(*i))
+                    .cloned()
+            } else {
+                None
+            };
+            (
+                Declaration::Token2022Extension {
+                    family: value.family,
+                    operation: value.operation,
+                    opcode: value.opcode,
+                    sub_opcode: value.sub_opcode,
+                    layout_checked: checked,
+                    // Prefix-only classifications must not assign account roles.
+                    mint: if checked { value.mint } else { None },
+                    source_account: value.source_account,
+                    destination_account,
+                    authority: value.authority,
+                    new_authority: value.new_authority,
+                    hook_program_id: value.hook_program_id,
+                    declared_amount_raw: value.declared_amount_raw,
+                    expected_fee_raw: value.expected_fee_raw,
+                    fee_basis_points: value.fee_basis_points,
+                    maximum_fee_raw: value.maximum_fee_raw,
+                },
+                if checked {
+                    "DECODED_DECLARATION"
+                } else {
+                    "PREFIX_ONLY"
+                },
+                roles,
+            )
+        }
+        Ok(None) => (Declaration::Unsupported, "UNRESOLVED_ACCOUNTS", &[]),
+        Ok(Some(StaticTokenDeclaration::Opaque)) => {
+            (Declaration::Unsupported, "UNSUPPORTED_LAYOUT", &[])
+        }
+        Err(_) => (Declaration::Unsupported, "DECODER_UNAVAILABLE", &[]),
+    }
+}
+
 /// Parse once, inspect only original wire bytes, and never invoke RPC.
 pub fn inspect(bytes: &[u8]) -> Result<ProgramReport, String> {
     let parsed = parse_transaction(bytes)?;
@@ -161,8 +287,8 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
                     None => (Declaration::Unsupported, "UNSUPPORTED_LAYOUT"),
                 }
             }
-            Some(ATA) if matches!(data.as_slice(), [] | [0] | [1])
-                && ix.account_indices.len() == 6 =>
+            Some(ATA)
+                if matches!(data.as_slice(), [] | [0] | [1]) && ix.account_indices.len() == 6 =>
             {
                 roles = &[
                     "funding_account",
@@ -190,6 +316,11 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
                     },
                     "DECODED_DECLARATION",
                 )
+            }
+            Some(TOKEN | TOKEN_2022) => {
+                let (value, status, token_roles) = token_declaration(parsed, ix.instruction_index);
+                roles = token_roles;
+                (value, status)
             }
             None => (Declaration::Unsupported, "UNRESOLVED_PROGRAM"),
             _ => (Declaration::Unsupported, "UNSUPPORTED_LAYOUT"),
@@ -229,6 +360,7 @@ fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
             "Account roles are declared, not verified ownership, PDA derivation or rent.",
             "Memo payload is deliberately omitted; UTF-8 validity is not authenticity.",
             "Unsupported instructions and unresolved ALT addresses are not safe or zero effects.",
+            "Token authority roles and amounts are declarations; multisig, hooks, actual fees and account state are not verified.",
         ],
     })
 }
@@ -241,12 +373,7 @@ mod tests {
     #[test]
     fn exact_compute_layouts_and_units() {
         for (data, op, raw, unit) in [
-            (
-                vec![1, 0, 0, 1, 0],
-                "request_heap_frame",
-                "65536",
-                "bytes",
-            ),
+            (vec![1, 0, 0, 1, 0], "request_heap_frame", "65536", "bytes"),
             (
                 vec![2, 64, 13, 3, 0],
                 "set_compute_unit_limit",
@@ -272,7 +399,13 @@ mod tests {
             assert_eq!(value["unit"], unit);
             assert_eq!(value["message_v1"], true);
         }
-        for data in [vec![], vec![0], vec![2, 1], vec![2, 1, 0, 0, 0, 0], vec![255]] {
+        for data in [
+            vec![],
+            vec![0],
+            vec![2, 1],
+            vec![2, 1, 0, 0, 0, 0],
+            vec![255],
+        ] {
             assert!(compute(&data, false).is_none());
         }
     }

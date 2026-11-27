@@ -21,6 +21,7 @@ COMPUTE = Pubkey.from_string("ComputeBudget111111111111111111111111111111")
 ATA = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 SYSTEM = Pubkey.default()
+TOKEN_2022 = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 
 
 def main():
@@ -104,6 +105,49 @@ def main():
     assert a["accounts"][0]["required_signer"] is True
     record("sdk_ata_declared_roles")
 
+    def token_instructions(payer):
+        source, mint, destination, delegate = (Pubkey.new_unique() for _ in range(4))
+        auth = AccountMeta(payer, True, False)
+        w = lambda key: AccountMeta(key, False, True)
+        r = lambda key: AccountMeta(key, False, False)
+        return [
+            Instruction(TOKEN, b"\x03" + (99).to_bytes(8, "little") + b"\xff",
+                        [w(source), w(destination), auth]),
+            Instruction(TOKEN, b"\x07" + (123).to_bytes(8, "little"),
+                        [w(mint), w(destination), auth]),
+            Instruction(TOKEN, b"\x08" + (17).to_bytes(8, "little"),
+                        [w(source), w(mint), auth]),
+            Instruction(TOKEN, b"\x05", [w(source), auth]),
+            Instruction(TOKEN, b"\x06\x03\x00", [w(source), auth]),
+            Instruction(TOKEN, b"\x09", [w(source), w(destination), auth]),
+            Instruction(TOKEN, b"\x0a", [w(source), r(mint), auth]),
+            Instruction(TOKEN, b"\x0b", [w(source), r(mint), auth]),
+            Instruction(TOKEN, b"\x11", [w(source)]),
+            Instruction(TOKEN, b"\x0c\x01", [w(source), r(mint), w(destination), auth]),
+            Instruction(TOKEN_2022, b"\x23" + bytes(delegate), [w(mint)]),
+            Instruction(TOKEN_2022, b"\x24\x01" + bytes(delegate), [w(mint), auth]),
+            Instruction(TOKEN_2022, b"\x1b\x00", [w(mint)]),
+        ]
+
+    report = inspect(token_instructions)
+    rows = report["instructions"]
+    assert [row["declaration"]["operation"] for row in rows[:9]] == [
+        "transfer", "mint_to", "burn", "revoke", "set_authority", "close_account",
+        "freeze_account", "thaw_account", "sync_native"]
+    assert rows[0]["declaration"]["amount_raw"] == "99"
+    assert rows[1]["declaration"]["amount_raw"] == "123"
+    assert rows[2]["declaration"]["amount_raw"] == "17"
+    assert rows[4]["declaration"]["authority_type"] == 3
+    assert rows[4]["declaration"]["new_authority"] is None
+    assert rows[9]["layout_status"] == "UNSUPPORTED_LAYOUT"
+    assert rows[10]["declaration"]["operation"] == "initialize_permanent_delegate"
+    assert rows[10]["declaration"]["new_authority"] is not None
+    assert rows[11]["declaration"]["operation"] == "update_transfer_hook"
+    assert rows[11]["declaration"]["hook_program_id"] is not None
+    assert rows[12]["layout_status"] == "PREFIX_ONLY"
+    assert rows[12]["declaration"]["mint"] is None
+    record("sdk_token_instruction_inventory")
+
     process = subprocess.run([str(binary), "programs", "-", "--offline"],
                              input=b"\xff", capture_output=True, timeout=20)
     assert process.returncode == 40
@@ -111,8 +155,8 @@ def main():
     record("versioned_input_error")
 
     args.out.write_text(json.dumps({"cases": cases, "acceptance": "PASS",
-                                    "mandatory_count": 5, "passed_count": len(cases)}, indent=2))
-    print("PASS: 5 independent SDK/CLI comparisons; 2 executed in LiteSVM")
+                                    "mandatory_count": 6, "passed_count": len(cases)}, indent=2))
+    print("PASS: 6 independent SDK/CLI comparisons; 2 executed in LiteSVM")
 
 
 if __name__ == "__main__":

@@ -71,7 +71,18 @@ def run_case(binary, expected_fee=2):
         effect = json.loads(output.stdout)["effects"][0]
     assert effect["kind"] == "checked_token_transfer" and effect["amount_raw"] == "123"
     assert effect["expected_fee_raw"] == str(expected_fee)
-    return {"case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
+    inventory = subprocess.run([binary, "programs", "-", "--offline"],
+                               input=bytes(tx), capture_output=True, timeout=20)
+    assert inventory.returncode == 0, inventory.stderr
+    program = json.loads(inventory.stdout)
+    declaration = program["instructions"][0]["declaration"]
+    assert declaration["kind"] == "token2022_extension"
+    assert declaration["operation"] == "transfer_checked_with_fee" and declaration["layout_checked"]
+    assert declaration["source_account"] == str(source) and declaration["destination_account"] == str(destination)
+    assert declaration["mint"] == str(mint) and declaration["declared_amount_raw"] == "123"
+    assert declaration["expected_fee_raw"] == str(expected_fee)
+    assert program["signing_authorization"] == "NOT_AUTHORIZED"
+    return {"program_inventory": "PASS", "case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
             "runtime_outcome": "REJECTED" if rejected else "EXECUTED",
             "runtime_error": rejection, "wire_amount": 123, "expected_fee": expected_fee,
             "source_debit": 0 if rejected else 123, "destination_credit": 0 if rejected else 121,

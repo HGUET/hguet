@@ -77,7 +77,23 @@ def run_case(binary, operation, wrong_authority=False):
         assert effect["new_authority"] == str(delegate.pubkey())
     else:
         assert effect["amount_raw"] == "123"
-    return {"case": operation + ("_wrong_authority" if wrong_authority else ""),
+    inventory = subprocess.run([binary, "programs", "-", "--offline"],
+                               input=bytes(tx), capture_output=True, timeout=20)
+    assert inventory.returncode == 0, inventory.stderr
+    program = json.loads(inventory.stdout)
+    declaration = program["instructions"][0]["declaration"]
+    assert declaration["kind"] == "token" and declaration["operation"] == operation
+    assert declaration["source_account"] == str(source)
+    assert declaration["authority"] == str(delegate.pubkey() if wrong_authority else owner.pubkey())
+    assert program["signing_authorization"] == "NOT_AUTHORIZED"
+    if operation == "transfer_checked":
+        assert declaration["mint"] == str(mint) and declaration["destination_account"] == str(destination)
+        assert declaration["amount_raw"] == "123" and declaration["decimals"] == 6
+    elif operation == "approve":
+        assert declaration["delegate"] == str(delegate.pubkey()) and declaration["amount_raw"] == "123"
+    else:
+        assert declaration["new_authority"] == str(delegate.pubkey()) and declaration["authority_type"] == 2
+    return {"program_inventory": "PASS", "case": operation + ("_wrong_authority" if wrong_authority else ""),
             "runtime_outcome": "REJECTED" if wrong_authority else "EXECUTED",
             "runtime_error": rejection, "comparison":"PASS", "hguet_effect": expected,
             "source_amount_after": state.amount}

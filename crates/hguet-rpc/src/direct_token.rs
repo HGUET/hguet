@@ -36,6 +36,53 @@ pub struct DirectTokenAnalysis {
     pub total_token_program_instructions: usize,
     pub limitation: &'static str,
 }
+/// Single-instruction offline view: unrelated ALT references and decoder failures
+/// cannot erase declarations for other instructions. No RPC resolution is used.
+pub enum StaticTokenDeclaration {
+    Base(Box<TokenCpiInstruction>),
+    Extension(Box<Token2022ExtensionObservation>),
+    Opaque,
+}
+
+pub fn inspect_static_token_instruction(
+    parsed: &ParsedTransaction,
+    index: usize,
+) -> Result<Option<StaticTokenDeclaration>, RpcError> {
+    let ix = parsed
+        .compiled_top_level_instructions
+        .get(index)
+        .ok_or(RpcError::InvalidResponse)?;
+    if ix.instruction_index != index {
+        return Err(RpcError::InvalidResponse);
+    }
+    let Some(program) = parsed.static_account_keys.get(ix.program_index) else {
+        return Ok(None);
+    };
+    if !is_token_program(program)
+        || ix
+            .account_indices
+            .iter()
+            .any(|&i| i >= parsed.static_account_keys.len())
+    {
+        return Ok(None);
+    }
+    let data = json!({
+        "programIdIndex": ix.program_index,
+        "accounts": ix.account_indices,
+        "data": ix.data_base58,
+    });
+    let map = data.as_object().ok_or(RpcError::InvalidResponse)?;
+    let result = match decode_token_cpi(program, map, &parsed.static_account_keys, index, 0)? {
+        TokenCpiDecode::Recognized(value) => StaticTokenDeclaration::Base(Box::new(value)),
+        TokenCpiDecode::Opaque {
+            observation: Some(value),
+            ..
+        } => StaticTokenDeclaration::Extension(Box::new(value)),
+        TokenCpiDecode::Opaque { .. } => StaticTokenDeclaration::Opaque,
+    };
+    Ok(Some(result))
+}
+
 /// Input must be the parsed ORIGINAL wire transaction, with address lookup
 /// resolution if the message uses ALT. The program ID, account indices and data
 /// MUST come from the wire; a provider cannot replace them without breaking

@@ -133,7 +133,10 @@
                   "DECODED_DECLARATION",
                   "INVALID_UTF8",
                   "UNSUPPORTED_LAYOUT",
-                  "UNRESOLVED_PROGRAM"
+                  "UNRESOLVED_PROGRAM",
+                  "UNRESOLVED_ACCOUNTS",
+                  "DECODER_UNAVAILABLE",
+                  "PREFIX_ONLY"
                 ]
               },
               "accounts": {
@@ -284,6 +287,200 @@
                     "properties": {
                       "kind": {
                         "const": "unsupported"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "operation",
+                      "source_account",
+                      "destination_account",
+                      "mint",
+                      "authority",
+                      "delegate",
+                      "amount_raw",
+                      "decimals",
+                      "authority_type",
+                      "new_authority"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "token"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "source_account": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "destination_account": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "mint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "authority": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "delegate": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "amount_raw": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "decimals": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "authority_type": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "new_authority": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "family",
+                      "operation",
+                      "opcode",
+                      "sub_opcode",
+                      "layout_checked",
+                      "mint",
+                      "source_account",
+                      "destination_account",
+                      "authority",
+                      "new_authority",
+                      "hook_program_id",
+                      "declared_amount_raw",
+                      "expected_fee_raw",
+                      "fee_basis_points",
+                      "maximum_fee_raw"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "token2022_extension"
+                      },
+                      "family": {
+                        "type": "string"
+                      },
+                      "operation": {
+                        "type": "string"
+                      },
+                      "opcode": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255
+                      },
+                      "sub_opcode": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "layout_checked": {
+                        "type": "boolean"
+                      },
+                      "mint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source_account": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "destination_account": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "authority": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "new_authority": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "hook_program_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "declared_amount_raw": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "expected_fee_raw": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      "fee_basis_points": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "maximum_fee_raw": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^(0|[1-9][0-9]*)$"
                       }
                     }
                   }
