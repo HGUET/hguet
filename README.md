@@ -57,7 +57,9 @@ hguet cloud status order.json --claim-file claim.bin --ca-file sandbox-ca.pem \
 ```
 
 Status rechecks the signed quote at its recorded acceptance time. A completed
-response must carry a fresh assessment and its matching signed receipt. The
+response must carry an authenticated assessment and its matching signed receipt.
+Archived reports remain retrievable after expiry. The output marks current
+validity in assessment_fresh and includes assessment_expires_at_unix. The
 command prints both after verification. `STATUS_UNAVAILABLE` means the gateway
 could not deliver a result for this claim. Keep the order and claim file for
 retry. The command submits no payment.

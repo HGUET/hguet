@@ -231,6 +231,14 @@ pub fn verify_assessment_bindings(
     canonical_payload: &[u8],
     e: &AssessmentExpectations<'_>,
 ) -> Result<AssessmentView> {
+    check_assessment_bindings(canonical_payload, e, true)
+}
+
+fn check_assessment_bindings(
+    canonical_payload: &[u8],
+    e: &AssessmentExpectations<'_>,
+    require_fresh: bool,
+) -> Result<AssessmentView> {
     let value = jcs::parse_canonical(canonical_payload)?;
     let object = value.as_object().ok_or(Error("ASSESSMENT_KEYS"))?;
     exact_keys(object, &ASSESSMENT_KEYS, "ASSESSMENT_KEYS")?;
@@ -265,7 +273,7 @@ pub fn verify_assessment_bindings(
         .as_str()
         .and_then(parse_timestamp)
         .ok_or(Error("ASSESSMENT_TIMESTAMP_INVALID"))?;
-    if !(issued <= e.now_unix && e.now_unix < expires) {
+    if issued >= expires || issued > e.now_unix || (require_fresh && e.now_unix >= expires) {
         return Err(Error("ASSESSMENT_EXPIRED_OR_NOT_YET_VALID"));
     }
     let requested: BTreeSet<String> = e.requested_capabilities.iter().cloned().collect();
@@ -374,6 +382,47 @@ pub fn verify_paid_check_with_keys(
     receipt_expectations: &ReceiptExpectations<'_>,
     assessment_expectations: &AssessmentExpectations<'_>,
 ) -> Result<VerifiedPaidCheck> {
+    check_paid_documents(
+        signed_receipt,
+        signed_assessment,
+        receipt_key,
+        assessment_key,
+        receipt_expectations,
+        assessment_expectations,
+        true,
+    )
+}
+
+/// Verify an archived purchase, retaining signature, binding and time-order checks.
+/// The caller must display the signed expiry and assess freshness separately.
+pub fn verify_archived_paid_check_with_keys(
+    signed_receipt: &SignedPayload,
+    signed_assessment: Option<&SignedPayload>,
+    receipt_key: &PinnedKey,
+    assessment_key: &PinnedKey,
+    receipt_expectations: &ReceiptExpectations<'_>,
+    assessment_expectations: &AssessmentExpectations<'_>,
+) -> Result<VerifiedPaidCheck> {
+    check_paid_documents(
+        signed_receipt,
+        signed_assessment,
+        receipt_key,
+        assessment_key,
+        receipt_expectations,
+        assessment_expectations,
+        false,
+    )
+}
+
+fn check_paid_documents(
+    signed_receipt: &SignedPayload,
+    signed_assessment: Option<&SignedPayload>,
+    receipt_key: &PinnedKey,
+    assessment_key: &PinnedKey,
+    receipt_expectations: &ReceiptExpectations<'_>,
+    assessment_expectations: &AssessmentExpectations<'_>,
+    require_fresh: bool,
+) -> Result<VerifiedPaidCheck> {
     if !receipt_key.verify(
         Domain::PaymentReceipt,
         &signed_receipt.canonical_payload,
@@ -404,9 +453,10 @@ pub fn verify_paid_check_with_keys(
     };
     let receipt = verify_receipt_bindings(&signed_receipt.canonical_payload, &expectations)?;
     let assessment = match assessment_payload {
-        Some(payload) => Some(verify_assessment_bindings(
+        Some(payload) => Some(check_assessment_bindings(
             payload,
             assessment_expectations,
+            require_fresh,
         )?),
         None => None,
     };
@@ -425,6 +475,21 @@ mod tests {
     const GENESIS: &str = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
     const RECEIVER: &str = "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi";
     const NOW: i64 = 1_760_000_100;
+
+    #[test]
+    fn archived_assessment_preserves_time_order_and_bindings_after_expiry() {
+        let capabilities = vec!["network_health".to_owned()];
+        let mut expected = assessment_expectations(&capabilities);
+        let payload = canonicalize_signed_payload(&assessment_json()).unwrap();
+        expected.now_unix = NOW + 86400;
+        assert!(verify_assessment_bindings(&payload, &expected).is_err());
+        assert!(check_assessment_bindings(&payload, &expected, false).is_ok());
+        expected.message_sha256 = [9; 32];
+        assert!(check_assessment_bindings(&payload, &expected, false).is_err());
+        expected.message_sha256 = [1; 32];
+        expected.now_unix = 0;
+        assert!(check_assessment_bindings(&payload, &expected, false).is_err());
+    }
 
     fn quote() -> QuoteBindings {
         QuoteBindings {

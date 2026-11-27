@@ -86,7 +86,8 @@ pub fn order_request(
     submit: bool,
 ) -> Result<Value, &'static str> {
     use hguet_cloud::report::{
-        verify_paid_check_with_keys, AnalysisState, AssessmentExpectations, ReceiptExpectations,
+        verify_archived_paid_check_with_keys, AnalysisState, AssessmentExpectations,
+        ReceiptExpectations,
     };
     use hguet_cloud::wire::v1::{self, PaidCheckStatus};
     let path = args.next().ok_or("ORDER_REQUIRED")?;
@@ -255,7 +256,7 @@ pub fn order_request(
     };
     let receipt = result.signed_payment_receipt.ok_or("RECEIPT_MISSING")?;
     let assessment = result.signed_cloud_assessment.ok_or("ASSESSMENT_MISSING")?;
-    let verified = verify_paid_check_with_keys(
+    let verified = verify_archived_paid_check_with_keys(
         &receipt,
         Some(&assessment),
         &receipt_key,
@@ -288,8 +289,12 @@ pub fn order_request(
         serde_json::from_slice(&assessment.canonical_payload).map_err(|_| "INVALID_REPORT")?;
     let payment: Value =
         serde_json::from_slice(&receipt.canonical_payload).map_err(|_| "INVALID_RECEIPT")?;
+    let expires = report["expires_at"]
+        .as_str()
+        .and_then(hguet_cloud::quote::parse_timestamp)
+        .ok_or("INVALID_REPORT_TIME")?;
     Ok(
-        json!({"status":"completed","quote_id":quote.quote_id,"program":order.program,"assessment":report,"receipt":payment}),
+        json!({"assessment_fresh":now < expires,"assessment_expires_at_unix":expires,"status":"completed","quote_id":quote.quote_id,"program":order.program,"assessment":report,"receipt":payment}),
     )
 }
 
