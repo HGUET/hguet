@@ -3452,16 +3452,18 @@
       "scope": "single_provider_advisory_observations",
       "summary": "Source authority correlation is inconsistent across separate RPC slots; no signer ownership or transfer permission can be inferred",
       "source": "crates/hguet-cli/src/lib.rs",
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "test_source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "source_authority_stage_rejects_stale_snapshot_and_records_finding"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Paired test exercises the real typed RPC guard and production finding mapping. Upstream provider-to-stage reachability is not claimed; independent review remains open.",
       "benchmark_fixtures": []
     },
     {
@@ -3493,16 +3495,18 @@
       "scope": "single_provider_advisory_observations",
       "summary": "CPI source evidence is malformed or conflicting across later RPC snapshots; no execution or authority proof is inferred",
       "source": "crates/hguet-cli/src/lib.rs",
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "test_source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "cpi_source_stage_rejects_stale_snapshot_and_records_finding"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Paired test exercises the real typed RPC guard and production finding mapping. Upstream provider-to-stage reachability is not claimed; independent review remains open.",
       "benchmark_fixtures": []
     },
     {
@@ -3512,16 +3516,18 @@
       "scope": "single_provider_advisory_observations",
       "summary": "Independent token debit evidence views were inconsistent, malformed or exceeded bounds; gross token spending is unknown",
       "source": "crates/hguet-cli/src/lib.rs",
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "test_source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "aggregate_stage_rejects_inconsistent_declaration_count_and_records_finding"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Paired test exercises the real typed RPC guard and production finding mapping. Upstream provider-to-stage reachability is not claimed; independent review remains open.",
       "benchmark_fixtures": []
     },
     {

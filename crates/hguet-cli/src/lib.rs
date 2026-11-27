@@ -64,6 +64,44 @@ struct Context {
     rpc_url: Option<String>,
     command: String,
 }
+#[derive(Clone, Copy)]
+enum AdvisoryStage {
+    SourceAuthority,
+    CpiSource,
+    Aggregate,
+}
+
+/// Internal stage failures retain UNKNOWN and never manufacture positive evidence.
+fn record_advisory_stage<T>(
+    verdict: &mut SecurityVerdict,
+    result: Result<T, hguet_rpc::RpcError>,
+    stage: AdvisoryStage,
+) -> Option<T> {
+    match result {
+        Ok(value) => Some(value),
+        Err(_) => {
+            match stage {
+                AdvisoryStage::SourceAuthority => verdict.finding(
+                    "RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID",
+                    "high",
+                    "Source authority correlation is inconsistent across separate RPC slots; no signer ownership or transfer permission can be inferred",
+                ),
+                AdvisoryStage::CpiSource => verdict.finding(
+                    "RPC_CPI_SOURCE_CORRELATION_INVALID",
+                    "high",
+                    "CPI source evidence is malformed or conflicting across later RPC snapshots; no execution or authority proof is inferred",
+                ),
+                AdvisoryStage::Aggregate => verdict.finding(
+                    "RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID",
+                    "high",
+                    "Independent token debit evidence views were inconsistent, malformed or exceeded bounds; gross token spending is unknown",
+                ),
+            }
+            None
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum RpcIntentRisk {
     CpiProgramOutsideAllowlist,
@@ -1382,27 +1420,26 @@ fn analyze_internal<T: JsonRpcTransport>(
                                     format!("Supplemental signed source account read failed ({:?}); no omitted source account may be treated as observed",err.code()));
                             }
                         }
-                        match hguet_rpc::correlate_signed_source_authority_with_additional_sources(
+                        let stage_result = hguet_rpc::correlate_signed_source_authority_with_additional_sources(
                             review,
                             evidence.token_account_snapshot.as_ref(),
                             signed_source_account_snapshot.as_ref(),
                             evidence.mint_snapshot.as_ref(),
                             evidence.context_slot,
+                        );
+                        if let Some(result) = record_advisory_stage(
+                            &mut verdict,
+                            stage_result,
+                            AdvisoryStage::SourceAuthority,
                         ) {
-                            Ok(result) => {
-                                verdict.coverage.push(
-                                    "rpc_signed_source_authority_correlations_advisory".into(),
-                                );
-                                for (code, severity, message) in source_authority_findings(&result)
-                                {
-                                    verdict.finding(code, severity, message);
-                                }
-                                signed_source_authority_evidence = Some(result);
+                            verdict.coverage.push(
+                                "rpc_signed_source_authority_correlations_advisory".into(),
+                            );
+                            for (code, severity, message) in source_authority_findings(&result)
+                            {
+                                verdict.finding(code, severity, message);
                             }
-                            Err(_) => {
-                                verdict.finding("RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID","high",
-                                    "Source authority correlation is inconsistent across separate RPC slots; no signer ownership or transfer permission can be inferred");
-                            }
+                            signed_source_authority_evidence = Some(result);
                         }
                     }
                 }
@@ -1434,55 +1471,53 @@ fn analyze_internal<T: JsonRpcTransport>(
                                 format!("Bounded CPI source RPC read failed ({:?}); missing source accounts remain unobserved",err.code()));
                         }
                     }
-                    match hguet_rpc::correlate_cpi_source_coverage(
+                    let stage_result = hguet_rpc::correlate_cpi_source_coverage(
                         evidence.context_slot,
                         &evidence.effect_analysis,
                         evidence.token_account_snapshot.as_ref(),
                         signed_source_account_snapshot.as_ref(),
                         cpi_source_account_snapshot.as_ref(),
+                    );
+                    if let Some(review) = record_advisory_stage(
+                        &mut verdict,
+                        stage_result,
+                        AdvisoryStage::CpiSource,
                     ) {
-                        Ok(review) => {
-                            if !review.entries.is_empty() {
-                                verdict
-                                    .coverage
-                                    .push("rpc_cpi_source_correlation_advisory".into());
-                            }
-                            for (code, severity, message) in cpi_source_coverage_findings(&review) {
-                                verdict.finding(code, severity, message);
-                            }
-                            cpi_source_coverage = Some(review);
+                        if !review.entries.is_empty() {
+                            verdict
+                                .coverage
+                                .push("rpc_cpi_source_correlation_advisory".into());
                         }
-                        Err(_) => {
-                            verdict.finding("RPC_CPI_SOURCE_CORRELATION_INVALID","high",
-                                "CPI source evidence is malformed or conflicting across later RPC snapshots; no execution or authority proof is inferred");
+                        for (code, severity, message) in cpi_source_coverage_findings(&review) {
+                            verdict.finding(code, severity, message);
                         }
+                        cpi_source_coverage = Some(review);
                     }
                 }
                 let mut aggregate_token_spending = None;
                 if evidence.status == "rpc_succeeded" {
                     // The intent is independently signature-verified above
                     // (or None). Never treat agent-provided caps as trusted.
-                    match hguet_rpc::analyze_aggregate_token_spending(
+                    let stage_result = hguet_rpc::analyze_aggregate_token_spending(
                         &evidence.status,
                         evidence.context_slot,
                         &evidence.direct_token_analysis,
                         &evidence.effect_analysis,
                         cpi_source_coverage.as_ref(),
                         verified_intent.as_ref(),
+                    );
+                    if let Some(report) = record_advisory_stage(
+                        &mut verdict,
+                        stage_result,
+                        AdvisoryStage::Aggregate,
                     ) {
-                        Ok(report) => {
-                            verdict
-                                .coverage
-                                .push("rpc_aggregate_token_views_advisory".into());
-                            for (code, severity, message) in aggregate_token_findings(&report) {
-                                verdict.finding(code, severity, message);
-                            }
-                            aggregate_token_spending = Some(report);
+                        verdict
+                            .coverage
+                            .push("rpc_aggregate_token_views_advisory".into());
+                        for (code, severity, message) in aggregate_token_findings(&report) {
+                            verdict.finding(code, severity, message);
                         }
-                        Err(_) => {
-                            verdict.finding("RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID","high",
-                                "Independent token debit evidence views were inconsistent, malformed or exceeded bounds; gross token spending is unknown");
-                        }
+                        aggregate_token_spending = Some(report);
                     }
                 }
                 if alt_gap_intent.is_some() {
@@ -2777,5 +2812,142 @@ mod rpc_intent_tests {
         .is_empty());
         assert!(rpc_intent_risks(&intent, "rpc_succeeded", false, &[unlisted], None,).is_empty());
         assert!(rpc_intent_risks(&intent, "rpc_succeeded", false, &[], None,).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod advisory_stage_tests {
+    use super::*;
+    use hguet_rpc::{CpiObservation, DirectTokenAnalysis, SimulationEffects, TokenAccountRpcSnapshot};
+
+    fn empty_effects() -> SimulationEffects {
+        SimulationEffects {
+            lamport_deltas: None,
+            token_deltas: None,
+            cpi: CpiObservation {
+                captured: false,
+                group_count: None,
+                instruction_count: None,
+                invoked_program_ids: Vec::new(),
+                token_instructions: Vec::new(),
+                token_2022_extension_observations: Vec::new(),
+                opaque_token_instruction_count: 0,
+                token_2022_extension_instruction_count: 0,
+                missing_compiled_token_data_count: 0,
+                requires_semantic_review: true,
+                limitations: Vec::new(),
+            },
+            simulated_fee_lamports: None,
+            observed_fields: Vec::new(),
+            missing_fields: Vec::new(),
+            warnings: Vec::new(),
+            security_coverage: "partial_untrusted_rpc".into(),
+        }
+    }
+
+    fn assert_pair<T>(
+        good: Result<T, hguet_rpc::RpcError>,
+        bad: Result<T, hguet_rpc::RpcError>,
+        stage: AdvisoryStage,
+        code: &str,
+    ) {
+        let mut verdict = SecurityVerdict::unknown("devnet");
+        assert!(record_advisory_stage(&mut verdict, good, stage).is_some());
+        assert!(verdict.findings.is_empty());
+        assert!(record_advisory_stage(&mut verdict, bad, stage).is_none());
+        assert_eq!(verdict.findings.len(), 1);
+        assert_eq!(verdict.findings[0].code, code);
+        assert!(matches!(verdict.decision, Decision::Unknown));
+    }
+
+    #[test]
+    fn source_authority_stage_rejects_stale_snapshot_and_records_finding() {
+        let review = hguet_core::TokenSourceLimitReview {
+            debits: Vec::new(),
+            checked_direct_debit_instructions: 0,
+            transaction_required_signer_role_checked: true,
+            transaction_signatures_verified: false,
+            token_account_owner_verified: false,
+            total_spending_proven: false,
+            coverage: "direct_wire_only",
+            limitation: "test",
+        };
+        let mut snapshot = TokenAccountRpcSnapshot {
+            context_slot: 601,
+            simulation_slot: 600,
+            atomic_with_simulation: false,
+            accounts: Vec::new(),
+            limitation: "test".into(),
+        };
+        let good = hguet_rpc::correlate_signed_source_authority_with_additional_sources(
+            &review,
+            Some(&snapshot),
+            None,
+            None,
+            600,
+        );
+        snapshot.context_slot = 599;
+        let bad = hguet_rpc::correlate_signed_source_authority_with_additional_sources(
+            &review,
+            Some(&snapshot),
+            None,
+            None,
+            600,
+        );
+        assert_pair(
+            good,
+            bad,
+            AdvisoryStage::SourceAuthority,
+            "RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID",
+        );
+    }
+
+    #[test]
+    fn cpi_source_stage_rejects_stale_snapshot_and_records_finding() {
+        let effects = empty_effects();
+        let mut snapshot = TokenAccountRpcSnapshot {
+            context_slot: 601,
+            simulation_slot: 600,
+            atomic_with_simulation: false,
+            accounts: Vec::new(),
+            limitation: "test".into(),
+        };
+        let good = hguet_rpc::correlate_cpi_source_coverage(
+            600, &effects, Some(&snapshot), None, None,
+        );
+        snapshot.context_slot = 599;
+        let bad = hguet_rpc::correlate_cpi_source_coverage(
+            600, &effects, Some(&snapshot), None, None,
+        );
+        assert_pair(
+            good,
+            bad,
+            AdvisoryStage::CpiSource,
+            "RPC_CPI_SOURCE_CORRELATION_INVALID",
+        );
+    }
+
+    #[test]
+    fn aggregate_stage_rejects_inconsistent_declaration_count_and_records_finding() {
+        let effects = empty_effects();
+        let mut direct = DirectTokenAnalysis {
+            recognized: Vec::new(),
+            opaque: Vec::new(),
+            total_token_program_instructions: 0,
+            limitation: "test",
+        };
+        let good = hguet_rpc::analyze_aggregate_token_spending(
+            "rpc_succeeded", 600, &direct, &effects, None, None,
+        );
+        direct.total_token_program_instructions = 1;
+        let bad = hguet_rpc::analyze_aggregate_token_spending(
+            "rpc_succeeded", 600, &direct, &effects, None, None,
+        );
+        assert_pair(
+            good,
+            bad,
+            AdvisoryStage::Aggregate,
+            "RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID",
+        );
     }
 }
