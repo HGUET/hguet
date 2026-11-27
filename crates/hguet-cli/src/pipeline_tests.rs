@@ -631,6 +631,22 @@ fn unsupported_version_is_unknown_and_never_contacts_rpc() {
 }
 
 #[test]
+fn oversized_token_instruction_retains_decoder_coverage_gap() {
+    let wire = STANDARD
+        .decode(include_str!("../../../tests/fixtures/token-oversized-instruction.base64").trim())
+        .unwrap();
+    let (report, exit) = execute_with(args(&wire, false), &Unreachable);
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30);
+    assert!(codes(&report).contains(&"WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE".to_owned()));
+    let normal = STANDARD
+        .decode(include_str!("../../../tests/fixtures/legacy-spl-transfer-checked.base64").trim())
+        .unwrap();
+    let (report, _) = execute_with(args(&normal, false), &Unreachable);
+    assert!(!codes(&report).contains(&"WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE".to_owned()));
+}
+
+#[test]
 fn missing_rpc_effect_fields_are_reported_without_inventing_zeroes() {
     let wire = legacy_transfer(75);
     let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);

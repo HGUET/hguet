@@ -3054,15 +3054,17 @@
       "summary": "The bounded original-wire token decoder could not establish complete direct token semantics; no safety is inferred",
       "source": "crates/hguet-cli/src/lib.rs",
       "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "tests": [
+        "oversized_token_instruction_retains_decoder_coverage_gap"
+      ],
+      "test_status": "TARGETED_REGRESSION",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Positive oversized Token instruction and negative normal checked-transfer assertions reviewed; UNKNOWN and signing refusal asserted.",
       "benchmark_fixtures": []
     },
     {

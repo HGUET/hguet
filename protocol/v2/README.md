@@ -50,7 +50,7 @@ not imply independent ground-truth review.
 
 The validator also inventories emitted engine finding codes missing individual
 catalogue entries. The current checkpoint reports zero uncatalogued engine emission codes and
-6 entries with targeted regression references still open. Family-level
+5 entries with targeted regression references still open. Family-level
 references also require individual assertion review. It prints these as OPEN;
 a successful reference check does not mean complete catalogue coverage.
 Aggregate and correlation entries preserve the distinction between original
@@ -76,3 +76,13 @@ failure and malformed response payloads. They assert that the actual read
 was attempted, the specific unavailable finding is emitted, UNKNOWN and
 signing refusal persist, and previously verified signed source scope remains
 verified and explicitly partial.
+
+The original-wire token decoder bound has a paired pipeline regression. A
+structurally accepted Token instruction with 600 data bytes exceeds the
+bounded semantic decoder and emits WIRE_TOKEN_DIRECT_DECODER_UNAVAILABLE.
+A normal checked transfer does not. The oversized case remains UNKNOWN and
+never authorizes signing. Fixture token-oversized-instruction.base64 was
+generated with Solders 0.29.0 Message.new_with_blockhash and
+Transaction.new_unsigned: payer bytes [7; 32], Token program, one writable
+signer payer account, data [255; 600], and the default blockhash. It contains
+no private key or live transaction.
