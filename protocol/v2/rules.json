@@ -1,0 +1,84 @@
+{
+  "catalogue_version": 1,
+  "status": "initial_subset",
+  "rules": [
+    {
+      "rule_id": "HGUET.POLICY_SOL_TRANSFER_CAP",
+      "legacy_code": "POLICY_SOL_TRANSFER_CAP",
+      "severity": "critical",
+      "scope": "configured_local_restrictions_on_original_wire_declarations",
+      "summary": "Declared top-level SOL movement exceeds configured cap.",
+      "evidence": [
+        "original message bytes",
+        "independently supplied local policy"
+      ],
+      "limitations": [
+        "No CPI, network fee, account ownership or total spending guarantee."
+      ],
+      "source": "crates/hguet-policy/src/lib.rs",
+      "tests": [
+        "transfer_cap_denies_and_never_authorizes",
+        "caps_compare_exactly_and_never_wrap"
+      ],
+      "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open."
+    },
+    {
+      "rule_id": "HGUET.POLICY_BLOCKED_SOL_RECIPIENT",
+      "legacy_code": "POLICY_BLOCKED_SOL_RECIPIENT",
+      "severity": "critical",
+      "scope": "configured_local_restrictions_on_original_wire_declarations",
+      "summary": "Direct SOL recipient violates a local restriction.",
+      "evidence": [
+        "original message bytes",
+        "independently supplied local policy"
+      ],
+      "limitations": [
+        "No CPI, network fee, account ownership or total spending guarantee."
+      ],
+      "source": "crates/hguet-policy/src/lib.rs",
+      "tests": [
+        "network_and_recipient_deny",
+        "recipient_and_program_allowlists_deny_everything_not_listed"
+      ],
+      "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open."
+    },
+    {
+      "rule_id": "HGUET.POLICY_UNAPPROVED_PROGRAM",
+      "legacy_code": "POLICY_UNAPPROVED_PROGRAM",
+      "severity": "critical",
+      "scope": "configured_local_restrictions_on_original_wire_declarations",
+      "summary": "Original-wire program is absent from the local allowlist.",
+      "evidence": [
+        "original message bytes",
+        "independently supplied local policy"
+      ],
+      "limitations": [
+        "No CPI, network fee, account ownership or total spending guarantee."
+      ],
+      "source": "crates/hguet-policy/src/lib.rs",
+      "tests": [
+        "recipient_and_program_allowlists_deny_everything_not_listed"
+      ],
+      "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open."
+    },
+    {
+      "rule_id": "HGUET.POLICY_UNRESOLVED_PROGRAM",
+      "legacy_code": "POLICY_UNRESOLVED_PROGRAM",
+      "severity": "high",
+      "scope": "configured_local_restrictions_on_original_wire_declarations",
+      "summary": "Program identity requires unavailable lookup state.",
+      "evidence": [
+        "original message bytes",
+        "independently supplied local policy"
+      ],
+      "limitations": [
+        "No CPI, network fee, account ownership or total spending guarantee."
+      ],
+      "source": "crates/hguet-policy/src/lib.rs",
+      "tests": [
+        "unresolvable_address_stays_unknown_not_implicitly_allowed"
+      ],
+      "fixture_review": "Existing Rust synthetic positive/negative tests; independent ground-truth review remains open."
+    }
+  ]
+}

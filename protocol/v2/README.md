@@ -9,7 +9,12 @@ restrictions on original-wire declarations. MATCH means those restrictions
 were evaluated without violations or unresolved policy findings.
 It provides no execution or total-spending guarantee.
 
-Coverage entries conservatively remain PARTIAL. Findings retain v1 codes,
+Inherited v1 coverage entries conservatively remain PARTIAL. Three explicit
+checks distinguish original-wire structural validation, supplied Ed25519
+signatures and whole-transaction execution effects. COMPLETE applies only
+to the named structure/signature check. Unsigned or partial signatures remain
+PARTIAL; unavailable checks and full execution effects remain UNSUPPORTED.
+Findings retain v1 codes,
 stable `HGUET.<code>` identifiers and JSON-pointer evidence references.
 RPC source and slot fields remain in embedded v1 evidence.
 Signing authorization is always NOT_AUTHORIZED.
@@ -24,3 +29,8 @@ They are never added to the original-wire effect amounts.
 Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
+
+rules.json begins the rule catalogue with four local-policy rules and links
+their existing positive/negative Rust tests, severity, scope and limitations.
+Its status is initial_subset. Other codes retain stable identifiers and generic
+scope mapping until their individual catalogue entries are reviewed.

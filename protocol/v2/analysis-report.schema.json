@@ -46,7 +46,11 @@
             "type": "string"
           },
           "status": {
-            "const": "PARTIAL"
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNSUPPORTED"
+            ]
           },
           "limitations": {
             "type": "array",

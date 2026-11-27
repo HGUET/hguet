@@ -93,6 +93,31 @@ mod tests {
         let error = from_v1(json!({"code":"BAD_POLICY"}), 40, true);
         assert!(matches!(error.policy_compliance, Compliance::Unknown));
     }
+
+    #[test]
+    fn complete_wire_coverage_never_means_complete_execution() {
+        let report = from_v1(
+            json!({"inspection":{"transaction_signature_status":"verified"},
+            "verdict":{"coverage":[],"findings":[]}}),
+            30,
+            false,
+        );
+        let status = |scope| {
+            report
+                .coverage
+                .iter()
+                .find(|entry| entry.scope == scope)
+                .unwrap()
+                .status
+        };
+        assert_eq!(status("original_wire_structural_validation"), "COMPLETE");
+        assert_eq!(
+            status("provided_transaction_ed25519_signatures"),
+            "COMPLETE"
+        );
+        assert_eq!(status("whole_transaction_execution_effects"), "UNSUPPORTED");
+        assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -205,6 +230,37 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
     } else {
         Compliance::Match
     };
+    let mut coverage: Vec<_> = verdict["coverage"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(|scope| CheckCoverage {
+            scope: scope.into(),
+            status: "PARTIAL",
+            limitations: limitations.clone(),
+        })
+        .collect();
+    coverage.push(CheckCoverage {
+        scope:"original_wire_structural_validation".into(),
+        status:if inspection.is_object() {"COMPLETE"} else {"UNSUPPORTED"},
+        limitations:vec!["Only the parser's supported wire structure is covered. Runtime and cluster acceptance are separate.".into()],
+    });
+    coverage.push(CheckCoverage {
+        scope:"provided_transaction_ed25519_signatures".into(),
+        status:match inspection["transaction_signature_status"].as_str() {
+            Some("verified"|"invalid")=>"COMPLETE",
+            Some(_)=>"PARTIAL",None=>"UNSUPPORTED",
+        },
+        limitations:vec!["Signature validity does not establish informed intent, blockhash freshness or execution.".into()],
+    });
+    coverage.push(CheckCoverage {
+        scope: "whole_transaction_execution_effects".into(),
+        status: "UNSUPPORTED",
+        limitations: vec![
+            "Complete execution, gross spending and signer authorization are unproven.".into(),
+        ],
+    });
     AnalysisReport {
         effects: vec![],
         schema_version: 2,
@@ -213,17 +269,7 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
         signature_status: inspection["transaction_signature_status"].clone(),
         policy_compliance: compliance,
         policy_scope: "configured_local_restrictions_on_original_wire_declarations",
-        coverage: verdict["coverage"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .map(|scope| CheckCoverage {
-                scope: scope.into(),
-                status: "PARTIAL",
-                limitations: limitations.clone(),
-            })
-            .collect(),
+        coverage,
         simulation_status: verdict["simulation_status"].clone(),
         findings,
         evidence: output,
