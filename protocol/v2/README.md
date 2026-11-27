@@ -30,11 +30,15 @@ Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
 
-rules.json covers all eight current local-policy rules plus signature,
-malformed wire and five direct-token findings. It links
-their existing positive/negative Rust tests, severity, scope and limitations.
-Its status is policy_signature_structure_and_direct_token_subset. Other codes retain stable identifiers and generic
-scope mapping until their individual catalogue entries are reviewed.
+rules.json now contains 51 rules spanning local policy, intent trust,
+signature/wire checks, direct tokens, RPC CPI, Token-2022 extension
+observations and later mint/token-account snapshots. Its status is
+policy_intent_wire_and_rpc_subset. Other codes retain stable identifiers
+and conservative generic scopes pending individual catalogue review.
+
+RPC catalogue entries name provider observations as their evidence and
+preserve non-atomic account-state limitations. Family-level reporting tests
+are distinguished from individually reviewed rule assertions.
 
 Run `python scripts/validate_rule_catalogue.py` to check unique identities,
 source definitions and referenced regression tests and benchmark fixtures.

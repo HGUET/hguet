@@ -1,6 +1,6 @@
 {
   "catalogue_version": 1,
-  "status": "policy_signature_structure_and_direct_token_subset",
+  "status": "policy_intent_wire_and_rpc_subset",
   "rules": [
     {
       "rule_id": "HGUET.POLICY_SOL_TRANSFER_CAP",
@@ -978,6 +978,984 @@
         "Declared wire effects do not prove owner permissions, total spending or execution."
       ],
       "fixture_review": "Existing synthetic Rust tests; runtime corroboration is separately scoped in testing/runtime.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_CPI_AUTHORITY_RISK",
+      "legacy_code": "RPC_TOKEN_CPI_AUTHORITY_RISK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A simulated CPI contains token delegation, authority or account-control instructions; inspect account roles and signer authorization independently",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "authority_and_value_movements_have_distinct_advisory_findings",
+        "missing_and_failed_simulation_never_claim_cpi_actions"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_CPI_MOVEMENT",
+      "legacy_code": "RPC_TOKEN_CPI_MOVEMENT",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Compiled token CPI declares a transfer, mint or burn; declared amounts are not independently verified net balance effects",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "authority_and_value_movements_have_distinct_advisory_findings",
+        "missing_and_failed_simulation_never_claim_cpi_actions"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_CPI_OPAQUE",
+      "legacy_code": "RPC_TOKEN_CPI_OPAQUE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "One or more simulated token CPI instructions have unknown, extension-specific or unverified binary semantics; no safe effect can be inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "authority_and_value_movements_have_distinct_advisory_findings",
+        "missing_and_failed_simulation_never_claim_cpi_actions"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_2022_TRANSFER_FEE",
+      "legacy_code": "RPC_TOKEN_2022_TRANSFER_FEE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 CPI references transfer-fee configuration, authority rotation, expected fees or withheld-fee operations; fee state and net receipts are unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "extension_types_generate_distinct_advisory_risks",
+        "failures_and_missing_extensions_do_not_invent_warnings"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_2022_TRANSFER_HOOK",
+      "legacy_code": "RPC_TOKEN_2022_TRANSFER_HOOK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 CPI references transfer-hook configuration or authority rotation; hook execution and downstream effects are not independently verified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "extension_types_generate_distinct_advisory_risks",
+        "failures_and_missing_extensions_do_not_invent_warnings"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_2022_PERMANENT_DELEGATE",
+      "legacy_code": "RPC_TOKEN_2022_PERMANENT_DELEGATE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 CPI references permanent-delegate initialization or authority rotation; this mint-wide authority may move or burn tokens without a token-account owner signature",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "extension_types_generate_distinct_advisory_risks",
+        "failures_and_missing_extensions_do_not_invent_warnings"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS",
+      "legacy_code": "RPC_TOKEN_2022_CONFIDENTIAL_EFFECTS",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 CPI references confidential token operations; ordinary balance snapshots cannot establish all hidden movements",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "extension_types_generate_distinct_advisory_risks",
+        "failures_and_missing_extensions_do_not_invent_warnings"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_STATE_NON_ATOMIC",
+      "legacy_code": "RPC_MINT_STATE_NON_ATOMIC",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 mint state was read after simulation in a separate RPC call; matching or later slots are not an atomic execution-state proof",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_STATE_MISSING",
+      "legacy_code": "RPC_MINT_STATE_MISSING",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "At least one candidate mint account was absent from the selected RPC snapshot; mint constraints remain unknown",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_TRANSFER_FEE_CONFIG",
+      "legacy_code": "RPC_MINT_TRANSFER_FEE_CONFIG",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 mint snapshot reports transfer-fee configuration; old/new epoch fees and mutable authority must be assessed before estimating net token receipt",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_TRANSFER_HOOK_ACTIVE",
+      "legacy_code": "RPC_MINT_TRANSFER_HOOK_ACTIVE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 mint snapshot reports an active transfer-hook program; downstream hook code and execution effects remain unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_PERMANENT_DELEGATE_ACTIVE",
+      "legacy_code": "RPC_MINT_PERMANENT_DELEGATE_ACTIVE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 mint snapshot reports a non-null permanent delegate with mint-wide token control; holder authorization alone may not restrict its actions",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_CONFIDENTIAL_EXTENSION",
+      "legacy_code": "RPC_MINT_CONFIDENTIAL_EXTENSION",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 mint snapshot includes confidential extension state; ordinary balance snapshots do not establish complete asset effects",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_UNKNOWN_EXTENSION",
+      "legacy_code": "RPC_MINT_UNKNOWN_EXTENSION",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "One or more Token-2022 mint TLV extension IDs are unknown to this decoder; full program effects cannot be inferred",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_MINT_OPAQUE_EXTENSION_STATE",
+      "legacy_code": "RPC_MINT_OPAQUE_EXTENSION_STATE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "One or more known or unknown mint extension payloads have not been semantically decoded; presence alone cannot prove safe transfers",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "every_active_mint_risk_is_advisory_and_non_atomic",
+        "missing_mints_never_imply_no_active_risk"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_NON_ATOMIC",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_NON_ATOMIC",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "SPL Token or Token-2022 holding account state was read separately after simulation; minimum slot does not guarantee an atomic execution snapshot",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MISSING",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_MISSING",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "At least one token holding account was absent from a later RPC snapshot; balances and authorities are unresolved",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_PROGRAM_UNVERIFIED",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_PROGRAM_UNVERIFIED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A reported token account is not owned by Token-2022 in the later RPC snapshot; this reader cannot authenticate its program state or owner",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MINT_MISMATCH",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_MINT_MISMATCH",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A token account mint in the later RPC snapshot differs from simulated balance metadata; this may be stale or inconsistent provider evidence",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_AUTHORITY_MISMATCH",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token account authority differs between later account state and simulated balance metadata; neither view can establish signer authorization",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_MINT_STATE_UNCONFIRMED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 holding account was read but its referenced mint was not confirmed as a Token-2022 mint in the separate mint snapshot",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_FROZEN",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_FROZEN",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A token holding account is frozen in the later snapshot; transferability and delivery must not be assumed",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_DELEGATE",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_DELEGATE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A token holding account has a delegate authority; delegated allowances and authorization are not independently enforced",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CLOSE_AUTHORITY",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_CLOSE_AUTHORITY",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A separate close authority is configured on a token account; account closure permissions may differ from holder permissions",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_WITHHELD_FEES",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_WITHHELD_FEES",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 account snapshot contains nonzero withheld transfer fees; the gross and net token movements are not fully attributed",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_MEMO_REQUIRED",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_MEMO_REQUIRED",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 account requires incoming transfer memos; no transaction-wide memo compliance has been proven",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CPI_GUARD",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_CPI_GUARD",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-2022 account has CPI Guard enabled; some cross-program operations may be restricted",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_HOOK_TRANSFERRING",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_HOOK_TRANSFERRING",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token account reports an in-progress transfer hook flag; hook state and execution cannot be independently confirmed",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_NON_TRANSFERABLE",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_NON_TRANSFERABLE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token account carries NonTransferableAccount extension; token delivery and onward transfer assumptions require independent checks",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_CONFIDENTIAL",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_CONFIDENTIAL",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token account has confidential extensions; public token balance snapshots may omit relevant encrypted flows",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_TOKEN_ACCOUNT_OPAQUE_EXTENSION",
+      "legacy_code": "RPC_TOKEN_ACCOUNT_OPAQUE_EXTENSION",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token account carries unsupported or unknown TLV extension payloads; HGUET cannot claim complete token semantics",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "suspicious_token_account_attributes_create_high_risk_advisory_findings",
+        "missing_account_does_not_get_decoded_as_zero_or_trusted"
+      ],
+      "evidence": [
+        "explicit opt-in single-provider RPC response",
+        "v1 rpc_analysis evidence with source and slot provenance"
+      ],
+      "limitations": [
+        "RPC data may be incomplete or malicious. Later account snapshots are non-atomic. No execution, total spend or authorization proof."
+      ],
+      "fixture_review": "Synthetic positive/negative reporting tests. Individual rule-to-case assertions require further review.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.INTENT_REJECTED",
+      "legacy_code": "INTENT_REJECTED",
+      "severity": "critical",
+      "scope": "intent_trust_and_binding",
+      "summary": "Signed intent or its supported bindings failed verification.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "a_local_hard_deny_is_decided_before_the_provider_sees_the_transaction"
+      ],
+      "evidence": [
+        "original transaction and independently configured intent issuer key"
+      ],
+      "limitations": [
+        "Supported scope only; no general safety or signing authorization."
+      ],
+      "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\B-001.json",
+        "testing\\scenarios\\B-002.json",
+        "testing\\scenarios\\B-003.json",
+        "testing\\scenarios\\B-004.json",
+        "testing\\scenarios\\B-005.json",
+        "testing\\scenarios\\B-006.json",
+        "testing\\scenarios\\B-007.json",
+        "testing\\scenarios\\B-008.json",
+        "testing\\scenarios\\B-009.json",
+        "testing\\scenarios\\B-010.json",
+        "testing\\scenarios\\B-011.json",
+        "testing\\scenarios\\B-012.json",
+        "testing\\scenarios\\B-013.json",
+        "testing\\scenarios\\B-014.json",
+        "testing\\scenarios\\B-015.json",
+        "testing\\scenarios\\B-016.json",
+        "testing\\scenarios\\B-017.json",
+        "testing\\scenarios\\B-018.json",
+        "testing\\scenarios\\G-001.json",
+        "testing\\scenarios\\G-002.json",
+        "testing\\scenarios\\G-003.json",
+        "testing\\scenarios\\G-004.json",
+        "testing\\scenarios\\G-005.json",
+        "testing\\scenarios\\G-006.json",
+        "testing\\scenarios\\G-007.json",
+        "testing\\scenarios\\G-008.json",
+        "testing\\scenarios\\G-009.json",
+        "testing\\scenarios\\G-010.json",
+        "testing\\scenarios\\G-011.json",
+        "testing\\scenarios\\G-012.json",
+        "testing\\scenarios\\G-013.json",
+        "testing\\scenarios\\G-014.json",
+        "testing\\scenarios\\G-015.json",
+        "testing\\scenarios\\G-016.json",
+        "testing\\scenarios\\G-017.json",
+        "testing\\scenarios\\G-018.json",
+        "testing\\scenarios\\G-019.json",
+        "testing\\scenarios\\G-020.json",
+        "testing\\scenarios-regression\\B-107.json",
+        "testing\\scenarios-regression\\B-108.json",
+        "testing\\scenarios-regression\\B-109.json",
+        "testing\\scenarios-regression\\B-110.json",
+        "testing\\scenarios-regression\\B-111.json",
+        "testing\\scenarios-regression\\B-112.json",
+        "testing\\scenarios-regression\\B-113.json",
+        "testing\\scenarios-regression\\B-114.json",
+        "testing\\scenarios-regression\\B-116.json",
+        "testing\\scenarios-regression\\B-117.json",
+        "testing\\scenarios-regression\\B-118.json",
+        "testing\\scenarios-regression\\B-121.json",
+        "testing\\scenarios-regression\\B-123.json",
+        "testing\\scenarios-regression\\B-125.json",
+        "testing\\scenarios-regression\\B-126.json",
+        "testing\\scenarios-regression\\B-127.json",
+        "testing\\scenarios-regression\\B-128.json",
+        "testing\\scenarios-regression\\B-135.json",
+        "testing\\scenarios-regression\\B-136.json",
+        "testing\\scenarios-regression\\B-137.json",
+        "testing\\scenarios-regression\\B-138.json",
+        "testing\\scenarios-regression\\B-140.json",
+        "testing\\scenarios-regression\\B-141.json",
+        "testing\\scenarios-regression\\B-142.json",
+        "testing\\scenarios-regression\\B-143.json",
+        "testing\\scenarios-regression\\B-144.json",
+        "testing\\scenarios-regression\\B-145.json",
+        "testing\\scenarios-regression\\B-146.json",
+        "testing\\scenarios-regression\\B-147.json",
+        "testing\\scenarios-regression\\B-148.json",
+        "testing\\scenarios-regression\\B-149.json",
+        "testing\\scenarios-regression\\B-150.json",
+        "testing\\scenarios-regression\\B-151.json",
+        "testing\\scenarios-regression\\B-152.json",
+        "testing\\scenarios-regression\\B-153.json",
+        "testing\\scenarios-regression\\B-154.json",
+        "testing\\scenarios-regression\\B-155.json",
+        "testing\\scenarios-regression\\B-156.json",
+        "testing\\scenarios-regression\\B-157.json",
+        "testing\\scenarios-regression\\B-158.json",
+        "testing\\scenarios-regression\\B-159.json",
+        "testing\\scenarios-regression\\B-160.json",
+        "testing\\scenarios-regression\\B-161.json",
+        "testing\\scenarios-regression\\B-163.json",
+        "testing\\scenarios-regression\\B-164.json",
+        "testing\\scenarios-regression\\B-165.json",
+        "testing\\scenarios-regression\\B-166.json",
+        "testing\\scenarios-regression\\B-167.json",
+        "testing\\scenarios-regression\\B-168.json",
+        "testing\\scenarios-regression\\B-169.json",
+        "testing\\scenarios-regression\\B-170.json",
+        "testing\\scenarios-regression\\B-171.json",
+        "testing\\scenarios-regression\\B-172.json",
+        "testing\\scenarios-regression\\B-173.json",
+        "testing\\scenarios-regression\\B-174.json",
+        "testing\\scenarios-regression\\B-175.json",
+        "testing\\scenarios-regression\\B-176.json",
+        "testing\\scenarios-regression\\B-177.json",
+        "testing\\scenarios-regression\\B-178.json",
+        "testing\\scenarios-regression\\B-179.json",
+        "testing\\scenarios-regression\\B-180.json",
+        "testing\\scenarios-regression\\B-181.json",
+        "testing\\scenarios-regression\\B-182.json",
+        "testing\\scenarios-regression\\B-183.json",
+        "testing\\scenarios-regression\\B-184.json",
+        "testing\\scenarios-regression\\B-185.json",
+        "testing\\scenarios-regression\\B-186.json",
+        "testing\\scenarios-regression\\B-187.json",
+        "testing\\scenarios-regression\\B-188.json",
+        "testing\\scenarios-regression\\B-189.json",
+        "testing\\scenarios-regression\\B-190.json",
+        "testing\\scenarios-regression\\B-191.json",
+        "testing\\scenarios-regression\\B-192.json",
+        "testing\\scenarios-regression\\B-193.json",
+        "testing\\scenarios-regression\\B-194.json",
+        "testing\\scenarios-regression\\G-101.json",
+        "testing\\scenarios-regression\\G-102.json",
+        "testing\\scenarios-regression\\G-103.json",
+        "testing\\scenarios-regression\\G-104.json",
+        "testing\\scenarios-regression\\G-105.json",
+        "testing\\scenarios-regression\\G-106.json",
+        "testing\\scenarios-regression\\G-107.json",
+        "testing\\scenarios-regression\\G-108.json",
+        "testing\\scenarios-regression\\G-109.json",
+        "testing\\scenarios-regression\\G-110.json",
+        "testing\\scenarios-regression\\G-111.json",
+        "testing\\scenarios-regression\\U-101.json",
+        "testing\\scenarios-regression\\U-102.json",
+        "testing\\scenarios-regression\\U-103.json",
+        "testing\\scenarios-regression\\U-104.json",
+        "testing\\scenarios-regression\\U-105.json",
+        "testing\\scenarios-regression\\U-106.json",
+        "testing\\scenarios-regression\\U-107.json",
+        "testing\\scenarios-regression\\U-108.json",
+        "testing\\scenarios-regression\\U-109.json",
+        "testing\\scenarios-regression\\U-110.json",
+        "testing\\scenarios-regression\\U-111.json",
+        "testing\\scenarios-regression\\U-112.json",
+        "testing\\scenarios-regression\\U-113.json",
+        "testing\\scenarios-regression\\U-114.json",
+        "testing\\scenarios-regression\\U-115.json",
+        "testing\\scenarios-regression\\U-116.json",
+        "testing\\scenarios-regression\\U-117.json",
+        "testing\\scenarios-regression\\U-118.json",
+        "testing\\scenarios-regression\\U-119.json",
+        "testing\\scenarios-regression\\U-120.json",
+        "testing\\scenarios-regression\\U-121.json",
+        "testing\\scenarios-regression\\U-122.json",
+        "testing\\scenarios-regression\\U-123.json",
+        "testing\\scenarios-regression\\U-124.json",
+        "testing\\scenarios-regression\\U-125.json",
+        "testing\\scenarios-regression\\U-126.json",
+        "testing\\scenarios-regression\\U-127.json",
+        "testing\\scenarios-regression\\U-128.json",
+        "testing\\scenarios-regression\\U-129.json",
+        "testing\\scenarios-regression\\U-130.json",
+        "testing\\scenarios-regression\\U-131.json",
+        "testing\\scenarios-regression\\U-132.json",
+        "testing\\scenarios-regression\\U-133.json",
+        "testing\\scenarios-regression\\U-134.json",
+        "testing\\scenarios-regression\\U-135.json",
+        "testing\\scenarios-regression\\U-136.json",
+        "testing\\scenarios-regression\\U-137.json",
+        "testing\\scenarios-regression\\U-138.json",
+        "testing\\scenarios-regression\\U-139.json",
+        "testing\\scenarios-regression\\U-140.json",
+        "testing\\scenarios-regression\\U-141.json",
+        "testing\\scenarios-regression\\U-142.json",
+        "testing\\scenarios-regression\\U-143.json",
+        "testing\\scenarios-regression\\U-144.json",
+        "testing\\scenarios-regression\\U-145.json",
+        "testing\\scenarios-regression\\U-146.json",
+        "testing\\scenarios-regression\\U-147.json",
+        "testing\\scenarios-regression\\U-148.json",
+        "testing\\scenarios-regression\\U-149.json",
+        "testing\\scenarios-regression\\U-150.json",
+        "testing\\scenarios-regression\\U-151.json",
+        "testing\\scenarios-regression\\U-152.json",
+        "testing\\scenarios-regression\\U-153.json",
+        "testing\\scenarios-regression\\U-154.json",
+        "testing\\scenarios-regression\\U-155.json",
+        "testing\\scenarios-regression\\U-156.json",
+        "testing\\scenarios-regression\\U-157.json",
+        "testing\\scenarios-regression\\U-158.json",
+        "testing\\scenarios-regression\\U-159.json",
+        "testing\\scenarios-regression\\U-160.json",
+        "testing\\scenarios-regression\\U-161.json",
+        "testing\\scenarios-regression\\U-162.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.INTENT_COVERAGE_INCOMPLETE",
+      "legacy_code": "INTENT_COVERAGE_INCOMPLETE",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Signed intent scope cannot be fully checked with the available wire addresses.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "lookup_table_with_a_signed_intent_reaches_the_rpc_and_stays_advisory"
+      ],
+      "evidence": [
+        "original transaction and independently configured intent issuer key"
+      ],
+      "limitations": [
+        "Supported scope only; no general safety or signing authorization."
+      ],
+      "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios-regression\\U-105.json",
+        "testing\\scenarios-regression\\U-106.json",
+        "testing\\scenarios-regression\\U-107.json",
+        "testing\\scenarios-regression\\U-108.json",
+        "testing\\scenarios-regression\\U-109.json",
+        "testing\\scenarios-regression\\U-114.json",
+        "testing\\scenarios-regression\\U-115.json",
+        "testing\\scenarios-regression\\U-116.json",
+        "testing\\scenarios-regression\\U-117.json",
+        "testing\\scenarios-regression\\U-118.json",
+        "testing\\scenarios-regression\\U-119.json",
+        "testing\\scenarios-regression\\U-120.json",
+        "testing\\scenarios-regression\\U-121.json",
+        "testing\\scenarios-regression\\U-122.json",
+        "testing\\scenarios-regression\\U-123.json",
+        "testing\\scenarios-regression\\U-124.json",
+        "testing\\scenarios-regression\\U-125.json",
+        "testing\\scenarios-regression\\U-126.json",
+        "testing\\scenarios-regression\\U-127.json",
+        "testing\\scenarios-regression\\U-128.json",
+        "testing\\scenarios-regression\\U-129.json",
+        "testing\\scenarios-regression\\U-130.json",
+        "testing\\scenarios-regression\\U-131.json",
+        "testing\\scenarios-regression\\U-132.json",
+        "testing\\scenarios-regression\\U-133.json",
+        "testing\\scenarios-regression\\U-134.json",
+        "testing\\scenarios-regression\\U-135.json",
+        "testing\\scenarios-regression\\U-136.json",
+        "testing\\scenarios-regression\\U-161.json",
+        "testing\\scenarios-regression\\U-162.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.INTENT_UNVERIFIED",
+      "legacy_code": "INTENT_UNVERIFIED",
+      "severity": "high",
+      "scope": "intent_trust_and_binding",
+      "summary": "Independent intent authorization could not be established.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "check_without_an_intent_and_offline_inspection_stay_local"
+      ],
+      "evidence": [
+        "original transaction and independently configured intent issuer key"
+      ],
+      "limitations": [
+        "Supported scope only; no general safety or signing authorization."
+      ],
+      "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-001.json",
+        "testing\\scenarios\\U-002.json",
+        "testing\\scenarios\\U-005.json",
+        "testing\\scenarios-regression\\U-103.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.RPC_SIMULATION_FAILED",
+      "legacy_code": "RPC_SIMULATION_FAILED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Provider simulation returned an execution error.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "failed_simulation_and_wrong_cluster_are_unknown_not_safe"
+      ],
+      "evidence": [
+        "explicit opt-in RPC simulation response"
+      ],
+      "limitations": [
+        "Supported scope only; no general safety or signing authorization."
+      ],
+      "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
+      "benchmark_fixtures": [
+        "testing\\scenarios\\U-010.json",
+        "testing\\scenarios\\U-011.json",
+        "testing\\scenarios\\U-012.json"
+      ]
+    },
+    {
+      "rule_id": "HGUET.RPC_SIMULATION_ONLY",
+      "legacy_code": "RPC_SIMULATION_ONLY",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Successful simulation remains provider-supplied advisory evidence.",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
+      "tests": [
+        "successful_simulation_is_reported_but_never_permits_signing"
+      ],
+      "evidence": [
+        "explicit opt-in RPC simulation response"
+      ],
+      "limitations": [
+        "Supported scope only; no general safety or signing authorization."
+      ],
+      "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
       "benchmark_fixtures": []
     }
   ]

@@ -293,6 +293,8 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
 fn rule_scope(code: &str) -> &'static str {
     if code == "MALFORMED_TRANSACTION" {
         "original_wire_structural_validation"
+    } else if code.starts_with("INTENT_") {
+        "intent_trust_and_binding"
     } else if code.starts_with("POLICY_") {
         "configured_local_restrictions_on_original_wire_declarations"
     } else if code.starts_with("RPC_") {
