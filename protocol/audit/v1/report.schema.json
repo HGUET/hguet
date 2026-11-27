@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:audit:v1",
+  "title": "HGUET Historical Audit v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "network",
+        "signature",
+        "status",
+        "rpc_error",
+        "verified_genesis_hash",
+        "signatures_verified",
+        "execution_proven",
+        "signing_authorization",
+        "wire",
+        "authority",
+        "historical",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_historical_audit"
+        },
+        "network": {
+          "enum": [
+            "mainnet",
+            "devnet",
+            "testnet"
+          ]
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 88,
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "status": {
+          "enum": [
+            "FOUND_SIGNATURE_VERIFIED",
+            "NOT_FOUND_AT_REQUESTED_COMMITMENT",
+            "RPC_UNAVAILABLE"
+          ]
+        },
+        "rpc_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_genesis_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signatures_verified": {
+          "type": "boolean"
+        },
+        "execution_proven": {
+          "const": false
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "wire": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:hguet:flow:v1"
+                },
+                {
+                  "properties": {
+                    "kind": {
+                      "const": "hguet_asset_flow"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "authority": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "urn:hguet:authority:v1"
+                },
+                {
+                  "properties": {
+                    "kind": {
+                      "const": "hguet_authority_intelligence"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "historical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "slot",
+                "block_time",
+                "status",
+                "reported_fee_lamports",
+                "historical_loaded_addresses",
+                "effects",
+                "effects_status"
+              ],
+              "properties": {
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "block_time": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "enum": [
+                    "METADATA_UNAVAILABLE",
+                    "RPC_REPORTED_SUCCESS",
+                    "RPC_REPORTED_FAILURE"
+                  ]
+                },
+                "reported_fee_lamports": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^(0|[1-9][0-9]*)$"
+                },
+                "historical_loaded_addresses": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "effects": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "lamport_deltas",
+                        "token_deltas",
+                        "cpi",
+                        "observed_fields",
+                        "missing_fields"
+                      ],
+                      "properties": {
+                        "lamport_deltas": {
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "token_deltas": {
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "cpi": {
+                          "type": "object"
+                        },
+                        "observed_fields": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "missing_fields": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "effects_status": {
+                  "enum": [
+                    "METADATA_UNAVAILABLE",
+                    "HISTORICAL_LOOKUPS_UNAVAILABLE",
+                    "PARTIAL_UNTRUSTED_RPC"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "FOUND_SIGNATURE_VERIFIED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "signatures_verified": {
+                "const": true
+              },
+              "rpc_error": {
+                "type": "null"
+              },
+              "verified_genesis_hash": {
+                "type": "string"
+              },
+              "wire": {
+                "type": "object"
+              },
+              "authority": {
+                "type": "object"
+              },
+              "historical": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "slot",
+                  "block_time",
+                  "status",
+                  "reported_fee_lamports",
+                  "historical_loaded_addresses",
+                  "effects",
+                  "effects_status"
+                ],
+                "properties": {
+                  "slot": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "block_time": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "status": {
+                    "enum": [
+                      "METADATA_UNAVAILABLE",
+                      "RPC_REPORTED_SUCCESS",
+                      "RPC_REPORTED_FAILURE"
+                    ]
+                  },
+                  "reported_fee_lamports": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "historical_loaded_addresses": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "effects": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "lamport_deltas",
+                          "token_deltas",
+                          "cpi",
+                          "observed_fields",
+                          "missing_fields"
+                        ],
+                        "properties": {
+                          "lamport_deltas": {
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "token_deltas": {
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "cpi": {
+                            "type": "object"
+                          },
+                          "observed_fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "missing_fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "effects_status": {
+                    "enum": [
+                      "METADATA_UNAVAILABLE",
+                      "HISTORICAL_LOOKUPS_UNAVAILABLE",
+                      "PARTIAL_UNTRUSTED_RPC"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "signatures_verified": {
+                "const": false
+              },
+              "wire": {
+                "type": "null"
+              },
+              "authority": {
+                "type": "null"
+              },
+              "historical": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "RPC_UNAVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "rpc_error": {
+                "type": "string"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "rpc_error": {
+                "type": "null"
+              },
+              "verified_genesis_hash": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_audit_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}

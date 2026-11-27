@@ -34,3 +34,5 @@ References:
 
 This is a developer preview; mock transport tests and real read-only public
 historical samples are required before broad compatibility claims.
+
+The [JSON schema](report.schema.json) validates the versioned report and error envelope and refusal invariants; register flow, program and authority schemas by their documented URNs for successful reports. Nested historical balance/CPI structures retain the existing typed evidence shapes. Seven Rust integration tests construct and locally sign synthetic legacy/v0/v1 wire fixtures, verify first-signature binding, rejected tampering, missing metadata, historical ALT claims, failed execution fees and no extra RPC methods. Network-isolated CLI tests verify malformed configuration error envelopes. These are synthetic provider responses, not live public transactions or independent ledger verification. New hosted results pending.

@@ -152,9 +152,22 @@ def main():
     assert p.returncode == 40 and json.loads(p.stdout)["kind"] == "hguet_diff_error"
     validator.validate(json.loads(p.stdout))
     record("bounded_input_errors")
-    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 9,
+
+    audit_schema = json.loads((ROOT / "protocol/audit/v1/report.schema.json").read_text())
+    Draft202012Validator.check_schema(audit_schema)
+    audit_validator = Draft202012Validator(audit_schema)
+    from solders.signature import Signature
+    signature = str(Signature.from_bytes(original[1:65]))
+    for inputs in (["invalid", "--network", "devnet", "--rpc-url", "https://rpc.example"],
+                   [signature], [signature, "--network", "devnet"],
+                   [signature, "--network", "devnet", "--rpc-url", "http://rpc.example"]):
+        p = subprocess.run([str(binary), "audit", *inputs], capture_output=True, timeout=20)
+        assert p.returncode == 40, p.stderr
+        audit_validator.validate(json.loads(p.stdout))
+    record("historical_audit_invalid_configuration")
+    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 10,
                                     "passed_count": len(cases), "acceptance": "PASS"}, indent=2))
-    print("PASS: 9 offline semantic diff SDK/CLI comparisons")
+    print("PASS: 9 offline semantic diff SDK/CLI comparisons and 1 audit configuration group")
 
 
 if __name__ == "__main__":

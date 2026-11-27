@@ -1,5 +1,7 @@
 //! Historical metadata is a single provider's claim, never current state.
-use super::{checked_result, effects, verify_rpc_genesis, JsonRpcTransport, LookupResolution, RpcError};
+use super::{
+    checked_result, effects, verify_rpc_genesis, JsonRpcTransport, LookupResolution, RpcError,
+};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hguet_core::{parse_transaction, ParsedTransaction, TransactionSignatureStatus};
 use serde::Serialize;
@@ -80,7 +82,7 @@ fn historical_lookup(
             .map(|v| {
                 let key = v.as_str().ok_or(RpcError::InvalidResponse)?;
                 if key.len() > 44
-                    || bs58::decode(key).into_vec().map_or(true, |v| v.len() != 32)
+                    || !bs58::decode(key).into_vec().is_ok_and(|v| v.len() == 32)
                 {
                     return Err(RpcError::InvalidResponse);
                 }
@@ -141,7 +143,9 @@ fn decode(
         "v1" => version.as_u64() == Some(1),
         _ => false,
     };
-    if !version_matches || parsed.transaction_signature_status != TransactionSignatureStatus::Verified {
+    if !version_matches
+        || parsed.transaction_signature_status != TransactionSignatureStatus::Verified
+    {
         return Err(RpcError::InvalidResponse);
     }
     // Core already validated canonical signature count and message boundaries.
@@ -169,6 +173,9 @@ fn decode(
         Some(value) => {
             let meta = value.as_object().ok_or(RpcError::InvalidResponse)?;
             let err = meta.get("err").ok_or(RpcError::InvalidResponse)?;
+            if !(err.is_null() || err.is_string() || err.is_object()) {
+                return Err(RpcError::InvalidResponse);
+            }
             evidence.status = if err.is_null() {
                 "RPC_REPORTED_SUCCESS"
             } else {
