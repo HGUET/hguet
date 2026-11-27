@@ -57,3 +57,11 @@ hguet flow-rpc transaction.bin --network devnet --rpc-url https://YOUR_RPC
 ```
 
 This sends the original transaction bytes to the explicitly selected provider for simulation, with signature verification disabled and recent blockhash replacement enabled. It can also request lookup, mint and token-account state from that provider. It does not broadcast. Use the offline flow command if you do not want to disclose transaction bytes. See [RPC flow contract](protocol/flow-rpc/v1/README.md).
+
+## Authority Intelligence (developer preview)
+
+```sh
+hguet authority transaction.bin --offline
+```
+
+Separate original-wire inventory of selected token and lookup-table control declarations. An approval is not a debit; a signer role is not verified authorization. See [authority contract](protocol/authority/v1/README.md).

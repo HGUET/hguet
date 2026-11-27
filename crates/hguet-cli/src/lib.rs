@@ -1,4 +1,5 @@
 //! Reusable transaction analysis with explicit trust and opt-in RPC.
+pub mod authority;
 pub mod effects;
 pub mod flow;
 pub mod flow_rpc;

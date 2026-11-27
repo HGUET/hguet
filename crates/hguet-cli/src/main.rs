@@ -19,6 +19,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
+  hguet authority FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json]\n\
   hguet doctor [--json]  (offline environment report)\n\
@@ -391,13 +392,12 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
     };
     (json!({"signer_refusal":refusal}), 20)
 }
-fn inventory_command(flow: bool) -> i32 {
+fn inventory_command(command: &str) -> i32 {
     let mut args = env::args().skip(2);
     let result = (|| {
         let file = args.next().ok_or("missing transaction path")?;
         let mut encoding = "binary".to_owned();
         let mut offline = false;
-        let command = if flow { "flow" } else { "programs" };
         while let Some(flag) = args.next() {
             match flag.as_str() {
                 "--offline" => offline = true,
@@ -410,10 +410,10 @@ fn inventory_command(flow: bool) -> i32 {
             return Err(format!("{command} requires --offline"));
         }
         let bytes = read_transaction(&file, &encoding)?;
-        if flow {
-            serde_json::to_string_pretty(&hguet::flow::inspect(&bytes)?)
-        } else {
-            serde_json::to_string_pretty(&hguet::programs::inspect(&bytes)?)
+        match command {
+            "flow" => serde_json::to_string_pretty(&hguet::flow::inspect(&bytes)?),
+            "authority" => serde_json::to_string_pretty(&hguet::authority::inspect(&bytes)?),
+            _ => serde_json::to_string_pretty(&hguet::programs::inspect(&bytes)?),
         }
         .map_err(|_| "report serialization failed".to_owned())
     })();
@@ -423,10 +423,10 @@ fn inventory_command(flow: bool) -> i32 {
             0
         }
         Err(error) => {
-            let kind = if flow {
-                "hguet_flow_error"
-            } else {
-                "hguet_program_error"
+            let kind = match command {
+                "flow" => "hguet_flow_error",
+                "authority" => "hguet_authority_error",
+                _ => "hguet_program_error",
             };
             println!(
                 "{}",
@@ -488,14 +488,17 @@ fn rpc_flow_command() -> i32 {
 }
 
 fn main() {
+    if env::args().nth(1).as_deref() == Some("authority") {
+        process::exit(inventory_command("authority"));
+    }
     if env::args().nth(1).as_deref() == Some("flow-rpc") {
         process::exit(rpc_flow_command());
     }
     if env::args().nth(1).as_deref() == Some("programs") {
-        process::exit(inventory_command(false));
+        process::exit(inventory_command("programs"));
     }
     if env::args().nth(1).as_deref() == Some("flow") {
-        process::exit(inventory_command(true));
+        process::exit(inventory_command("flow"));
     }
     let mut arguments = env::args().skip(1);
     let command = (arguments.next(), arguments.next());

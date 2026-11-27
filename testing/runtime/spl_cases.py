@@ -93,7 +93,24 @@ def run_case(binary, operation, wrong_authority=False):
         assert declaration["delegate"] == str(delegate.pubkey()) and declaration["amount_raw"] == "123"
     else:
         assert declaration["new_authority"] == str(delegate.pubkey()) and declaration["authority_type"] == 2
-    return {"program_inventory": "PASS", "case": operation + ("_wrong_authority" if wrong_authority else ""),
+    authority_output = subprocess.run([binary, "authority", "-", "--offline"],
+                                      input=bytes(tx), capture_output=True, timeout=20)
+    assert authority_output.returncode == 0, authority_output.stderr
+    authority_report = json.loads(authority_output.stdout)
+    assert not authority_report["authorization_proven"] and not authority_report["execution_proven"]
+    assert authority_report["signing_authorization"] == "NOT_AUTHORIZED"
+    changes = authority_report["changes"]
+    if operation == "approve":
+        assert len(changes) == 1 and changes[0]["action"] == "set_delegate"
+        assert changes[0]["proposed_authority"] == str(delegate.pubkey())
+        assert changes[0]["declared_delegate_limit_raw"] == "123"
+        assert changes[0]["target"] == str(source) and changes[0]["authority_required_signer"]
+    elif operation == "set_authority":
+        assert len(changes) == 1 and changes[0]["control_scope"] == "token_account_owner"
+        assert changes[0]["proposed_authority"] == str(delegate.pubkey())
+    else:
+        assert changes == []
+    return {"authority_inventory": "PASS", "program_inventory": "PASS", "case": operation + ("_wrong_authority" if wrong_authority else ""),
             "runtime_outcome": "REJECTED" if wrong_authority else "EXECUTED",
             "runtime_error": rejection, "comparison":"PASS", "hguet_effect": expected,
             "source_amount_after": state.amount}

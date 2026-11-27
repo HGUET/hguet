@@ -1,6 +1,6 @@
 //! Read-only correlation of wire declarations with single-provider RPC claims.
 use crate::flow::{self, Endpoint, FlowEdge, FlowReport};
-use hguet_rpc::{JsonRpcTransport, SimulationEvidence, SimulationEffects};
+use hguet_rpc::{JsonRpcTransport, SimulationEffects, SimulationEvidence};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -71,9 +71,7 @@ fn match_endpoint(
         return ("METADATA_ABSENT", None);
     };
     match rows.iter().enumerate().find(|(_, r)| {
-        r.account_index == endpoint.message_index
-            && r.token_account == *address
-            && r.mint == *mint
+        r.account_index == endpoint.message_index && r.token_account == *address && r.mint == *mint
     }) {
         Some((i, row)) => (
             if row.complete_pair {
@@ -142,7 +140,12 @@ pub fn inspect<T: JsonRpcTransport>(
                 ),
             });
         }
-        for (i, item) in effects.cpi.token_2022_extension_observations.iter().enumerate() {
+        for (i, item) in effects
+            .cpi
+            .token_2022_extension_observations
+            .iter()
+            .enumerate()
+        {
             cpi_links.push(CpiLink {
                 parent_instruction_index: item.parent_instruction_index,
                 inner_instruction_index: item.inner_instruction_index,
@@ -247,7 +250,9 @@ mod tests {
         let edge = &wire.flows[0];
         let from = edge.from.as_ref().unwrap().message_index;
         let to = edge.to.as_ref().unwrap().message_index;
-        let count = hguet_core::parse_transaction(&bytes).unwrap().total_address_count;
+        let count = hguet_core::parse_transaction(&bytes)
+            .unwrap()
+            .total_address_count;
         let before = vec![10_000u64; count];
         let mut after = before.clone();
         after[from] -= 700;
@@ -263,7 +268,10 @@ mod tests {
         assert!(!report.execution_proven);
         assert_eq!(report.signing_authorization, "NOT_AUTHORIZED");
         let value = serde_json::to_value(report).unwrap();
-        assert_eq!(value["rpc_evidence"]["effect_analysis"]["simulated_fee_lamports"], "200");
+        assert_eq!(
+            value["rpc_evidence"]["effect_analysis"]["simulated_fee_lamports"],
+            "200"
+        );
         assert!(value["wire"]["actual_network_fee_lamports"].is_null());
         for link in value["endpoint_links"].as_array().unwrap() {
             assert_eq!(link["status"], "ACCOUNT_ROW_MATCH");
@@ -278,14 +286,22 @@ mod tests {
         let bytes = fixture();
         let missing = provider(json!({"err":null}));
         let report = inspect(&bytes, "devnet", "https://rpc.example", &missing).unwrap();
-        assert!(report.endpoint_links.iter().all(|l| l.status == "METADATA_ABSENT"));
-        let count = hguet_core::parse_transaction(&bytes).unwrap().total_address_count;
+        assert!(report
+            .endpoint_links
+            .iter()
+            .all(|l| l.status == "METADATA_ABSENT"));
+        let count = hguet_core::parse_transaction(&bytes)
+            .unwrap()
+            .total_address_count;
         let balances = vec![1000u64; count];
         let unchanged = provider(json!({
             "err":null,"preBalances":balances,"postBalances":balances
         }));
         let report = inspect(&bytes, "devnet", "https://rpc.example", &unchanged).unwrap();
-        assert!(report.endpoint_links.iter().all(|l| l.status == "NO_DELTA_ROW"));
+        assert!(report
+            .endpoint_links
+            .iter()
+            .all(|l| l.status == "NO_DELTA_ROW"));
         assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "500");
     }
 
