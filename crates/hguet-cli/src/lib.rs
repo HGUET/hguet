@@ -1130,7 +1130,7 @@ fn analyze_internal<T: JsonRpcTransport>(
         match local_policy {
             Ok(policy) => {
                 let evaluation = policy.evaluate(&v.network, &parsed);
-                if let Some(details) = details.as_deref_mut() {
+                if let Some(details) = details {
                     details.compliance = if !evaluation.hard_denies.is_empty() {
                         report_v2::Compliance::Violation
                     } else if !evaluation.unknowns.is_empty() {
