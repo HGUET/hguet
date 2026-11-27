@@ -82,7 +82,17 @@ def run_case(binary, expected_fee=2):
     assert declaration["mint"] == str(mint) and declaration["declared_amount_raw"] == "123"
     assert declaration["expected_fee_raw"] == str(expected_fee) and declaration["decimals"] == 6
     assert program["signing_authorization"] == "NOT_AUTHORIZED"
-    return {"program_inventory": "PASS", "case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
+    flow_output = subprocess.run([binary, "flow", "-", "--offline"],
+                                 input=bytes(tx), capture_output=True, timeout=20)
+    assert flow_output.returncode == 0, flow_output.stderr
+    flow = json.loads(flow_output.stdout)
+    total = flow["asset_totals"][0]
+    assert total["declared_debit_raw"] == "123"
+    assert total["declared_expected_fee_raw"] == str(expected_fee)
+    assert flow["flows"][0]["declared_decimals"] == 6
+    assert flow["execution_status"] == "NOT_PERFORMED"
+    assert flow["observed_net_changes"] is None
+    return {"flow_inventory": "PASS", "program_inventory": "PASS", "case": "token2022_wrong_fee" if rejected else "token2022_transfer_fee",
             "runtime_outcome": "REJECTED" if rejected else "EXECUTED",
             "runtime_error": rejection, "wire_amount": 123, "expected_fee": expected_fee,
             "source_debit": 0 if rejected else 123, "destination_credit": 0 if rejected else 121,

@@ -32,3 +32,5 @@ validating (no network resolution). See `testing/runtime/flow_preview.py`.
 This is only the first offline slice of Phase 2.1. Existing RPC analysis remains
 separate. CPI/net/state correlation, richer authority reports and historical
 execution analysis are pending. No public release or independent audit claimed.
+
+The SDK suite also checks totals greater than u64 and self-transfers. The existing actual ALT and Token-2022 fee runtime tests now compare flow declarations too, including a rejected wrong-fee transaction, whose declaration must not become an observed debit. These checks do not imply execution of the other SDK fixtures.

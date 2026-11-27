@@ -137,6 +137,20 @@ def main():
     assert fee_total["expected_fee_instruction_count"] == 1
     record("fee_not_double_counted_and_programs_separate")
 
+    tx, msg = make_tx(svm, payer, [checked(2**64 - 1, 6), checked(2**64 - 1, 6)])
+    report = inspect(tx, msg)
+    assert report["asset_totals"][0]["declared_debit_raw"] == str(2 * (2**64 - 1))
+    record("u128_totals_preserve_u64_inputs")
+
+    tx, msg = make_tx(svm, payer, [
+        transfer(TransferParams(from_pubkey=payer.pubkey(), to_pubkey=payer.pubkey(), lamports=500))
+    ])
+    report = inspect(tx, msg)
+    assert report["flows"][0]["from"] == report["flows"][0]["to"]
+    assert report["asset_totals"][0]["declared_debit_raw"] == "500"
+    assert report["observed_net_changes"] is None
+    record("self_transfer_not_netted")
+
     p = subprocess.run([str(binary), "flow", "-", "--offline"], input=b"\xff", capture_output=True, timeout=20)
     assert p.returncode == 40
     validator.validate(json.loads(p.stdout))
@@ -145,9 +159,9 @@ def main():
     validator.validate(json.loads(p.stdout))
     record("versioned_errors_and_explicit_offline")
 
-    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 5,
+    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 7,
                                     "passed_count": len(cases), "acceptance": "PASS"}, indent=2))
-    print("PASS: 5 asset flow SDK/CLI comparisons; 2 executed in LiteSVM")
+    print("PASS: 7 asset flow SDK/CLI comparisons; 2 executed in LiteSVM")
 
 
 if __name__ == "__main__":

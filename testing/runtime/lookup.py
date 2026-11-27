@@ -61,6 +61,15 @@ def run_case(binary):
     assert row["accounts"][1]["role"] == "destination"
     assert row["accounts"][1]["address"] is None
     assert program["signing_authorization"] == "NOT_AUTHORIZED"
-    return {"program_inventory":"PASS", "case":"v0_alt_native_transfer", "runtime_outcome":"EXECUTED",
+    flow_output = subprocess.run([binary, "flow", "-", "--offline"],
+                                 input=bytes(tx), capture_output=True, timeout=20)
+    assert flow_output.returncode == 0, flow_output.stderr
+    flow = json.loads(flow_output.stdout)
+    assert flow["asset_totals"][0]["declared_debit_raw"] == "500"
+    assert flow["flows"][0]["from"]["address"] == str(payer)
+    assert flow["flows"][0]["to"]["address"] is None
+    assert flow["unresolved_endpoint_instruction_indices"] == [0]
+    assert flow["observed_net_changes"] is None
+    return {"flow_inventory":"PASS", "program_inventory":"PASS", "case":"v0_alt_native_transfer", "runtime_outcome":"EXECUTED",
             "actual_recipient_delta":500, "offline_destination":"UNKNOWN",
             "unresolved_lookup_addresses":1, "comparison":"PASS"}
