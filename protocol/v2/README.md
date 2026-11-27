@@ -145,3 +145,10 @@ now fail validation. Signing-boundary reason strings remain a separate
 contract. The fourteen additional entries document their actual scope and
 limits; RPC typed-error injection verifies code forwarding and refusal,
 without claiming to reproduce every underlying transport failure cause.
+
+The Rust CI workflow runs the catalogue validator and its mutation regressions.
+Tests reject missing dynamic/direct codes, duplicate rules, broken test
+references, unrecorded regression gaps and source paths outside the repository.
+Catalogue fixture references use forward slashes for both Linux and Windows;
+portable-path checks prevent Windows-generated separators breaking Linux CI.
+The five declared targeted regression gaps remain visible in successful output.

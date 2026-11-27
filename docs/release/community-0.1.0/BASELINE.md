@@ -158,3 +158,20 @@ pq-tests-wsl.txt and clippy-wsl.txt. Tested source SHA-256:
 
 - crates/hguet-cli/src/pipeline_tests.rs: 2835650f9ba9346a480604c89012af796d6c0a9b3b4f9cc1ad1f9a8927211063
 - protocol/v2/rules.json: bc5dcfd7a58a5045220e84d72432ca980ad7fea76142dd6ed29ac8a6baa9e298
+
+## Catalogue CI and portability refresh — 2026-11-27
+
+Base ba9f735 plus the catalogue CI/portability changes in the accompanying
+commit. The validator and seven mutation/portability tests passed on Windows.
+WSL Ubuntu-26.04: catalogue validation passed for 125 rules with five explicit
+targeted regression gaps; all workflow YAML parsed successfully.
+`PYTHONPATH="$PWD/target/runtime-deps" python3 -m unittest discover -s
+testing/tests -v` ran 108 tests in 490.489 seconds: OK, zero skips.
+OpenSSL-dependent TLS tests ran; ResourceWarning messages for unclosed test
+SSL sockets remain visible in the log. The run covers the Python framework,
+not a new execution of the 227-case HGUET benchmark.
+
+Normalized 1073 fixture references to repository-portable forward slashes.
+CI now invokes the catalogue validator and its regressions. Local full log:
+target/phase01-current/framework-tests-wsl.txt. SHA-256:
+52314ac98a60c7aad3e63dec091419f4aa1728214aa2d90b3bdd2eec2d84ba0b
