@@ -55,7 +55,8 @@ def run_cases(binary):
         outcome = svm.send_transaction(v1_tx)
         if isinstance(outcome, FailedTransactionMetadata):
             v1_result = {"case":case_name,"sdk_roundtrip":"PASS",
-                         "runtime_outcome":"REJECTED","runtime_error":str(outcome)}
+                         "runtime_outcome":"REJECTED","runtime_error":str(outcome),
+                         "comparison":"FAIL"}
         else:
             assert svm.get_balance(receiver.pubkey()) - before == 500
             with tempfile.TemporaryDirectory() as directory:

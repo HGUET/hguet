@@ -9,25 +9,41 @@ permissions:
 jobs:
   runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      RUSTUP_HOME: ${{ runner.temp }}/hguet-rustup
+      CARGO_HOME: ${{ runner.temp }}/hguet-cargo
     steps:
+      - name: Initialize evidence before setup
+        shell: bash
+        run: |
+          mkdir -p target/runtime-ci
+          printf '%s\n' "$GITHUB_SHA" > target/runtime-ci/source.txt
+          uname -a > target/runtime-ci/environment.txt
       - uses: actions/checkout@v4
+        with:
+          clean: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.100.0
+      - name: Install exact Rust toolchain in isolated home
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal --component rustfmt --component clippy 2>&1 | tee "$GITHUB_WORKSPACE/target/runtime-ci/rustup.log"
+          rustc +1.100.0 -Vv >> "$GITHUB_WORKSPACE/target/runtime-ci/environment.txt"
       - name: Install pinned runtime dependencies
-        run: python -m pip install -r testing/runtime/requirements.txt
+        shell: bash
+        run: python -m pip install -r testing/runtime/requirements.txt 2>&1 | tee target/runtime-ci/pip.log
+      - name: Test fail-closed runtime acceptance
+        run: python -m unittest discover -s testing/runtime -p test_acceptance.py -v
       - name: Build locked read-only CLI
-        run: cargo build --locked -p hguet
+        shell: bash
+        run: cargo +1.100.0 build --locked -p hguet 2>&1 | tee target/runtime-ci/build.log
       - name: Record source and runtime environment
         run: |
-          mkdir -p target/runtime-ci
-          git rev-parse HEAD > target/runtime-ci/source.txt
+          git rev-parse HEAD >> target/runtime-ci/source.txt
           git status --porcelain >> target/runtime-ci/source.txt
-          rustc -Vv > target/runtime-ci/environment.txt
           python --version >> target/runtime-ci/environment.txt
           python -m pip freeze >> target/runtime-ci/environment.txt
           sha256sum target/debug/hguet > target/runtime-ci/cli.sha256
@@ -38,6 +54,13 @@ jobs:
           sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/native.py \
             --hguet "$PWD/target/debug/hguet" --out target/runtime-ci/result.json \
             2>&1 | tee target/runtime-ci/runtime.log
+      - name: Hash evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p target/runtime-ci
+          cd target/runtime-ci
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
       - name: Preserve runtime evidence
         if: always()
         uses: actions/upload-artifact@v4

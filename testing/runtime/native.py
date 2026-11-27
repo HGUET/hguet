@@ -69,20 +69,29 @@ def main():
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
     binary = str(Path(args.hguet).resolve())
-    result = {"schema_version": 1, "python": platform.python_version(),
-              "solders": importlib.metadata.version("solders"),
-              "cases": [run_case(binary, [500]), run_case(binary, [300, 201]),
-                        *[token_case(binary, operation) for operation in
-                          ("transfer_checked", "approve", "set_authority")],
-                        fee_case(binary), fee_case(binary, 1),
-                        token_case(binary,"transfer_checked",True),
-                        run_case(binary,[20_000_000],True), *format_cases(binary), lookup_case(binary)],
-              "limitations": ["ALT runtime comparison keeps offline addresses unresolved.",
-                              "v1 comparisons cover native transfers with default and inline resource configurations.",
-                              "These local runtime results establish no live cluster support."]}
-    Path(args.out).write_text(json.dumps(result, indent=2) + "\n")
-    print(json.dumps(result, indent=2))
+    from acceptance import run_suite, expected_cases
+    from functools import partial
+
+    jobs = [
+        (("native_match",), partial(run_case, binary, [500])),
+        (("native_repeated_over_cap",), partial(run_case, binary, [300, 201])),
+        *[((op,), partial(token_case, binary, op))
+          for op in ("transfer_checked", "approve", "set_authority")],
+        (("token2022_transfer_fee",), partial(fee_case, binary)),
+        (("token2022_wrong_fee",), partial(fee_case, binary, 1)),
+        (("transfer_checked_wrong_authority",), partial(token_case, binary, "transfer_checked", True)),
+        (("native_insufficient_balance",), partial(run_case, binary, [20_000_000], True)),
+        (("v0_sdk_transfer", "v1_sdk_transfer", "v1_inline_resources"), partial(format_cases, binary)),
+        (("v0_alt_native_transfer",), partial(lookup_case, binary)),
+    ]
+    metadata = {"schema_version": 1, "python": platform.python_version(),
+                "solders": importlib.metadata.version("solders"),
+                "binary_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
+                "limitations": ["ALT runtime comparison keeps offline addresses unresolved.",
+                                "v1 comparisons cover native transfers with default and inline resource configurations.",
+                                "These local runtime results establish no live cluster support."]}
+    return run_suite(jobs, expected_cases, Path(args.out), metadata)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
