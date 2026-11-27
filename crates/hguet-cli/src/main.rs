@@ -19,6 +19,7 @@ Usage:\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
+  hguet doctor [--json]  (offline environment report)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
   hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--save-order FILE] [--json]\n\
   hguet cloud status ORDER --claim-file FILE --ca-file FILE --quote-key FILE --assessment-key FILE --receipt-key FILE [--json]\n\
@@ -43,6 +44,25 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let mut a = env::args().skip(1);
     let cmd = a.next().ok_or("missing command")?;
+    if cmd == "doctor" {
+        if let Some(option) = a.next() {
+            if option != "--json" || a.next().is_some() {
+                return Err("expected doctor [--json]".into());
+            }
+        }
+        return Ok(Args {
+            command: cmd,
+            file: String::new(),
+            network: "mainnet".into(),
+            encoding: "binary".into(),
+            intent: None,
+            trusted_key: None,
+            policy: None,
+            rpc_url: None,
+            mode: "local".into(),
+            offline: true,
+        });
+    }
     if cmd == "--help" || cmd == "-h" || cmd == "--version" {
         return Ok(Args {
             command: cmd,
@@ -1861,6 +1881,19 @@ fn main() {
         return;
     }
     match parse_args() {
+        Ok(v) if v.command == "doctor" => {
+            println!(
+                "{}",
+                json!({
+                    "schema_version":1,"command":"doctor","offline":true,
+                    "os":env::consts::OS,"architecture":env::consts::ARCH,
+                    "package_version":env!("CARGO_PKG_VERSION"),
+                    "network_access":false,"signing_authorization":"NOT_AUTHORIZED",
+                    "input_limit_bytes":16384,"input_encodings":["binary","base64","base58"],
+                    "cloud_required":false
+                })
+            );
+        }
         Ok(v) if v.command == "--help" || v.command == "-h" => {
             println!("{}", usage());
             process::exit(0)

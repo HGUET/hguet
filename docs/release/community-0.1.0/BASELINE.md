@@ -35,6 +35,6 @@ reported as a 227-case signing-boundary check. Cloud scoring uses mocks.
 Local raw output is under target/phase01-evidence. These generated files
 are excluded by Git. The report JSON records the executable digest.
 Framework self-tests initially stalled without output under the restricted
-launcher and were interrupted. A verbose rerun is being evaluated separately.
+launcher and were interrupted. The verbose rerun outside the restricted launcher completed in 63.034 seconds: 101 tests, 15 skipped because the Windows environment lacked the OpenSSL CLI. These mock framework tests do not establish runtime correctness.
 Real Solana SDK/LiteSVM runtime validation is NOT RUN at this milestone.
 Phase 1 acceptance remains OPEN.
