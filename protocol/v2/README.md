@@ -96,3 +96,24 @@ identities do produce an aggregate object, while signing remains blocked.
 These tests exercise earlier guards; they do not cover or close the later
 RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID finding. That targeted regression remains
 open. The checks intentionally use the existing parser and RPC validation.
+
+### Remaining defensive finding reachability
+
+The following is a source review plus selected regressions, not a formal
+unreachability proof or a waiver of the five targeted regression gaps.
+
+| Finding | Earlier constraint / current evidence | Remaining work |
+| --- | --- | --- |
+| SIGNED_INTENT_TOKEN_CAP_INVALID | `verify_intent_detailed` invokes the same deterministic token-limit review on the same parsed wire and signed limits before populating `verified_intent`; coverage failures also leave that path. Existing equal/over-cap pipeline tests exercise acceptance and early rejection. | Prove the invariant across all review return paths or find a counterexample; the later error branch has not been exercised. |
+| SIGNED_INTENT_SOURCE_SCOPE_INVALID | The same source-limit review runs during independent intent verification before its CLI recomputation. Existing source-cap overage tests reject before RPC. | Review all source-review failure/coverage paths; no direct emission fixture yet. |
+| RPC_SOURCE_AUTHORITY_EVIDENCE_INVALID | Snapshot constructors validate slot floors, sizes, state/address binding and unique accounts; the supplemental signed-source read excludes already observed addresses. | Check constructor/correlator invariants, including cross-program signed sources and state decoding; no direct emission fixture yet. |
+| RPC_CPI_SOURCE_CORRELATION_INVALID | CPI decoding bounds and assigns parent/inner indices; snapshot constructors validate slots/state and exclude existing addresses. The 512/513 pipeline test confirms the shared item boundary. | Review all source-claim operations and snapshot combinations; no direct emission fixture yet. |
+| RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID | Wire parsing rejects duplicate keys and more than 64 instructions; CPI parsing rejects duplicate parent groups and more than 512 items; token snapshots reject conflicting mint/owner identity. Guard regressions cover duplicate keys and changed mint identity. | Review aggregate-only checks against every upstream constructor; no direct emission fixture yet. |
+
+`cpi_item_limit_is_enforced_before_source_correlation_and_aggregation` uses
+512 compiled checked-transfer CPI declarations with one source and one mint.
+It asserts 512 correlation entries and an advisory CPI view of 512 raw units,
+without claiming executed spending. At 513 items RPC_RESPONSE_INVALID is
+emitted, the CPI account read is not attempted and no aggregate is returned.
+Both cases remain UNKNOWN and signing is blocked. No decoder, trust or
+correlation guard was relaxed to construct these tests.

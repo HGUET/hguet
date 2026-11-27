@@ -848,3 +848,58 @@ fn changing_provider_mint_identity_is_rejected_before_aggregation() {
         }
     }
 }
+
+#[test]
+fn cpi_item_limit_is_enforced_before_source_correlation_and_aggregation() {
+    let token_program = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+    let mut data = vec![12];
+    data.extend(1u64.to_le_bytes());
+    data.push(6);
+    for count in [512, 513] {
+        let wire = legacy_transfer(75);
+        let mut response = simulation(900, Value::Null, &[10000, 0, 1], &[4925, 75, 1]);
+        let ix = json!({"programId":token_program,"accounts":[0,1,1,0],
+            "data":bs58::encode(&data).into_string()});
+        response["value"]["innerInstructions"] = json!([{"index":0,"instructions":vec![ix;count]}]);
+        let rpc = FakeRpc::new(response);
+        let (report, exit) = execute_with(args(&wire, true), &rpc);
+        assert_never_permits(&report, exit);
+        assert_eq!(exit, 30);
+        assert_eq!(
+            codes(&report).contains(&"RPC_RESPONSE_INVALID".to_owned()),
+            count == 513,
+            "{report}"
+        );
+        for code in [
+            "RPC_CPI_SOURCE_CORRELATION_INVALID",
+            "RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID",
+        ] {
+            assert!(!codes(&report).contains(&code.to_owned()), "{report}");
+        }
+        if count == 512 {
+            assert_eq!(
+                report["cpi_source_coverage"]["entries"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                512
+            );
+            assert_eq!(
+                report["aggregate_token_spending"]["mints"][0]["rpc_cpi_checked_debit_raw"],
+                "512"
+            );
+            assert!(rpc
+                .requests
+                .borrow()
+                .iter()
+                .any(|request| request["id"] == 7));
+        } else {
+            assert!(report["aggregate_token_spending"].is_null());
+            assert!(!rpc
+                .requests
+                .borrow()
+                .iter()
+                .any(|request| request["id"] == 7));
+        }
+    }
+}
