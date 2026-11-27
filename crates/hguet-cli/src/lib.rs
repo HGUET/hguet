@@ -9,13 +9,29 @@ pub fn analyze_v2<T: hguet_rpc::JsonRpcTransport>(
     transport: &T,
     clock: impl Fn() -> Result<u64, String>,
 ) -> (report_v2::AnalysisReport, i32) {
-    let effects = effects::original_wire(&input.transaction);
     let policy_configured = config.policy.is_some();
-    let (output, code) = analyze(input, config, transport, clock);
+    let mut details = V2Details {
+        effects: Vec::new(),
+        compliance: if policy_configured {
+            report_v2::Compliance::Unknown
+        } else {
+            report_v2::Compliance::NotConfigured
+        },
+    };
+    let (output, code) = analyze_internal(input, config, transport, clock, Some(&mut details));
+    let has_inspection = output["inspection"].is_object();
     let mut report = report_v2::from_v1(output, code, policy_configured);
-    report.effects = effects;
+    report.policy_compliance = details.compliance;
+    if has_inspection {
+        report.effects = details.effects;
+    }
     (report, code)
 }
+struct V2Details {
+    effects: Vec<effects::Effect>,
+    compliance: report_v2::Compliance,
+}
+
 use hguet_core::{
     parse_transaction, verify_intent_with_reviews, Decision, IntentFailure, PaymentIntentPayload,
     ScopeFinding, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus,
@@ -994,6 +1010,16 @@ pub fn analyze<T: JsonRpcTransport>(
     transport: &T,
     clock: impl Fn() -> Result<u64, String>,
 ) -> (serde_json::Value, i32) {
+    analyze_internal(input, config, transport, clock, None)
+}
+
+fn analyze_internal<T: JsonRpcTransport>(
+    input: AnalysisInput,
+    config: TrustedConfig,
+    transport: &T,
+    clock: impl Fn() -> Result<u64, String>,
+    mut details: Option<&mut V2Details>,
+) -> (serde_json::Value, i32) {
     let v = Context {
         network: config.network.clone(),
         policy: config.policy.clone(),
@@ -1024,6 +1050,9 @@ pub fn analyze<T: JsonRpcTransport>(
             return (json!({"inspection":null,"verdict":verdict}), 40);
         }
     };
+    if let Some(details) = details.as_deref_mut() {
+        details.effects = effects::from_parsed(&parsed);
+    }
     verdict.message_sha256 = Some(parsed.message_sha256.clone());
     verdict.transaction_sha256 = Some(parsed.transaction_sha256.clone());
     verdict.coverage.push("wire_structure".into());
@@ -1063,6 +1092,15 @@ pub fn analyze<T: JsonRpcTransport>(
         match local_policy {
             Ok(policy) => {
                 let evaluation = policy.evaluate(&v.network, &parsed);
+                if let Some(details) = details.as_deref_mut() {
+                    details.compliance = if !evaluation.hard_denies.is_empty() {
+                        report_v2::Compliance::Violation
+                    } else if !evaluation.unknowns.is_empty() {
+                        report_v2::Compliance::Unknown
+                    } else {
+                        report_v2::Compliance::Match
+                    };
+                }
                 verdict.coverage.push("local_restrictive_policy".into());
                 for finding in evaluation.unknowns {
                     verdict.findings.push(finding);

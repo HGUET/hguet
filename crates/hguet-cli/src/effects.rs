@@ -36,7 +36,11 @@ pub fn original_wire(bytes: &[u8]) -> Vec<Effect> {
     let Ok(parsed) = hguet_core::parse_transaction(bytes) else {
         return vec![];
     };
-    let direct = hguet_rpc::inspect_direct_tokens(&parsed, None).ok();
+    from_parsed(&parsed)
+}
+
+pub(crate) fn from_parsed(parsed: &hguet_core::ParsedTransaction) -> Vec<Effect> {
+    let direct = hguet_rpc::inspect_direct_tokens(parsed, None).ok();
     let mut effects = Vec::new();
     for ix in &parsed.compiled_top_level_instructions {
         let mut effect=Effect {

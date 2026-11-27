@@ -506,7 +506,25 @@ fn main() {
             process::exit(code);
         }
         Err(e) => {
-            eprintln!("hguet: {e}\n{}", usage());
+            let args: Vec<String> = env::args().skip(1).collect();
+            // The opt-in v2 JSON contract also covers argument errors for
+            // inspect/check; keep existing v1 and conflicting text/JSON behavior.
+            if matches!(args.first().map(String::as_str), Some("inspect" | "check"))
+                && args.iter().any(|arg| arg == "--report-v2")
+                && !args.iter().any(|arg| arg == "--text")
+            {
+                let report = hguet::report_v2::from_v1(
+                    json!({"code":"BAD_INPUT","error":e}),
+                    40,
+                    args.iter().any(|arg| arg == "--policy"),
+                );
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).expect("report serialization")
+                );
+            } else {
+                eprintln!("hguet: {e}\n{}", usage());
+            }
             process::exit(40)
         }
     }

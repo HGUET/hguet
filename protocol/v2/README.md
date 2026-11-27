@@ -168,3 +168,15 @@ Tests compare retained reviews with the bounded check results and confirm
 mint/source overages still reject during verification. Three RPC defensive
 finding regression gaps remain open. The earlier reachability table describes
 the pre-refactor investigation; it does not override these lifecycle statuses.
+
+## Phase 1.1 contract hardening
+
+For inspect/check with explicit --report-v2 (without conflicting --text),
+argument validation errors also emit a v2 report with exit_code=40 and
+evidence.code=BAD_INPUT. File/encoding and policy errors retain the versioned
+report; no typed effects are emitted when the report has no inspection
+evidence to support their pointers. Legacy CLI errors remain unchanged.
+The library pipeline records scoped local policy compliance from the typed
+PolicyEvaluation, rather than deriving it from finding code prefixes.
+V2 effects reuse the pipeline's parsed transaction. Runtime and signature
+coverage semantics remain unchanged. These changes require fresh test evidence.
