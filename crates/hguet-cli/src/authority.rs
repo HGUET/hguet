@@ -42,7 +42,7 @@ fn address(row: &ProgramInstruction, name: &str) -> Option<String> {
     role(row, name).and_then(|a| a.address.clone())
 }
 
-fn change(row: &ProgramInstruction) -> Option<AuthorityChange> {
+pub(crate) fn change(row: &ProgramInstruction) -> Option<AuthorityChange> {
     if row.layout_status != "DECODED_DECLARATION" {
         return None;
     }

@@ -320,7 +320,7 @@ pub fn inspect(bytes: &[u8]) -> Result<ProgramReport, String> {
     from_parsed(&parsed)
 }
 
-fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
+pub(crate) fn from_parsed(parsed: &ParsedTransaction) -> Result<ProgramReport, String> {
     let mut instructions = Vec::with_capacity(parsed.instruction_count);
     for ix in &parsed.compiled_top_level_instructions {
         let program_id = parsed.static_account_keys.get(ix.program_index).cloned();

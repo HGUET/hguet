@@ -65,3 +65,11 @@ hguet authority transaction.bin --offline
 ```
 
 Separate original-wire inventory of selected token and lookup-table control declarations. An approval is not a debit; a signer role is not verified authorization. See [authority contract](protocol/authority/v1/README.md).
+
+## Semantic Transaction Diff (developer preview)
+
+```sh
+hguet diff original.base64 modified.base64 --offline --encoding base64
+```
+
+Compare two messages locally; one input may be stdin. Exit 0 means a report was produced, not that the transactions are equivalent. See [diff contract](protocol/diff/v1/README.md).

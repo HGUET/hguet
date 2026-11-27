@@ -19,6 +19,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
+  hguet diff BEFORE AFTER --offline [--encoding binary|base64|base58] [--json]\n\
   hguet authority FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json]\n\
@@ -487,7 +488,56 @@ fn rpc_flow_command() -> i32 {
     }
 }
 
+fn diff_command() -> i32 {
+    let result = (|| {
+        let mut args = env::args().skip(2);
+        let before = args.next().ok_or("missing before transaction")?;
+        let after = args.next().ok_or("missing after transaction")?;
+        if before == "-" && after == "-" {
+            return Err("only one input may use stdin".to_owned());
+        }
+        let mut encoding = None;
+        let mut offline = false;
+        while let Some(flag) = args.next() {
+            match flag.as_str() {
+                "--offline" if !offline => offline = true,
+                "--json" => {}
+                "--encoding" if encoding.is_none() => {
+                    encoding = Some(args.next().ok_or("missing encoding")?);
+                }
+                _ => return Err("unsupported or duplicate diff option".to_owned()),
+            }
+        }
+        if !offline {
+            return Err("diff requires --offline".to_owned());
+        }
+        let encoding = encoding.as_deref().unwrap_or("binary");
+        let before = read_transaction(&before, encoding).map_err(|e| format!("before: {e}"))?;
+        let after = read_transaction(&after, encoding).map_err(|e| format!("after: {e}"))?;
+        hguet::diff::compare(&before, &after)
+    })();
+    match result {
+        Ok(report) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).expect("serialization")
+            );
+            0
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({"schema_version":1,"kind":"hguet_diff_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+            );
+            40
+        }
+    }
+}
+
 fn main() {
+    if env::args().nth(1).as_deref() == Some("diff") {
+        process::exit(diff_command());
+    }
     if env::args().nth(1).as_deref() == Some("authority") {
         process::exit(inventory_command("authority"));
     }

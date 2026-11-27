@@ -98,7 +98,7 @@ fn token_asset(row: &ProgramInstruction, mint: &Option<String>) -> Asset {
     }
 }
 
-fn edge(row: &ProgramInstruction) -> Option<FlowEdge> {
+pub(crate) fn edge(row: &ProgramInstruction) -> Option<FlowEdge> {
     let (operation, category, asset, from, to, amount, decimals, fee) = match &row.declaration {
         Declaration::SystemMovement {
             operation,
