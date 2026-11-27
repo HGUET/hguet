@@ -30,7 +30,7 @@ Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
 
-rules.json begins the rule catalogue with four local-policy rules and links
+rules.json covers all eight current local-policy rules and links
 their existing positive/negative Rust tests, severity, scope and limitations.
-Its status is initial_subset. Other codes retain stable identifiers and generic
+Its status is local_policy_catalogue. Other codes retain stable identifiers and generic
 scope mapping until their individual catalogue entries are reviewed.

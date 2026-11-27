@@ -116,3 +116,24 @@ Phase 1 remains open for detailed per-rule positive/negative catalogue,
 finer per-check coverage and a durable published evidence package. Original-wire
 effects are typed; CPI/net/state observations retain v1 evidence separation.
 Cloud feature isolation was evaluated and deferred to preserve compatibility.
+
+
+## Source-attributed evidence archive
+
+Tested commit aa198e545d86461d0d2c1fd6763581b65c3df8d2.
+Archive target/phase01-catalogue-evidence.zip contains 459 files and a
+manifest with per-file SHA-256 hashes. All entries were read back and their
+hashes verified. Archive SHA-256:
+cb13ebee332fc131eb3774b76dc5e3a421dc143649cc4b9a1b8f91637548ce33.
+
+Workspace: 268 passed, zero failed, six ignored PQ checks. Those six passed
+in the separately selected PQ run. Benchmark: 227 PASS, zero FAIL/XFAIL/XPASS.
+Runtime: thirteen cases. Demo executed in an isolated network namespace.
+The archive includes raw command logs, environment, benchmark inputs/results,
+runtime output and demo output. It does not itself provide publisher
+authentication or independent review.
+
+All eight local-policy codes now have catalogue entries and test references.
+Other finding families still require individual catalogue review.
+Phase 1 acceptance remains open for that work and complete evidence/coverage
+review. The archive is a local artifact, without a public release or tag.
