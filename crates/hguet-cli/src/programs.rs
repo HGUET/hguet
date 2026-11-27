@@ -179,7 +179,9 @@ fn lookup_declaration(
                 return None;
             }
             new_addresses = data[12..]
-                .chunks_exact(32)
+                .as_chunks::<32>()
+                .0
+                .iter()
                 .map(|key| bs58::encode(key).into_string())
                 .collect();
             let roles: &[&str] = if accounts == 4 {
