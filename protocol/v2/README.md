@@ -30,10 +30,11 @@ Finding scopes identify policy declarations, wire instructions, signature checks
 or advisory RPC observations where the existing code provides that distinction.
 Detailed per-rule catalogues and runtime validation remain open Phase 1 work.
 
-rules.json now contains 51 rules spanning local policy, intent trust,
+rules.json now contains 92 rules spanning local policy, intent trust,
 signature/wire checks, direct tokens, RPC CPI, Token-2022 extension
-observations and later mint/token-account snapshots. Its status is
-policy_intent_wire_and_rpc_subset. Other codes retain stable identifiers
+observations, later mint/token-account snapshots, aggregate spending,
+source authority, CPI source coverage and effect correlation. Its status is
+policy_intent_wire_rpc_and_correlation_subset. Other codes retain stable identifiers
 and conservative generic scopes pending individual catalogue review.
 
 RPC catalogue entries name provider observations as their evidence and
@@ -45,3 +46,11 @@ source definitions and referenced regression tests and benchmark fixtures.
 The report tests also compare catalogue scopes with the emitted scopes.
 Fixture references identify existing synthetic cases. Their presence does
 not imply independent ground-truth review.
+
+
+The validator also inventories emitted engine finding codes missing individual
+catalogue entries. The current checkpoint reports 19. It prints these as OPEN;
+a successful reference check does not mean complete catalogue coverage.
+Aggregate and correlation entries preserve the distinction between original
+wire, provider-reported CPI, net changes and later snapshots. A repeated
+observation across views never becomes an additional claimed debit.

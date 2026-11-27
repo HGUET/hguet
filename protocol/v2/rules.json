@@ -1,6 +1,6 @@
 {
   "catalogue_version": 1,
-  "status": "policy_intent_wire_and_rpc_subset",
+  "status": "policy_intent_wire_rpc_and_correlation_subset",
   "rules": [
     {
       "rule_id": "HGUET.POLICY_SOL_TRANSFER_CAP",
@@ -1956,6 +1956,979 @@
         "Supported scope only; no general safety or signing authorization."
       ],
       "fixture_review": "Existing synthetic end-to-end regression tests; independent review remains open.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_SOURCE_CPI_OUTSIDE_SCOPE",
+      "legacy_code": "RPC_SIGNED_SOURCE_CPI_OUTSIDE_SCOPE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC reports checked CPI debits whose source/mint/authority roles do not match the independently signed source scope; independent execution evidence is absent",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "source_scoped_rpc_cpi_anomalies_remain_advisory",
+        "later_token_account_authority_conflict_is_not_mistaken_for_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_SOURCE_CPI_OVER_CAP",
+      "legacy_code": "RPC_SIGNED_SOURCE_CPI_OVER_CAP",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC reports source-scoped checked CPI debit amounts above an independently signed raw cap; these are not proven gross onchain debits",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "source_scoped_rpc_cpi_anomalies_remain_advisory",
+        "later_token_account_authority_conflict_is_not_mistaken_for_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT",
+      "legacy_code": "RPC_SIGNED_SOURCE_ACCOUNT_CONFLICT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A separately read Token-2022 account reports a mint or owner authority different from its signed source scope; delegate and historical states remain unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "source_scoped_rpc_cpi_anomalies_remain_advisory",
+        "later_token_account_authority_conflict_is_not_mistaken_for_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE",
+      "legacy_code": "RPC_SIGNED_SOURCE_EVIDENCE_INCOMPLETE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Source account or CPI evidence is missing, opaque, legacy-token-only, or not paired with its mint; single-provider non-atomic snapshots cannot certify signer authority",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "source_scoped_rpc_cpi_anomalies_remain_advisory",
+        "later_token_account_authority_conflict_is_not_mistaken_for_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS",
+      "legacy_code": "RPC_SIGNED_TOKEN_MINT_OUTSIDE_CAPS",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC reports CPI token debits or simulated net token losses involving a mint absent from independently signed per-mint limits; this is advisory and requires independent verification",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "cpi_sum_and_simulated_losses_over_mint_cap_are_advisory",
+        "no_verified_caps_or_failed_simulation_cannot_claim_rpc_violation"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_TOKEN_CPI_OVER_CAP",
+      "legacy_code": "RPC_SIGNED_TOKEN_CPI_OVER_CAP",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC reports checked CPI token debits whose summed raw amount exceeds the independently signed per-mint cap; this does not establish exact executed gross spending",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "cpi_sum_and_simulated_losses_over_mint_cap_are_advisory",
+        "no_verified_caps_or_failed_simulation_cannot_claim_rpc_violation"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_TOKEN_NET_LOSS_OVER_CAP",
+      "legacy_code": "RPC_SIGNED_TOKEN_NET_LOSS_OVER_CAP",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC reports observed token-account net losses above a signed mint cap; incoming transfers, other account owners and omitted snapshots prevent exact attribution",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "cpi_sum_and_simulated_losses_over_mint_cap_are_advisory",
+        "no_verified_caps_or_failed_simulation_cannot_claim_rpc_violation"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SIGNED_TOKEN_CAP_INCOMPLETE",
+      "legacy_code": "RPC_SIGNED_TOKEN_CAP_INCOMPLETE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "CPI or token balance data is missing, opaque, unchecked or has unsupported authority/fee semantics; no full per-mint spending bound can be established",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "cpi_sum_and_simulated_losses_over_mint_cap_are_advisory",
+        "no_verified_caps_or_failed_simulation_cannot_claim_rpc_violation"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_NON_ADDITIVE",
+      "legacy_code": "RPC_AGGREGATE_TOKEN_NON_ADDITIVE",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Direct wire declarations, RPC CPI instructions and negative token-account net deltas are three potentially overlapping evidence views and are NEVER added as executed gross spending",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_WIRE_CAP_ANOMALY",
+      "legacy_code": "RPC_AGGREGATE_WIRE_CAP_ANOMALY",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Original wire checked debit declarations appear to exceed independently provided signed limits; transaction-local verification must reject rather than infer a safe transaction from RPC",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_CPI_MINT_CAP_RISK",
+      "legacy_code": "RPC_AGGREGATE_CPI_MINT_CAP_RISK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Sum of selected RPC checked CPI debits for a mint exceeds its independently signed raw cap; CPI effects are not execution-authenticated",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_CPI_SOURCE_CAP_RISK",
+      "legacy_code": "RPC_AGGREGATE_CPI_SOURCE_CAP_RISK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Sum of selected RPC checked CPI debits for one source/mint exceeds its signed source cap; authority and gross spending remain unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_NET_MINT_CAP_RISK",
+      "legacy_code": "RPC_AGGREGATE_NET_MINT_CAP_RISK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Summed negative provider token-account net deltas exceed a signed mint cap; losses are not payer-attributed gross debits and may overlap CPI",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_NET_SOURCE_CAP_RISK",
+      "legacy_code": "RPC_AGGREGATE_NET_SOURCE_CAP_RISK",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Negative net token delta at a source account exceeds its signed source cap according to one RPC; a net delta is not verified gross spending",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_UNLISTED_MINT",
+      "legacy_code": "RPC_AGGREGATE_UNLISTED_MINT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC observes CPI checked debits or negative net changes for a mint outside the independently signed mint cap list",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_UNLISTED_SOURCE",
+      "legacy_code": "RPC_AGGREGATE_UNLISTED_SOURCE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Selected RPC observes CPI checked debits or negative net changes for a token source outside the independently signed source scopes",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_WIRE_ALT_IDENTITY_UNTRUSTED",
+      "legacy_code": "RPC_AGGREGATE_WIRE_ALT_IDENTITY_UNTRUSTED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Some direct token instruction program or account identities depend on single-provider ALT lookup; only compiled instruction indices and data bytes are intrinsic to signed wire",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE",
+      "legacy_code": "RPC_AGGREGATE_TOKEN_COVERAGE_INCOMPLETE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Opaque, unchecked, incomplete or absent CPI/balance source evidence prevents any bound on total token spending; missing data never means zero",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS",
+      "legacy_code": "RPC_AGGREGATE_TOKEN_AUTHORITY_SIDE_EFFECTS",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Authority, allowance, minting or other non-debit token operations are excluded from debit sums and need independent semantic review",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matched_three_70_views_do_not_raise_210_cap_warning",
+        "cpi_and_net_mint_source_cap_risks_are_reported_separately",
+        "uncovered_mint_source_opaque_cpi_and_unknown_authority_get_warnings"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_NON_ATOMIC",
+      "legacy_code": "RPC_CPI_SOURCE_NON_ATOMIC",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "CPI source roles and later token-account state come from the selected RPC; no authenticated execution-bank or gross spending proof is available",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_SEMANTICS_INCOMPLETE",
+      "legacy_code": "RPC_CPI_SOURCE_SEMANTICS_INCOMPLETE",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "CPI recording is absent or contains opaque or unsupported Token-2022 instructions; missing source roles are not zero debit",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_UNOBSERVED",
+      "legacy_code": "RPC_CPI_SOURCE_UNOBSERVED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "At least one RPC-declared CPI token source has no decodable later token-account state; source ownership and debits are unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_PROGRAM_MISMATCH",
+      "legacy_code": "RPC_CPI_SOURCE_PROGRAM_MISMATCH",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A later CPI source token-account program differs from the program identified by the selected RPC CPI instruction",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_MINT_MISMATCH",
+      "legacy_code": "RPC_CPI_SOURCE_MINT_MISMATCH",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The token account's later decoded mint differs from the selected RPC checked CPI declared mint",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_UNCHECKED_MINT",
+      "legacy_code": "RPC_CPI_SOURCE_UNCHECKED_MINT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "An unchecked CPI transfer or approval declares no mint; a later observed mint cannot be treated as an independently verified transfer asset",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_AUTHORITY_UNRESOLVED",
+      "legacy_code": "RPC_CPI_SOURCE_AUTHORITY_UNRESOLVED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "CPI authority does not match later token-account owner/delegate; permanent mint delegate, PDA, multisig and execution-time state remain unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_DELEGATE_ALLOWANCE_LOW",
+      "legacy_code": "RPC_CPI_SOURCE_DELEGATE_ALLOWANCE_LOW",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Later CPI source delegate allowance is smaller than the CPI-declared amount; the allowance at execution is unknown",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_BALANCE_LOW",
+      "legacy_code": "RPC_CPI_SOURCE_BALANCE_LOW",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Later CPI source balance is lower than the declared amount; it may be a post-simulation balance and is not evidence of execution failure",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_CPI_SOURCE_FROZEN",
+      "legacy_code": "RPC_CPI_SOURCE_FROZEN",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A CPI source account was frozen at the later RPC slot; transferability at execution is unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_cpi_owner_and_token_state_are_never_authorization",
+        "incomplete_and_unchecked_cpi_expose_missing_asset_and_source",
+        "conflicting_program_mint_authority_fee_allowance_or_frozen_state_warns"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_NON_ATOMIC",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_NON_ATOMIC",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Source authority roles are compared to a later RPC account read, never an authenticated execution-bank state",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_UNOBSERVED",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_UNOBSERVED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "A signed source has no supported token-account state in the later snapshot; permission is unresolved",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_PROGRAM_CONFLICT",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_PROGRAM_CONFLICT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Observed token account owner program differs from direct Token/Token-2022 instruction program",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_MINT_CONFLICT",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_MINT_CONFLICT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Token-account mint in later RPC snapshot differs from independently signed source scope",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_ROLE_UNMATCHED",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_ROLE_UNMATCHED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Signed source authority is neither owner nor delegate in later account state; historical state is unknown",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_DELEGATE_ALLOWANCE_LOW",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_DELEGATE_ALLOWANCE_LOW",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Later delegate allowance is smaller than signed direct declared debit; execution-time allowance is unverified",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_BALANCE_LOW",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_BALANCE_LOW",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Later token-account balance is smaller than declared debit; it could be post-simulation and does not prove execution was impossible",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_FROZEN",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_FROZEN",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Signed source token account was frozen at later observed slot; transferability at execution was not established",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_SOURCE_AUTHORITY_EXTENSION_UNRESOLVED",
+      "legacy_code": "RPC_SOURCE_AUTHORITY_EXTENSION_UNRESOLVED",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Observed source carries restricted or opaque Token-2022 extensions; deeper execution-time semantics remain unknown",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "matching_later_owner_or_delegate_never_becomes_authorization",
+        "mismatched_program_mint_owner_and_insufficient_delegate_are_high_risk",
+        "no_observation_and_no_consumed_source_are_not_reported_as_safe"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED",
+      "legacy_code": "RPC_EFFECT_GRAPH_CPI_UNATTRIBUTED",
+      "severity": "medium",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Declared token CPI movement and simulated net balance deltas are indexed separately; per-instruction gross spending and causality are not proven",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "graph_warning_codes_preserve_cpi_and_cross_slot_uncertainty",
+        "no_graph_warning_claims_authorization_or_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_EFFECT_GRAPH_IDENTITY_CONFLICT",
+      "legacy_code": "RPC_EFFECT_GRAPH_IDENTITY_CONFLICT",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "The non-atomic token-account snapshot conflicts with simulation mint or authority metadata; neither view proves execution-time identity",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "graph_warning_codes_preserve_cpi_and_cross_slot_uncertainty",
+        "no_graph_warning_claims_authorization_or_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
+      "benchmark_fixtures": []
+    },
+    {
+      "rule_id": "HGUET.RPC_EFFECT_GRAPH_OPAQUE_CPI",
+      "legacy_code": "RPC_EFFECT_GRAPH_OPAQUE_CPI",
+      "severity": "high",
+      "scope": "single_provider_advisory_observations",
+      "summary": "Opaque CPI instructions prevent attribution of all token and authority effects; correlated balances cannot close this coverage gap",
+      "source": "crates/hguet-cli/src/lib.rs",
+      "tests": [
+        "graph_warning_codes_preserve_cpi_and_cross_slot_uncertainty",
+        "no_graph_warning_claims_authorization_or_execution"
+      ],
+      "evidence": [
+        "original-wire declaration view where supplied",
+        "RPC-reported CPI declaration view",
+        "separate negative net balance view",
+        "later non-atomic account snapshots where supplied"
+      ],
+      "limitations": [
+        "Each view retains its own provenance. Views are never summed into total gross spending. Provider evidence does not prove execution-time ownership, permission or signer authorization."
+      ],
+      "fixture_review": "Family-level positive/negative regression tests; individual assertions and independent review remain explicit follow-up work.",
       "benchmark_fixtures": []
     }
   ]

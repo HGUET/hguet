@@ -32,6 +32,13 @@ def validate():
     policy = (ROOT / "crates/hguet-policy/src/lib.rs").read_text()
     assert set(re.findall(r'"(POLICY_[A-Z_]+)"', policy)).issubset(seen)
     print(f"PASS: {len(seen)} catalogue rules and their source/test/fixture references")
+    engine = (ROOT / "crates/hguet-cli/src/lib.rs").read_text().split("#[cfg(test)]")[0]
+    emitted = set(re.findall(r'\.finding\(\s*"([A-Z][A-Z0-9_]+)"',engine))
+    emitted.update(re.findall(r'\("([A-Z][A-Z0-9_]+)"\s*,\s*"(?:high|medium|critical)"\s*,',engine))
+    missing=sorted(emitted-seen)
+    print(f"OPEN: {len(missing)} engine finding codes without individual catalogue entries")
+    for code in missing:
+        print("  "+code)
 
 
 if __name__ == "__main__":
