@@ -30,3 +30,9 @@ Later slices require their own technical specification and acceptance record. Ph
 ## Phase 2.1 initial implementation — offline asset flow
 
 The new independent `hguet flow` command consumes the typed program inventory, emits one original-wire movement edge per decoded instruction, and groups raw quantities by SOL or token program + mint. Unknown mints are never guessed; mint/burn, funding, nonce withdrawals and expected fee declarations remain distinguishable. Self-transfers and repetitions are retained as declarations, not netted. Actual network fees and observed net changes remain null. Embedded program report supplies evidence pointers. Separate JSON schema and SDK/runtime tests gate the increment. Phase 2.0 broader gaps and final acceptance remain tracked independently. CPI/net/state reconciliation and historical audit are not implemented by this slice.
+
+## Phase 2.1 RPC correlation preview
+
+The complete hosted acceptance and PQ workflows succeeded on `fe94ee6ad167c4dbc145a1a15a18fd83e3762032`: [Runtime](https://github.com/HGUET/hguet/actions/runs/46044374991), [PQ](https://github.com/HGUET/hguet/actions/runs/46044374984). This establishes acceptance of that offline increment, not all Phase 2.0/2.1 goals.
+
+New additive `flow-rpc` report reuses the bounded typed simulation pipeline, retains the offline wire inventory unchanged, and links account/mint rows and reported CPI parent instructions with JSON Pointers. RPC failures preserve wire declarations. Native/token net rows, CPI claims, graph and later non-atomic account snapshots stay separate; no joint numeric total or execution proof. Mock transport tests exercise real decoders, not a live network. Full semantic reconciliation, program-aware balance identity, actual historical execution and broader runtime comparisons remain open. New source acceptance pending.

@@ -20,6 +20,7 @@ Usage:\n\
   hguet config show [--json]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
+  hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json]\n\
   hguet doctor [--json]  (offline environment report)\n\
   hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
@@ -436,7 +437,60 @@ fn inventory_command(flow: bool) -> i32 {
     }
 }
 
+fn rpc_flow_command() -> i32 {
+    let result = (|| {
+        let mut args = env::args().skip(2);
+        let file = args.next().ok_or("missing transaction path")?;
+        let mut endpoint = None;
+        let mut network = None;
+        let mut encoding = None;
+        while let Some(flag) = args.next() {
+            match flag.as_str() {
+                "--rpc-url" if endpoint.is_none() => {
+                    endpoint = Some(args.next().ok_or("missing RPC URL")?);
+                }
+                "--network" if network.is_none() => {
+                    network = Some(args.next().ok_or("missing network")?);
+                }
+                "--encoding" if encoding.is_none() => {
+                    encoding = Some(args.next().ok_or("missing encoding")?);
+                }
+                "--json" => {}
+                _ => return Err("unsupported or duplicate flow-rpc option".to_owned()),
+            }
+        }
+        let endpoint = endpoint.ok_or("explicit --rpc-url required")?;
+        let network = network.ok_or("explicit --network required")?;
+        let bytes = read_transaction(&file, encoding.as_deref().unwrap_or("binary"))?;
+        hguet::flow_rpc::inspect(&bytes, &network, &endpoint, &HttpsTransport::default())
+    })();
+    match result {
+        Ok(report) => {
+            let code = if report.status == "RPC_SIMULATION_SUCCEEDED" {
+                0
+            } else {
+                30
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).expect("serialization")
+            );
+            code
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({"schema_version":1,"kind":"hguet_rpc_flow_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+            );
+            40
+        }
+    }
+}
+
 fn main() {
+    if env::args().nth(1).as_deref() == Some("flow-rpc") {
+        process::exit(rpc_flow_command());
+    }
     if env::args().nth(1).as_deref() == Some("programs") {
         process::exit(inventory_command(false));
     }

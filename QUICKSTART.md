@@ -49,3 +49,11 @@ cargo run --locked -p hguet -- flow tests/fixtures/v1-system-transfer.base64 --e
 ```
 
 This offline preview groups raw, declared quantities by SOL or exact token program and mint. It reports supply changes separately and leaves actual fees and net changes unknown. See [flow contract](protocol/flow/v1/README.md).
+
+## Explicit RPC asset-flow correlation (developer preview)
+
+```sh
+hguet flow-rpc transaction.bin --network devnet --rpc-url https://YOUR_RPC
+```
+
+This sends the original transaction bytes to the explicitly selected provider for simulation, with signature verification disabled and recent blockhash replacement enabled. It can also request lookup, mint and token-account state from that provider. It does not broadcast. Use the offline flow command if you do not want to disclose transaction bytes. See [RPC flow contract](protocol/flow-rpc/v1/README.md).
