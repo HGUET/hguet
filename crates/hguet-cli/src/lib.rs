@@ -1,5 +1,6 @@
 //! Reusable transaction analysis with explicit trust and opt-in RPC.
 pub mod effects;
+pub mod programs;
 pub mod report_v2;
 
 /// Analyze once and retain typed original-wire declarations in report v2.

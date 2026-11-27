@@ -18,6 +18,7 @@ Usage:\n\
   hguet signer-preflight FILE --offline --network mainnet|devnet|testnet --intent FILE --trusted-key BASE58 [--encoding binary|base64|base58] [--json]
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
+  hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet doctor [--json]  (offline environment report)\n\
   hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
@@ -388,7 +389,42 @@ fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
     };
     (json!({"signer_refusal":refusal}), 20)
 }
+fn program_command() -> i32 {
+    let mut args = env::args().skip(2);
+    let result = (|| {
+        let file = args.next().ok_or("missing transaction path")?;
+        let mut encoding = "binary".to_owned();
+        let mut offline = false;
+        while let Some(flag) = args.next() {
+            match flag.as_str() {
+                "--offline" => offline = true,
+                "--json" => {}
+                "--encoding" => encoding = args.next().ok_or("missing encoding")?,
+                _ => return Err("unsupported programs option".to_owned()),
+            }
+        }
+        if !offline {
+            return Err("programs requires --offline".to_owned());
+        }
+        let bytes = read_transaction(&file, &encoding)?;
+        hguet::programs::inspect(&bytes)
+    })();
+    match result {
+        Ok(report) => {
+            println!("{}", serde_json::to_string_pretty(&report).expect("serialization"));
+            0
+        }
+        Err(error) => {
+            println!("{}", json!({"schema_version":1,"kind":"hguet_program_error","error":error,"signing_authorization":"NOT_AUTHORIZED"}));
+            40
+        }
+    }
+}
+
 fn main() {
+    if env::args().nth(1).as_deref() == Some("programs") {
+        process::exit(program_command());
+    }
     let mut arguments = env::args().skip(1);
     let command = (arguments.next(), arguments.next());
     if command.0.as_deref() == Some("cloud")

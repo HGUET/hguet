@@ -33,3 +33,11 @@ cat tests/fixtures/v1-system-transfer.base64 | cargo run --locked -p hguet -- in
 ```
 
 The demo uses actual synthetic analysis, not a signing grant. Use [Phase 1.1 acceptance](docs/release/community-0.1.0/PHASE_01_1.md) for verification status.
+
+## Program Intelligence preview (Phase 2.0)
+
+```sh
+cargo run --locked -p hguet -- programs tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline
+```
+
+Separate offline declaration inventory; no verdict or signing permission. See [contract](protocol/programs/v1/README.md).

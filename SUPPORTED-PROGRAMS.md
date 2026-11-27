@@ -13,3 +13,7 @@ Coverage is instruction-specific, not a program safety endorsement.
 | Arbitrary programs | Opaque/partial effects | Explicit unknowns and evidence; never infer safety from a known ID |
 
 Record exact program IDs, versions, decoded fields, test IDs, evidence and gaps before claiming semantics.
+
+## Phase 2.0 preview
+
+The separate programs command exposes bounded original-wire declarations for System movements, Compute Budget, Memo and six-account ATA create variants. SPL Token, Token-2022 and ALT program identities are recognized by exact static ID, but their instruction semantics in this new report remain unsupported. Existing v1/v2 token and ALT analysis is unchanged. See [contract](protocol/programs/v1/README.md). Runtime verification remains open for newly advertised behavior.
