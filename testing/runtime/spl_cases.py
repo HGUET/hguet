@@ -18,7 +18,7 @@ from solders.transaction_metadata import FailedTransactionMetadata
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
 
-def run_case(binary, operation):
+def run_case(binary, operation, wrong_authority=False):
     svm = LiteSVM()
     owner, delegate = Keypair(), Keypair()
     mint, source, destination = (Keypair().pubkey() for _ in range(3))
@@ -28,7 +28,7 @@ def run_case(binary, operation):
         state = TokenAccount(mint, owner.pubkey(), amount, None,
                              TokenAccountState.Initialized, None, 0)
         svm.set_account(address, Account(10_000_000, bytes(state), TOKEN))
-    auth = AccountMeta(owner.pubkey(), True, False)
+    auth = AccountMeta(delegate.pubkey() if wrong_authority else owner.pubkey(), True, False)
     writable = lambda address: AccountMeta(address, False, True)
     if operation == "transfer_checked":
         data = bytes([12]) + (123).to_bytes(8, "little") + bytes([6])
@@ -41,11 +41,15 @@ def run_case(binary, operation):
         accounts = [writable(source), auth]
     instruction = Instruction(TOKEN, data, accounts)
     message = Message.new_with_blockhash([instruction], owner.pubkey(), svm.latest_blockhash())
-    tx = Transaction([owner], message, svm.latest_blockhash())
+    tx = Transaction([owner, delegate] if wrong_authority else [owner], message, svm.latest_blockhash())
+    before = svm.get_account(source).data
     result = svm.send_transaction(tx)
-    assert not isinstance(result, FailedTransactionMetadata), str(result)
+    assert isinstance(result, FailedTransactionMetadata) == wrong_authority, str(result)
     state = TokenAccount.from_bytes(svm.get_account(source).data)
-    if operation == "transfer_checked":
+    if wrong_authority:
+        assert svm.get_account(source).data == before
+        assert TokenAccount.from_bytes(svm.get_account(destination).data).amount == 0
+    elif operation == "transfer_checked":
         assert state.amount == 877
         assert TokenAccount.from_bytes(svm.get_account(destination).data).amount == 123
     elif operation == "approve":
@@ -69,5 +73,7 @@ def run_case(binary, operation):
         assert effect["new_authority"] == str(delegate.pubkey())
     else:
         assert effect["amount_raw"] == "123"
-    return {"case": operation, "runtime_execution": "PASS", "hguet_effect": expected,
+    return {"case": operation + ("_wrong_authority" if wrong_authority else ""),
+            "runtime_outcome": "REJECTED" if wrong_authority else "EXECUTED",
+            "comparison":"PASS", "hguet_effect": expected,
             "source_amount_after": state.amount}

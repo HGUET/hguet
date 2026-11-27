@@ -30,6 +30,11 @@ checked against resulting account state. See testing/runtime/README.md.
 Two additional Token-2022 fee cases executed: correct fee transfers and
 incorrect fee runtime rejection. HGUET reports the expected wire fee through
 the existing checked extension decoder. Seven runtime cases now pass.
-Independent v1 runtime compatibility remains open.
+One SDK-generated v1 transfer now executes in the pinned LiteSVM and matches
+HGUET message hashing and effects. The existing v1 fixture round-trips through
+the SDK. V0 native transfer also passes; ALT runtime comparison remains open.
+Wrong token authority and insufficient SOL produce verified runtime rejections.
+The harness now records eleven cases. These observations do not establish
+complete v1 support or live cluster compatibility.
 
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md).

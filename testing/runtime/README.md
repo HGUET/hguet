@@ -12,7 +12,7 @@ Transactions are constructed and signed by Solders with disposable keypairs
 inside this harness. HGUET sees serialized bytes and public policy only.
 The harness never contacts an RPC or submits a chain transaction.
 
-Seven cases executed successfully in Ubuntu 26.04 WSL with Python 3.14.4:
+Eleven runtime comparisons completed successfully in Ubuntu 26.04 WSL with Python 3.14.4:
 native transfer, repeated native debits exceeding a local cap, SPL checked
 transfer, delegate approval and account-owner authority change. The harness
 checks actual balances/delegation/owner state after LiteSVM execution and
@@ -28,8 +28,16 @@ token account bytes. HGUET reports the declared amount and expected fee in
 both cases, independently of runtime success. The instruction layout reference
 is https://github.com/solana-program/token-2022/blob/main/interface/src/extension/transfer_fee/instruction.rs.
 
-Limitations remain legacy transactions, no independent v1 runtime support
-claim. Additional legitimate
+Additional comparisons cover SDK-built v0 and v1 native transfers. Both
+executed and their serialized message hashes matched HGUET. The bundled v1
+fixture also round-tripped exactly through the SDK. A transfer with the wrong
+token authority and a native transfer with insufficient funds were rejected
+with unchanged destination/token state. HGUET retains wire declarations in
+rejected runtime cases.
+
+Limits remain v0 static accounts without ALT and one default-configuration
+v1 transfer in this pinned local runtime. Live cluster support is unverified.
+Additional legitimate
 and violation variants and runtime rejection cases are required for Phase 1.
 These comparisons do not establish total-spending coverage or an audit.
 

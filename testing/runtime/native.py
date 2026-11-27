@@ -17,9 +17,10 @@ from solders.transaction import Transaction
 from solders.transaction_metadata import FailedTransactionMetadata
 from spl_cases import run_case as token_case
 from transfer_fee import run_case as fee_case
+from formats import run_cases as format_cases
 
 
-def run_case(binary, amounts):
+def run_case(binary, amounts, insufficient=False):
     svm = LiteSVM()
     payer, recipient = Keypair(), Keypair()
     funding = svm.airdrop(payer.pubkey(), 10_000_000)
@@ -33,9 +34,9 @@ def run_case(binary, amounts):
     wire = bytes(tx)
     before = svm.get_balance(recipient.pubkey())
     result = svm.send_transaction(tx)
-    assert not isinstance(result, FailedTransactionMetadata), str(result)
+    assert isinstance(result, FailedTransactionMetadata) == insufficient, str(result)
     delta = svm.get_balance(recipient.pubkey()) - before
-    assert delta == sum(amounts)
+    assert delta == (0 if insufficient else sum(amounts))
     with tempfile.TemporaryDirectory(prefix="hguet-runtime-") as directory:
         root = Path(directory)
         fixture, policy = root / "transaction.base64", root / "policy.toml"
@@ -49,14 +50,16 @@ def run_case(binary, amounts):
     assert [int(effect["amount_raw"]) for effect in effects] == amounts
     assert all(effect["source"] == "original_wire" for effect in effects)
     assert report["evidence"]["inspection"]["message_sha256"] == hashlib.sha256(bytes(message)).hexdigest()
-    expected = "VIOLATION" if delta > 500 else "MATCH"
+    expected = "VIOLATION" if sum(amounts) > 500 else "MATCH"
     assert report["policy_compliance"] == expected
     assert report["signing_authorization"] == "NOT_AUTHORIZED"
-    assert process.returncode == (20 if delta > 500 else 30)
-    return {"case": "native_repeated_over_cap" if len(amounts) > 1 else "native_match",
+    assert process.returncode == (20 if sum(amounts) > 500 else 30)
+    return {"case": "native_insufficient_balance" if insufficient else
+            ("native_repeated_over_cap" if len(amounts) > 1 else "native_match"),
             "amounts": amounts, "actual_recipient_delta": delta,
             "wire_sha256": hashlib.sha256(wire).hexdigest(),
-            "policy_compliance": expected, "runtime_execution": "PASS"}
+            "policy_compliance": expected, "runtime_outcome": "REJECTED" if insufficient else "EXECUTED",
+            "comparison":"PASS"}
 
 
 def main():
@@ -70,9 +73,12 @@ def main():
               "cases": [run_case(binary, [500]), run_case(binary, [300, 201]),
                         *[token_case(binary, operation) for operation in
                           ("transfer_checked", "approve", "set_authority")],
-                        fee_case(binary), fee_case(binary, 1)],
-              "limitations": ["Legacy SDK transactions only.",
-                              "v1 runtime compatibility remains NOT VERIFIED."]}
+                        fee_case(binary), fee_case(binary, 1),
+                        token_case(binary,"transfer_checked",True),
+                        run_case(binary,[20_000_000],True), *format_cases(binary)],
+              "limitations": ["v0 runtime case uses static accounts without ALT.",
+                              "v1 comparison covers one native transfer with default inline configuration.",
+                              "These local runtime results establish no live cluster support."]}
     Path(args.out).write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
 
