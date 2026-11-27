@@ -124,6 +124,114 @@
     },
     "policy_scope": {
       "const": "configured_local_restrictions_on_original_wire_declarations"
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "program_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "destination_account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "authority": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delegate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "new_authority": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_raw": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "native_transfer",
+              "checked_token_transfer",
+              "checked_token_burn",
+              "delegate_approval",
+              "authority_change",
+              "account_closure",
+              "unknown"
+            ]
+          },
+          "instruction_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source": {
+            "const": "original_wire"
+          },
+          "evidence_ref": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authority_type": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "required": [
+          "program_id",
+          "source_account",
+          "destination_account",
+          "mint",
+          "authority",
+          "delegate",
+          "new_authority",
+          "amount_raw",
+          "kind",
+          "instruction_index",
+          "source",
+          "evidence_ref",
+          "limitations",
+          "authority_type"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -138,6 +246,7 @@
     "evidence",
     "signing_authorization",
     "exit_code",
-    "policy_scope"
+    "policy_scope",
+    "effects"
   ]
 }

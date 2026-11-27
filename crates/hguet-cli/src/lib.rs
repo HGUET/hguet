@@ -1,5 +1,21 @@
 //! Reusable transaction analysis with explicit trust and opt-in RPC.
+pub mod effects;
 pub mod report_v2;
+
+/// Analyze once and retain typed original-wire declarations in report v2.
+pub fn analyze_v2<T: hguet_rpc::JsonRpcTransport>(
+    input: AnalysisInput,
+    config: TrustedConfig,
+    transport: &T,
+    clock: impl Fn() -> Result<u64, String>,
+) -> (report_v2::AnalysisReport, i32) {
+    let effects = effects::original_wire(&input.transaction);
+    let policy_configured = config.policy.is_some();
+    let (output, code) = analyze(input, config, transport, clock);
+    let mut report = report_v2::from_v1(output, code, policy_configured);
+    report.effects = effects;
+    (report, code)
+}
 use hguet_core::{
     parse_transaction, verify_intent_detailed, Decision, IntentFailure, PaymentIntentPayload,
     ScopeFinding, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus,

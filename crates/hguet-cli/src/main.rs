@@ -289,9 +289,21 @@ fn read_transaction(path: &str, enc: &str) -> Result<Vec<u8>, String> {
 }
 
 fn execute(v: Args) -> (serde_json::Value, i32) {
-    execute_with(v, &HttpsTransport::default())
+    execute_version(
+        v,
+        &HttpsTransport::default(),
+        env::args().any(|arg| arg == "--report-v2"),
+    )
 }
+#[cfg(test)]
 fn execute_with<T: JsonRpcTransport>(v: Args, transport: &T) -> (serde_json::Value, i32) {
+    execute_version(v, transport, false)
+}
+fn execute_version<T: JsonRpcTransport>(
+    v: Args,
+    transport: &T,
+    v2: bool,
+) -> (serde_json::Value, i32) {
     let data = match read_transaction(&v.file, &v.encoding) {
         Ok(data) => data,
         Err(e) => return (json!({"error":e,"code":"BAD_INPUT"}), 40),
@@ -301,25 +313,30 @@ fn execute_with<T: JsonRpcTransport>(v: Args, transport: &T) -> (serde_json::Val
             .and_then(|bytes| String::from_utf8(bytes).map_err(|_| "policy must be UTF-8".into()))
     });
     let intent = v.intent.as_ref().map(|path| limited_file(path, 16384));
-    hguet::analyze(
-        hguet::AnalysisInput {
-            transaction: data,
-            signed_intent: intent,
+    let input = hguet::AnalysisInput {
+        transaction: data,
+        signed_intent: intent,
+    };
+    let config = hguet::TrustedConfig {
+        network: v.network,
+        trusted_key: v.trusted_key,
+        policy,
+        rpc_url: v.rpc_url,
+        operation: if v.command == "inspect" {
+            hguet::Operation::Inspect
+        } else {
+            hguet::Operation::Check
         },
-        hguet::TrustedConfig {
-            network: v.network,
-            trusted_key: v.trusted_key,
-            policy,
-            rpc_url: v.rpc_url,
-            operation: if v.command == "inspect" {
-                hguet::Operation::Inspect
-            } else {
-                hguet::Operation::Check
-            },
-        },
-        transport,
-        unix_now,
-    )
+    };
+    if v2 {
+        let (report, code) = hguet::analyze_v2(input, config, transport, unix_now);
+        (
+            serde_json::to_value(report).expect("report serialization"),
+            code,
+        )
+    } else {
+        hguet::analyze(input, config, transport, unix_now)
+    }
 }
 // No signer backend exists in the public API or this CLI.
 fn execute_signer_preflight(v: Args) -> (serde_json::Value, i32) {
@@ -449,7 +466,9 @@ fn main() {
         Ok(v) => {
             let policy_configured = v.policy.is_some();
             let (output, code) = execute(v);
-            let output = if env::args().any(|arg| arg == "--report-v2") {
+            let output = if env::args().any(|arg| arg == "--report-v2")
+                && output.get("schema_version") != Some(&json!(2))
+            {
                 serde_json::to_value(hguet::report_v2::from_v1(output, code, policy_configured))
                     .expect("report serialization")
             } else {

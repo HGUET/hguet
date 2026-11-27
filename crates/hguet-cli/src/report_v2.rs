@@ -77,6 +77,7 @@ pub struct Finding {
 
 #[derive(Debug, Serialize)]
 pub struct AnalysisReport {
+    pub effects: Vec<crate::effects::Effect>,
     pub schema_version: u32,
     pub kind: &'static str,
     pub structural_validity: StructuralValidity,
@@ -113,8 +114,12 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
             severity: f["severity"].as_str().unwrap_or("unknown").into(),
             summary: f["summary"].as_str().unwrap_or("").into(),
             evidence_refs: vec![format!("/evidence/verdict/findings/{index}")],
-            scope: "existing_v1_check",
-            limitations: limitations.clone(),
+            scope: rule_scope(f["code"].as_str().unwrap_or("UNKNOWN")),
+            limitations: {
+                let mut limits = limitations.clone();
+                limits.push("This finding applies only to its named evidence scope and never authorizes signing.".into());
+                limits
+            },
         })
         .collect();
     let validity = if inspection.is_object() {
@@ -154,6 +159,7 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
         Compliance::Match
     };
     AnalysisReport {
+        effects: vec![],
         schema_version: 2,
         kind: "hguet_analysis_report",
         structural_validity: validity,
@@ -176,5 +182,19 @@ pub fn from_v1(output: Value, exit_code: i32, policy_configured: bool) -> Analys
         evidence: output,
         signing_authorization: "NOT_AUTHORIZED",
         exit_code,
+    }
+}
+
+fn rule_scope(code: &str) -> &'static str {
+    if code.starts_with("POLICY_") {
+        "configured_local_restrictions_on_original_wire_declarations"
+    } else if code.starts_with("RPC_") {
+        "single_provider_advisory_observations"
+    } else if code.starts_with("WIRE_") {
+        "original_wire_instruction_declarations"
+    } else if code.contains("SIGNATURE") {
+        "provided_signature_verification"
+    } else {
+        "existing_v1_check"
     }
 }
