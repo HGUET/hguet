@@ -17,6 +17,7 @@ mod direct_token;
 mod effect_graph;
 mod effects;
 mod extension_semantics;
+pub mod history;
 mod mint_rpc;
 mod mint_state;
 mod signing_boundary;

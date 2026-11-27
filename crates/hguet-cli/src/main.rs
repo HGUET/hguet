@@ -19,6 +19,7 @@ Usage:\n\
   hguet policy validate FILE [--json]\n\
   hguet config show [--json]\n\
   hguet programs FILE --offline [--encoding binary|base64|base58] [--json]\n\
+  hguet audit SIGNATURE --network mainnet|devnet|testnet --rpc-url HTTPS_URL [--json]\n\
   hguet diff BEFORE AFTER --offline [--encoding binary|base64|base58] [--json]\n\
   hguet authority FILE --offline [--encoding binary|base64|base58] [--json]\n\
   hguet flow FILE --offline [--encoding binary|base64|base58] [--json]\n\
@@ -534,7 +535,55 @@ fn diff_command() -> i32 {
     }
 }
 
+fn audit_command() -> i32 {
+    let result = (|| {
+        let mut args = env::args().skip(2);
+        let signature = args.next().ok_or("missing transaction signature")?;
+        let mut endpoint = None;
+        let mut network = None;
+        while let Some(flag) = args.next() {
+            match flag.as_str() {
+                "--rpc-url" if endpoint.is_none() => {
+                    endpoint = Some(args.next().ok_or("missing RPC URL")?);
+                }
+                "--network" if network.is_none() => {
+                    network = Some(args.next().ok_or("missing network")?);
+                }
+                "--json" => {}
+                _ => return Err("unsupported or duplicate audit option".to_owned()),
+            }
+        }
+        let endpoint = endpoint.ok_or("explicit --rpc-url required")?;
+        let network = network.ok_or("explicit --network required")?;
+        hguet::audit::inspect(&signature, &network, &endpoint, &HttpsTransport::default())
+    })();
+    match result {
+        Ok(report) => {
+            let code = if report.status == "FOUND_SIGNATURE_VERIFIED" {
+                0
+            } else {
+                30
+            };
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).expect("serialization")
+            );
+            code
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({"schema_version":1,"kind":"hguet_audit_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+            );
+            40
+        }
+    }
+}
+
 fn main() {
+    if env::args().nth(1).as_deref() == Some("audit") {
+        process::exit(audit_command());
+    }
     if env::args().nth(1).as_deref() == Some("diff") {
         process::exit(diff_command());
     }

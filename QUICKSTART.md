@@ -73,3 +73,11 @@ hguet diff original.base64 modified.base64 --offline --encoding base64
 ```
 
 Compare two messages locally; one input may be stdin. Exit 0 means a report was produced, not that the transactions are equivalent. See [diff contract](protocol/diff/v1/README.md).
+
+## Historical Transaction Audit (developer preview)
+
+```sh
+hguet audit SIGNATURE --network mainnet --rpc-url https://YOUR_RPC
+```
+
+Only the public signature is submitted to the selected RPC. Requests finalized historical metadata and verifies the returned transaction's signatures locally. See [audit contract](protocol/audit/v1/README.md).
