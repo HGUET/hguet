@@ -2,6 +2,53 @@
 use serde::Serialize;
 use serde_json::Value;
 
+/// Render selected report fields without terminal control characters.
+pub fn text(report: &Value) -> String {
+    let clean = |value: &Value| {
+        value
+            .as_str()
+            .unwrap_or("unknown")
+            .chars()
+            .filter(|c| !c.is_control())
+            .collect::<String>()
+    };
+    let mut lines = vec![
+        format!(
+            "Transaction structure: {}",
+            clean(&report["structural_validity"])
+        ),
+        format!("Signatures: {}", clean(&report["signature_status"])),
+        format!("Local policy: {}", clean(&report["policy_compliance"])),
+        format!("Policy scope: {}", clean(&report["policy_scope"])),
+        format!("Simulation: {}", clean(&report["simulation_status"])),
+        format!("Signing: {}", clean(&report["signing_authorization"])),
+    ];
+    for effect in report["effects"].as_array().into_iter().flatten() {
+        lines.push(format!(
+            "Instruction {}: {} amount={} expected_fee={}",
+            effect["instruction_index"],
+            clean(&effect["kind"]),
+            clean(&effect["amount_raw"]),
+            clean(&effect["expected_fee_raw"])
+        ));
+    }
+    for finding in report["findings"].as_array().into_iter().flatten() {
+        lines.push(format!(
+            "{} [{}] {}",
+            clean(&finding["rule_id"]),
+            clean(&finding["severity"]),
+            clean(&finding["summary"])
+        ));
+    }
+    if let Some(code) = report["evidence"]["code"].as_str() {
+        lines.push(format!(
+            "Input error: {}",
+            code.chars().filter(|c| !c.is_control()).collect::<String>()
+        ));
+    }
+    lines.join("\n")
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StructuralValidity {

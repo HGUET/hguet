@@ -55,6 +55,12 @@ contains an expected 500-lamport declaration, an additional transfer exceeding
 the configured cap, and an opaque program requiring UNKNOWN. Every case
 refuses signing. No endpoint or credentials are needed.
 
+For transaction reports, use `--text` for terminal output or `--report-v2`
+for the new JSON schema. Default JSON v1 and exit codes remain compatible.
+`inspect` and `check` also accept `-` for bounded stdin (16384 encoded bytes).
+`--text` and `--json` are mutually exclusive. `hguet doctor --json` reports
+offline environment capabilities.
+
 Our first public release prioritizes a reusable security engine, scoped findings and coverage, real Solana runtime validation, terminal/JSON/HTML reports, audit and diff, semantic policies, x402 exact SVM verification, Rust and TypeScript integration and an open benchmark.
 
 These are **targets**, not installed commands. No general ALLOW or automatic signing is planned for 0.1.0. MPP and expanded Cloud are deferred.

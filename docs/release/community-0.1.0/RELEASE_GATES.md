@@ -19,3 +19,22 @@
 | G13 documentation | Current vs target clearly separated, limitations and security reporting route; no unverified claims |
 
 Platform claims require actual testing per published target. Do not create fictitious signatures/notarization or present checksums as publisher authentication. No production-grade or independently audited claim without independent evidence. Release owner decides whether to narrow advertised scope; agents may not silently waive gates. External review is sought; absence must be disclosed. Cloud availability is not a gate.
+
+## Phase 1 evidence checkpoint, 2026-11-27
+
+These are partial release-gate observations, scoped to the recorded local tests.
+
+| Gate | Observed evidence and remaining work |
+| --- | --- |
+| G01 | Demo executes identically with Linux networking isolated; broader clean-install gate open |
+| G02 | V1 golden cases, full synthetic benchmark and public contract validators pass |
+| G03 | SDK legacy/v0/v1 comparisons added; comprehensive differential/fuzz coverage open |
+| G04 | Thirteen LiteSVM cases pass; validator corpus remains later-phase work |
+| G05–G06 | Refusal preserved in measured cases; per-rule fixture catalogue and finer coverage remain open |
+| G07 | Bounded stdin, explicit text, doctor and real demo implemented; HTML/audit/diff remain open |
+| G08–G10 | Existing intent/policy preserved; semantic mandate, x402 and integrations remain open |
+| G11 | 227/227 local benchmark cases pass; independent review and adapter remain open |
+| G12 | No release package or publisher provenance produced |
+| G13 | Baseline records measured results and runtime limits; full release documentation remains open |
+
+See BASELINE.md for commands, source attribution, evidence locations and hashes.

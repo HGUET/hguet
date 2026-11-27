@@ -72,3 +72,47 @@ test framework. These warnings remain to be addressed. This run tests
 framework/TLS behavior; actual Solana runtime verification remains NOT RUN.
 An initial WSL attempt incorrectly reused Windows PYTHONPATH dependencies
 and was interrupted; it is excluded from the acceptance result.
+
+## Consolidated verification, 2026-11-27
+
+Source parent 41d45d1f54446157908a654a89a7915ac1c5ac1c plus the text output
+change committed with this evidence. Ubuntu 26.04 WSL, Rust 1.100.0,
+Python 3.14.4, OpenSSL 3.5.5 and Solders 0.29.0.
+
+Commands completed successfully:
+
+```sh
+cargo build --locked --workspace
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+python3 scripts/validate_contract.py
+python3 scripts/validate_json_contracts.py
+python3 testing/tools/build_scenarios.py --check
+python3 testing/runner/run_benchmark.py --hguet HGUET_BINARY --suite all --out target/phase01-final/benchmark
+python3 testing/runtime/native.py --hguet HGUET_BINARY --out target/phase01-final/runtime.json
+```
+
+The workspace run recorded 265 passed, zero failed, six explicitly ignored
+PQ tests. The subsequently added text/stdin compatibility test passed in a
+separate package run. Benchmark: 227 PASS, zero FAIL/XFAIL/XPASS; BAD 119/119,
+UNKNOWN 77/77, GOOD left UNKNOWN 31/31. Thirteen real runtime cases completed.
+All three demo reports validate against report v2. Demo output was identical
+inside an isolated Linux network namespace with no external network.
+The six ignored PQ checks were selected separately with
+`cargo test --locked -p hguet-cloud --all-targets -- --ignored`; all six passed.
+
+WSL jsonschema initially lacked RFC3339 format validation. Adding the Linux
+rfc3339-validator 0.1.4 dependency restored rejection of invalid timestamps;
+both contract validators then passed without schema changes.
+
+Local evidence is target/phase01-final. SHA-256 hashes:
+
+- benchmark/report.json e66d09a95bcafd338d12f8695e43f68e4016be823c8a78bd9af0acbb2ed4484f
+- runtime.json 6dbf5c6a829f7901fd02a9bca01bee561764ae825c32e8fe07307fb882d84bf8
+- demo.json e9408de11790fe8ec74b84604fabcd153fd682cd29820147801e3b6c8312c4c8
+
+Phase 1 remains open for detailed per-rule positive/negative catalogue,
+finer per-check coverage and a durable published evidence package. Original-wire
+effects are typed; CPI/net/state observations retain v1 evidence separation.
+Cloud feature isolation was evaluated and deferred to preserve compatibility.
