@@ -159,9 +159,23 @@ def main():
     validator.validate(json.loads(p.stdout))
     record("versioned_errors_and_explicit_offline")
 
-    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 7,
+    rpc_schema = json.loads((ROOT / "protocol/flow-rpc/v1/report.schema.json").read_text())
+    Draft202012Validator.check_schema(rpc_schema)
+    rpc_validator = Draft202012Validator(rpc_schema, registry=registry.with_resource(
+        "urn:hguet:flow:v1", Resource.from_contents(json.loads(
+            (ROOT / "protocol/flow/v1/report.schema.json").read_text()))))
+    for options in ([], ["--rpc-url", "https://rpc.example"],
+                    ["--network", "devnet", "--rpc-url", "http://rpc.example"],
+                    ["--network", "devnet", "--rpc-url", "https://rpc.example", "--offline"]):
+        p = subprocess.run([str(binary), "flow-rpc", "-", *options],
+                           input=bytes(tx), capture_output=True, timeout=20)
+        assert p.returncode == 40, p.stderr
+        rpc_validator.validate(json.loads(p.stdout))
+    record("rpc_explicit_configuration_errors")
+
+    args.out.write_text(json.dumps({"cases": cases, "mandatory_count": 8,
                                     "passed_count": len(cases), "acceptance": "PASS"}, indent=2))
-    print("PASS: 7 asset flow SDK/CLI comparisons; 2 executed in LiteSVM")
+    print("PASS: 8 asset flow SDK/CLI comparisons; 2 executed in LiteSVM")
 
 
 if __name__ == "__main__":

@@ -35,3 +35,5 @@ Existing analysis and offline flow contracts unchanged.
 Tests use an injected transport and real bounded response decoder; no live RPC
 or real funds. Actual execution remains validated only in separate local runtime
 fixtures. The full Phase 2.1 acceptance is not claimed.
+
+The [JSON schema](report.schema.json) validates the envelope, links, refusal invariants and required RPC evidence fields. Embedded RPC details retain the existing typed evidence shape, not an exhaustive independent schema. Register the local flow and program schemas under their documented URN identifiers. The network-isolated CLI suite validates invalid configuration error envelopes; Rust injected-transport tests check successful/failed report fields, evidence pointers, repeated edges sharing one net row, incomplete token pairs and CPI links. Provider error truncation preserves UTF-8 boundaries. Full hosted acceptance remains pending.

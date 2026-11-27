@@ -297,7 +297,7 @@ pub fn simulate_with<T: JsonRpcTransport>(
     } else {
         let mut s = err.to_string();
         if s.len() > MAX_SIMULATION_ERROR_CHARS {
-            s.truncate(MAX_SIMULATION_ERROR_CHARS);
+            s.truncate(s.floor_char_boundary(MAX_SIMULATION_ERROR_CHARS));
         }
         Some(s)
     };

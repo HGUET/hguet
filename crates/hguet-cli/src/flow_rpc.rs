@@ -214,6 +214,13 @@ mod tests {
                         "result":{"context":{"slot":1234},"value":self.body}
                     }))
                 }
+                Some("getMultipleAccounts") => {
+                    let count = request["params"][0].as_array().unwrap().len();
+                    Ok(json!({
+                        "jsonrpc":"2.0","id":request["id"],
+                        "result":{"context":{"slot":1235},"value":vec![Value::Null; count]}
+                    }))
+                }
                 _ => panic!("unexpected RPC call"),
             }
         }
@@ -290,6 +297,11 @@ mod tests {
         assert_eq!(report.status, "RPC_SIMULATION_FAILED");
         assert!(report.rpc_evidence.is_some());
         assert!(!report.execution_proven);
+        // Long, non-ASCII provider errors must not panic during truncation.
+        let unicode_error = provider(json!({"err":"é".repeat(1024)}));
+        let report = inspect(&bytes, "devnet", "https://rpc.example", &unicode_error).unwrap();
+        assert_eq!(report.status, "RPC_SIMULATION_FAILED");
+        assert!(report.rpc_evidence.unwrap().error_summary.unwrap().len() <= 1024);
         let mut unavailable = provider(Value::Null);
         unavailable.unavailable = true;
         let report = inspect(&bytes, "devnet", "https://rpc.example", &unavailable).unwrap();
@@ -297,6 +309,85 @@ mod tests {
         assert!(report.rpc_evidence.is_none());
         assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "500");
         assert_eq!(report.rpc_error, Some("RPC_TRANSPORT_FAILURE"));
+    }
+
+    #[test]
+    fn repeated_wire_edges_link_to_one_net_observation_without_merging_totals() {
+        let mut bytes = vec![1];
+        bytes.extend([0; 64]);
+        bytes.extend([1, 0, 1, 3]);
+        bytes.extend([7; 32]);
+        bytes.extend([8; 32]);
+        bytes.extend([0; 32]);
+        bytes.extend([9; 32]);
+        bytes.push(2);
+        for amount in [300u64, 201] {
+            bytes.extend([2, 2, 0, 1, 12, 2, 0, 0, 0]);
+            bytes.extend(amount.to_le_bytes());
+        }
+        let fake = provider(json!({
+            "err":null,"preBalances":[10000,1000,1],"postBalances":[9499,1501,1]
+        }));
+        let report = inspect(&bytes, "devnet", "https://rpc.example", &fake).unwrap();
+        assert_eq!(report.wire.flows.len(), 2);
+        assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "501");
+        assert_eq!(report.endpoint_links.len(), 4);
+        assert_eq!(
+            report.endpoint_links[0].observation_ref,
+            report.endpoint_links[2].observation_ref
+        );
+        assert_eq!(
+            report.endpoint_links[1].observation_ref,
+            report.endpoint_links[3].observation_ref
+        );
+        assert_eq!(
+            report.rpc_evidence.unwrap().effect_analysis.lamport_deltas.unwrap().len(),
+            2
+        );
+    }
+
+    #[test]
+    fn token_balance_pairs_and_cpi_claims_are_independent() {
+        let bytes = STANDARD
+            .decode(
+                include_str!("../../../tests/fixtures/legacy-spl-transfer-checked.base64").trim(),
+            )
+            .unwrap();
+        let wire = flow::inspect(&bytes).unwrap();
+        let edge = &wire.flows[0];
+        let mint = edge.asset.mint.as_ref().unwrap();
+        let from = edge.from.as_ref().unwrap().message_index;
+        let to = edge.to.as_ref().unwrap().message_index;
+        let parsed = hguet_core::parse_transaction(&bytes).unwrap();
+        let instruction = &parsed.compiled_top_level_instructions[0];
+        let row = |index, amount| {
+            json!({"accountIndex":index,"mint":mint,
+                "uiTokenAmount":{"amount":amount,"decimals":6}})
+        };
+        let fake = provider(json!({
+            "err":null,
+            "preTokenBalances":[row(from,"2000")],
+            "postTokenBalances":[row(from,"766"),row(to,"1234")],
+            "innerInstructions":[{"index":0,"instructions":[{
+                "programIdIndex":instruction.program_index,
+                "accounts":instruction.account_indices,
+                "data":instruction.data_base58
+            }]}]
+        }));
+        let report = inspect(&bytes, "devnet", "https://rpc.example", &fake).unwrap();
+        assert_eq!(report.status, "RPC_SIMULATION_SUCCEEDED");
+        assert_eq!(report.wire.asset_totals[0].declared_debit_raw, "1234");
+        assert_eq!(report.endpoint_links[0].status, "ACCOUNT_MINT_ROW_MATCH");
+        assert_eq!(report.endpoint_links[1].status, "INCOMPLETE_ACCOUNT_MINT_ROW");
+        assert_eq!(report.cpi_links.len(), 1);
+        let value = serde_json::to_value(report).unwrap();
+        let link = &value["cpi_links"][0];
+        assert!(value.pointer(link["wire_ref"].as_str().unwrap()).is_some());
+        assert_eq!(
+            value.pointer(link["observation_ref"].as_str().unwrap()).unwrap()["amount_raw"],
+            "1234"
+        );
+        assert!(!value["execution_proven"].as_bool().unwrap());
     }
 
     #[test]

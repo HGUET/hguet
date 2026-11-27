@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:flow-rpc:v1",
+  "title": "HGUET RPC Asset Flow v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "network",
+        "status",
+        "rpc_error",
+        "signing_authorization",
+        "execution_proven",
+        "wire",
+        "rpc_evidence",
+        "endpoint_links",
+        "cpi_links",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_rpc_asset_flow"
+        },
+        "network": {
+          "enum": [
+            "mainnet",
+            "devnet",
+            "testnet"
+          ]
+        },
+        "status": {
+          "enum": [
+            "RPC_SIMULATION_SUCCEEDED",
+            "RPC_SIMULATION_FAILED",
+            "RPC_UNAVAILABLE"
+          ]
+        },
+        "rpc_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "execution_proven": {
+          "const": false
+        },
+        "wire": {
+          "allOf": [
+            {
+              "$ref": "urn:hguet:flow:v1"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "hguet_asset_flow"
+                }
+              }
+            }
+          ]
+        },
+        "rpc_evidence": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "network",
+                "verified_genesis_hash",
+                "context_slot",
+                "simulated_message_sha256",
+                "status",
+                "effect_analysis",
+                "effect_graph",
+                "mint_snapshot",
+                "token_account_snapshot",
+                "lookup_resolution"
+              ],
+              "properties": {
+                "network": {
+                  "enum": [
+                    "mainnet",
+                    "devnet",
+                    "testnet"
+                  ]
+                },
+                "verified_genesis_hash": {
+                  "type": "string"
+                },
+                "context_slot": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "simulated_message_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "status": {
+                  "enum": [
+                    "rpc_succeeded",
+                    "rpc_failed"
+                  ]
+                },
+                "effect_analysis": {
+                  "type": "object",
+                  "required": [
+                    "lamport_deltas",
+                    "token_deltas",
+                    "cpi",
+                    "simulated_fee_lamports",
+                    "security_coverage"
+                  ],
+                  "properties": {
+                    "lamport_deltas": {
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "token_deltas": {
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "cpi": {
+                      "type": "object"
+                    },
+                    "simulated_fee_lamports": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "security_coverage": {
+                      "const": "partial_untrusted_rpc"
+                    }
+                  }
+                },
+                "effect_graph": {
+                  "type": "object",
+                  "required": [
+                    "execution_proven",
+                    "spend_limit_enforced"
+                  ],
+                  "properties": {
+                    "execution_proven": {
+                      "const": false
+                    },
+                    "spend_limit_enforced": {
+                      "const": false
+                    }
+                  }
+                },
+                "mint_snapshot": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "token_account_snapshot": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "lookup_resolution": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "endpoint_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "instruction_index",
+              "endpoint_role",
+              "wire_ref",
+              "status",
+              "observation_ref"
+            ],
+            "properties": {
+              "instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "endpoint_role": {
+                "enum": [
+                  "from",
+                  "to"
+                ]
+              },
+              "wire_ref": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "status": {
+                "enum": [
+                  "UNRESOLVED_WIRE_ADDRESS",
+                  "RPC_UNAVAILABLE",
+                  "METADATA_ABSENT",
+                  "NO_DELTA_ROW",
+                  "ACCOUNT_ROW_MATCH",
+                  "UNKNOWN_WIRE_MINT",
+                  "ACCOUNT_MINT_ROW_MATCH",
+                  "INCOMPLETE_ACCOUNT_MINT_ROW"
+                ]
+              },
+              "observation_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^/rpc_evidence/"
+              }
+            }
+          },
+          "maxItems": 128
+        },
+        "cpi_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "parent_instruction_index",
+              "inner_instruction_index",
+              "wire_ref",
+              "observation_ref"
+            ],
+            "properties": {
+              "parent_instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inner_instruction_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "wire_ref": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "observation_ref": {
+                "type": "string",
+                "pattern": "^/"
+              }
+            }
+          },
+          "maxItems": 1024
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "RPC_UNAVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "rpc_evidence": {
+                "type": "null"
+              },
+              "rpc_error": {
+                "type": "string"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "rpc_evidence": {
+                "type": "object",
+                "required": [
+                  "network",
+                  "verified_genesis_hash",
+                  "context_slot",
+                  "simulated_message_sha256",
+                  "status",
+                  "effect_analysis",
+                  "effect_graph",
+                  "mint_snapshot",
+                  "token_account_snapshot",
+                  "lookup_resolution"
+                ],
+                "properties": {
+                  "network": {
+                    "enum": [
+                      "mainnet",
+                      "devnet",
+                      "testnet"
+                    ]
+                  },
+                  "verified_genesis_hash": {
+                    "type": "string"
+                  },
+                  "context_slot": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "simulated_message_sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "status": {
+                    "enum": [
+                      "rpc_succeeded",
+                      "rpc_failed"
+                    ]
+                  },
+                  "effect_analysis": {
+                    "type": "object",
+                    "required": [
+                      "lamport_deltas",
+                      "token_deltas",
+                      "cpi",
+                      "simulated_fee_lamports",
+                      "security_coverage"
+                    ],
+                    "properties": {
+                      "lamport_deltas": {
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "token_deltas": {
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "cpi": {
+                        "type": "object"
+                      },
+                      "simulated_fee_lamports": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "security_coverage": {
+                        "const": "partial_untrusted_rpc"
+                      }
+                    }
+                  },
+                  "effect_graph": {
+                    "type": "object",
+                    "required": [
+                      "execution_proven",
+                      "spend_limit_enforced"
+                    ],
+                    "properties": {
+                      "execution_proven": {
+                        "const": false
+                      },
+                      "spend_limit_enforced": {
+                        "const": false
+                      }
+                    }
+                  },
+                  "mint_snapshot": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "token_account_snapshot": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "lookup_resolution": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "rpc_error": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_rpc_flow_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}
