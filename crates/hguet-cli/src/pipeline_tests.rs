@@ -784,3 +784,67 @@ fn signed_token_cap_findings_preserve_scope_and_reject_overages_before_rpc() {
         assert!(!codes(&report).contains(&partial.to_owned()));
     }
 }
+
+#[test]
+fn duplicate_wire_accounts_are_rejected_before_rpc_aggregation() {
+    let mut wire = legacy_transfer(75);
+    wire[101..133].copy_from_slice(&payer());
+    let (report, exit) = execute_with(args(&wire, true), &Unreachable);
+    assert_eq!(exit, 40);
+    assert!(
+        codes(&report).contains(&"MALFORMED_TRANSACTION".to_owned()),
+        "{report}"
+    );
+    assert!(!codes(&report).contains(&"RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID".to_owned()));
+
+    let wire = legacy_transfer(75);
+    let mut response = simulation(900, Value::Null, &[10000, 10000, 1], &[10000, 10000, 1]);
+    for (field, amount) in [("preTokenBalances", "100"), ("postTokenBalances", "90")] {
+        response["value"][field] = json!([0, 1]
+            .into_iter()
+            .map(|index| json!({
+                "accountIndex":index,"mint":b58(&[9;32]),"owner":b58(&payer()),
+                "uiTokenAmount":{"amount":amount,"decimals":6}
+            }))
+            .collect::<Vec<_>>());
+    }
+    let (report, exit) = execute_with(args(&wire, true), &FakeRpc::new(response));
+    assert_never_permits(&report, exit);
+    assert_eq!(exit, 30);
+    assert!(!codes(&report).contains(&"RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID".to_owned()));
+    assert!(report["aggregate_token_spending"].is_object(), "{report}");
+}
+
+#[test]
+fn changing_provider_mint_identity_is_rejected_before_aggregation() {
+    for changed in [false, true] {
+        let wire = legacy_transfer(75);
+        let mut response = simulation(900, Value::Null, &[10000, 10000, 1], &[10000, 10000, 1]);
+        for (field, amount, mint) in [
+            ("preTokenBalances", "100", [9; 32]),
+            (
+                "postTokenBalances",
+                "90",
+                if changed { [8; 32] } else { [9; 32] },
+            ),
+        ] {
+            response["value"][field] = json!([{
+                "accountIndex":1,"mint":b58(&mint),"owner":b58(&payer()),
+                "uiTokenAmount":{"amount":amount,"decimals":6}
+            }]);
+        }
+        let (report, exit) = execute_with(args(&wire, true), &FakeRpc::new(response));
+        assert_never_permits(&report, exit);
+        assert_eq!(exit, 30);
+        assert_eq!(
+            codes(&report).contains(&"RPC_RESPONSE_INVALID".to_owned()),
+            changed,
+            "{report}"
+        );
+        if changed {
+            assert!(report["aggregate_token_spending"].is_null());
+        } else {
+            assert!(report["aggregate_token_spending"].is_object());
+        }
+    }
+}

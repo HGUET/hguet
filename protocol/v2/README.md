@@ -86,3 +86,13 @@ generated with Solders 0.29.0 Message.new_with_blockhash and
 Transaction.new_unsigned: payer bytes [7; 32], Token program, one writable
 signer payer account, data [255; 600], and the default blockhash. It contains
 no private key or live transaction.
+
+Reachability checks for aggregate failures now have paired CLI regressions.
+Duplicate static account keys are rejected as MALFORMED_TRANSACTION (exit 40)
+before the RPC transport is called. A provider changing the mint identity of
+one token account between pre/post balances is rejected as RPC_RESPONSE_INVALID
+(exit 30) before aggregate analysis. Distinct wire accounts and stable mint
+identities do produce an aggregate object, while signing remains blocked.
+These tests exercise earlier guards; they do not cover or close the later
+RPC_AGGREGATE_TOKEN_ANALYSIS_INVALID finding. That targeted regression remains
+open. The checks intentionally use the existing parser and RPC validation.
