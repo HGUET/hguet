@@ -205,6 +205,15 @@ pub struct VerifiedIntent {
     pub scope_gaps: Vec<ScopeFinding>,
 }
 
+/// Verified payload together with the exact bounded reviews performed during verification.
+/// These reviews describe original-wire declarations, never execution or authorization.
+#[derive(Debug, Clone)]
+pub struct VerifiedIntentWithReviews {
+    pub verified: VerifiedIntent,
+    pub token_spend_review: Option<TokenSpendLimitReview>,
+    pub token_source_review: Option<TokenSourceLimitReview>,
+}
+
 /// Legacy entry point kept for callers that only need pass/fail. Any coverage
 /// gap on an intent that carries token limits is still a failure here (fail
 /// closed); callers that must distinguish DENY from UNKNOWN use
@@ -239,6 +248,25 @@ pub fn verify_intent_detailed(
     parsed: &ParsedTransaction,
     now: u64,
 ) -> Result<VerifiedIntent, IntentFailure> {
+    verify_intent_with_reviews(
+        envelope,
+        independently_pinned_key,
+        actual_network,
+        parsed,
+        now,
+    )
+    .map(|result| result.verified)
+}
+
+/// Verify every signed constraint and retain successful declaration reviews.
+/// Existing detailed/legacy entry points preserve their return types and failure precedence.
+pub fn verify_intent_with_reviews(
+    envelope: &SignedPaymentIntent,
+    independently_pinned_key: &str,
+    actual_network: &str,
+    parsed: &ParsedTransaction,
+    now: u64,
+) -> Result<VerifiedIntentWithReviews, IntentFailure> {
     let v = |m: &str| IntentFailure::violation(m);
     // The key MUST be configured independently, not sourced from the untrusted JSON.
     let pin = decode_fixed_b58::<32>(independently_pinned_key, "trusted signer key")
@@ -349,12 +377,18 @@ pub fn verify_intent_detailed(
         }
         Ok(())
     };
+    let mut token_spend_review = None;
+    let mut token_source_review = None;
     if let Some(ref limits) = intent.token_spend_limits {
-        collect(token_limits::review_declared_token_limits_detailed(parsed, limits).map(|_| ()))?;
+        collect(
+            token_limits::review_declared_token_limits_detailed(parsed, limits)
+                .map(|review| token_spend_review = Some(review)),
+        )?;
     }
     if let Some(ref sources) = intent.token_source_limits {
         collect(
-            source_limits::review_declared_source_limits_detailed(parsed, sources).map(|_| ()),
+            source_limits::review_declared_source_limits_detailed(parsed, sources)
+                .map(|review| token_source_review = Some(review)),
         )?;
     }
     if parsed.unresolved_lookup_addresses > 0 {
@@ -368,9 +402,13 @@ pub fn verify_intent_detailed(
         return Err(gap.into());
     }
     // Verified intent is NOT proof of total spending, fees or execution success.
-    Ok(VerifiedIntent {
-        intent,
-        scope_gaps: scope,
+    Ok(VerifiedIntentWithReviews {
+        verified: VerifiedIntent {
+            intent,
+            scope_gaps: scope,
+        },
+        token_spend_review,
+        token_source_review,
     })
 }
 

@@ -500,3 +500,59 @@ fn coverage_gaps_never_hide_independent_signed_limit_violations() {
         }
     }
 }
+
+#[test]
+fn verified_reviews_reuse_exact_constraint_results_and_preserve_failures() {
+    let tx = wire(&[(false, checked(12, 80), vec![1, 3, 2, 0])]);
+    let payload = signed_source_payload(
+        &tx,
+        Some(vec![capped(4, "80")]),
+        vec![source_cap(4, 2, 1, "80")],
+    );
+    let (envelope, pin) = sign(&payload);
+    let result = verify_intent_with_reviews(&envelope, &pin, "devnet", &tx, 101).unwrap();
+    let to_json = |value| serde_json::to_value(value).unwrap();
+    assert_eq!(
+        to_json(result.token_spend_review.unwrap()),
+        to_json(
+            review_declared_token_limits_detailed(
+                &tx,
+                payload.token_spend_limits.as_ref().unwrap()
+            )
+            .unwrap()
+        )
+    );
+    assert_eq!(
+        serde_json::to_value(result.token_source_review.unwrap()).unwrap(),
+        serde_json::to_value(
+            review_declared_source_limits_detailed(
+                &tx,
+                payload.token_source_limits.as_ref().unwrap()
+            )
+            .unwrap()
+        )
+        .unwrap()
+    );
+    let legacy = verify_intent_detailed(&envelope, &pin, "devnet", &tx, 101).unwrap();
+    assert_eq!(
+        serde_json::to_value(result.verified.intent).unwrap(),
+        serde_json::to_value(legacy.intent).unwrap()
+    );
+    for source_over in [false, true] {
+        let mut over = payload.clone();
+        if source_over {
+            over.token_source_limits.as_mut().unwrap()[0].max_debit_raw = "79".into();
+        } else {
+            over.token_spend_limits.as_mut().unwrap()[0].max_debit_raw = "79".into();
+        }
+        let (envelope, pin) = sign(&over);
+        let retained = verify_intent_with_reviews(&envelope, &pin, "devnet", &tx, 101).unwrap_err();
+        let original = verify_intent_detailed(&envelope, &pin, "devnet", &tx, 101).unwrap_err();
+        assert!(matches!(retained, IntentFailure::Violation { .. }));
+        assert_eq!(retained.message(), original.message());
+    }
+    let no_caps = self::payload(&tx, None);
+    let (envelope, pin) = sign(&no_caps);
+    let result = verify_intent_with_reviews(&envelope, &pin, "devnet", &tx, 101).unwrap();
+    assert!(result.token_spend_review.is_none() && result.token_source_review.is_none());
+}

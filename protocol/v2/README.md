@@ -50,7 +50,7 @@ not imply independent ground-truth review.
 
 The validator also inventories emitted engine finding codes missing individual
 catalogue entries. The current checkpoint reports zero uncatalogued engine emission codes and
-5 entries with targeted regression references still open. Family-level
+3 entries with targeted regression references still open. Family-level
 references also require individual assertion review. It prints these as OPEN;
 a successful reference check does not mean complete catalogue coverage.
 Aggregate and correlation entries preserve the distinction between original
@@ -152,3 +152,19 @@ references, unrecorded regression gaps and source paths outside the repository.
 Catalogue fixture references use forward slashes for both Linux and Windows;
 portable-path checks prevent Windows-generated separators breaking Linux CI.
 The five declared targeted regression gaps remain visible in successful output.
+
+### Reusing verified intent reviews
+
+The additive Rust API `verify_intent_with_reviews` returns the verified payload
+and the exact mint/source declaration reviews performed during verification.
+`verify_intent` and `verify_intent_detailed` keep their existing return types.
+CLI reporting consumes those reviews instead of recomputing them. Failure
+precedence, signed constraint checks and v1 finding text are preserved.
+SIGNED_INTENT_TOKEN_CAP_INVALID and SIGNED_INTENT_SOURCE_SCOPE_INVALID are
+historical, no longer emitted: both previously described failure of a second
+identical deterministic check after the first had succeeded. They remain in
+the catalogue with RETIRED_REDUNDANT_CHECK and historical_not_emitted lifecycle.
+Tests compare retained reviews with the bounded check results and confirm
+mint/source overages still reject during verification. Three RPC defensive
+finding regression gaps remain open. The earlier reachability table describes
+the pre-refactor investigation; it does not override these lifecycle statuses.

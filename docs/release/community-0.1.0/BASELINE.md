@@ -175,3 +175,28 @@ Normalized 1073 fixture references to repository-portable forward slashes.
 CI now invokes the catalogue validator and its regressions. Local full log:
 target/phase01-current/framework-tests-wsl.txt. SHA-256:
 52314ac98a60c7aad3e63dec091419f4aa1728214aa2d90b3bdd2eec2d84ba0b
+
+## Verified-review reuse — 2026-11-27
+
+Base da28a8b plus the review-reuse changes in the accompanying commit.
+CLI consumes the exact bounded mint/source reviews produced during intent
+verification. Existing public verifier return types remain available through
+compatibility wrappers. Two redundant second-check errors are historical
+catalogue entries; three RPC defensive finding regression gaps remain open.
+No signed constraint or failure precedence is waived.
+
+`cargo test --locked -p hguet -p hguet-core`: 118 passed, zero failed.
+CLI/core Clippy with warnings denied and workspace formatting passed.
+Eight catalogue validator regressions passed, including rejecting retirement
+of a still-emitted code.
+WSL locked CLI build and full benchmark: 227 PASS, zero FAIL/XFAIL/XPASS.
+This is a current local regression measurement, not independent review or
+a refresh of the older archived evidence package.
+
+Report: target/phase01-current/review-reuse-benchmark/report.json. SHA-256:
+41db0958140ff5b2c4b7151713f6dbe28a38c3098c93dcd78ddaa93343933656
+
+Tested Rust source SHA-256 (LF-normalized):
+
+- crates/hguet-core/src/lib.rs: 849266f8bc4afc2eb90b45a5c62711d93ce9c30307b3bdb15a852fc66942acb2
+- crates/hguet-cli/src/lib.rs: 2fa074f122b1cc37ead9d888b495c49ba503e340352d35ced4f1d4465e61dc64

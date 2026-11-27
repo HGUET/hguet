@@ -17,7 +17,7 @@ pub fn analyze_v2<T: hguet_rpc::JsonRpcTransport>(
     (report, code)
 }
 use hguet_core::{
-    parse_transaction, verify_intent_detailed, Decision, IntentFailure, PaymentIntentPayload,
+    parse_transaction, verify_intent_with_reviews, Decision, IntentFailure, PaymentIntentPayload,
     ScopeFinding, SecurityVerdict, SignedPaymentIntent, TransactionSignatureStatus,
 };
 use hguet_policy::LocalPolicy;
@@ -1090,6 +1090,8 @@ pub fn analyze<T: JsonRpcTransport>(
         }
     }
     let mut verified_intent: Option<PaymentIntentPayload> = None;
+    let mut signed_token_spend_review = None;
+    let mut signed_token_source_review = None;
     // Signed payload whose scope could not be completed because of unresolved
     // lookup tables. Used ONLY for advisory comparison with RPC observations.
     let mut alt_gap_intent: Option<PaymentIntentPayload> = None;
@@ -1107,7 +1109,7 @@ pub fn analyze<T: JsonRpcTransport>(
                     .and_then(|signed| clock().map(|now| (signed, now)));
                 let result = match envelope {
                     Ok((signed, now)) => {
-                        verify_intent_detailed(&signed, key, &v.network, &parsed, now)
+                        verify_intent_with_reviews(&signed, key, &v.network, &parsed, now)
                     }
                     Err(message) => Err(IntentFailure::Violation {
                         message,
@@ -1115,7 +1117,10 @@ pub fn analyze<T: JsonRpcTransport>(
                     }),
                 };
                 match result {
-                    Ok(verified) => {
+                    Ok(result) => {
+                        signed_token_spend_review = result.token_spend_review;
+                        signed_token_source_review = result.token_source_review;
+                        let verified = result.verified;
                         if !verified.scope_gaps.is_empty() {
                             for gap in &verified.scope_gaps {
                                 verdict.finding(gap.code, gap.severity, gap.summary.clone());
@@ -1203,59 +1208,31 @@ pub fn analyze<T: JsonRpcTransport>(
             }
         }
     }
-    let mut signed_token_spend_review = None;
-    let mut signed_token_source_review = None;
+    // Historical "SIGNED_INTENT_TOKEN_CAP_INVALID" and "SIGNED_INTENT_SOURCE_SCOPE_INVALID"
+    // were errors from recomputing the same reviews after successful verification.
+    // Reuse the exact reviews instead; violations still return INTENT_REJECTED above.
     if let Some(ref intent) = verified_intent {
-        match &intent.token_spend_limits {
-            None => {
-                if intent.token_source_limits.is_none() {
-                    if let Some(ref direct) = offline_direct_analysis {
-                        if signed_sol_intent_cannot_cap_direct_tokens(direct) {
-                            verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED","high",
-                                "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed token debit limits");
-                        }
-                    }
-                }
-            }
-            Some(caps) => {
-                // verify_intent already ran this same bounded direct-wire check,
-                // but preserve an auditable per-mint summary in the CLI response.
-                // A failure here is never treated as a successfully signed cap.
-                match hguet_core::review_declared_token_limits_detailed(&parsed, caps) {
-                    Ok(review) => {
-                        verdict
-                            .coverage
-                            .push("signed_direct_token_debit_limits".into());
-                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE","high",
-                            "Signed per-mint limits bound recognized direct checked token debit declarations only. CPI, fees, unknown program side effects and total gross spending are NOT enforceable from the original wire alone");
-                        signed_token_spend_review = Some(review);
-                    }
-                    Err(err) => {
-                        verdict.decision = Decision::Deny;
-                        verdict.finding("SIGNED_INTENT_TOKEN_CAP_INVALID", "critical", err);
-                        return (json!({"inspection":parsed,"verdict":verdict}), 20);
-                    }
+        if intent.token_spend_limits.is_none() && intent.token_source_limits.is_none() {
+            if let Some(ref direct) = offline_direct_analysis {
+                if signed_sol_intent_cannot_cap_direct_tokens(direct) {
+                    verdict.finding("SIGNED_INTENT_TOKEN_CAP_UNSPECIFIED", "high",
+                        "The independently verified legacy PaymentIntent only caps native SOL lamports; direct token movement, allowances and opaque token instructions have no signed token debit limits");
                 }
             }
         }
-        if let Some(ref scopes) = intent.token_source_limits {
-            // Exact-byte signing + source/signer-role enforcement ran in
-            // verify_intent. Recompute once to expose bounded review evidence.
-            match hguet_core::review_declared_source_limits_detailed(&parsed, scopes) {
-                Ok(review) => {
-                    verdict
-                        .coverage
-                        .push("signed_direct_token_source_authority_roles".into());
-                    verdict.finding("SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE","high",
-                        "Signed source/mint/authority scopes bind direct checked debit declarations to required message signer roles, but do not verify token-account ownership, multisig, CPI, actual signature presence before signing or total executed spending");
-                    signed_token_source_review = Some(review);
-                }
-                Err(err) => {
-                    verdict.decision = Decision::Deny;
-                    verdict.finding("SIGNED_INTENT_SOURCE_SCOPE_INVALID", "critical", err);
-                    return (json!({"inspection":parsed,"verdict":verdict}), 20);
-                }
-            }
+        if signed_token_spend_review.is_some() {
+            verdict
+                .coverage
+                .push("signed_direct_token_debit_limits".into());
+            verdict.finding("SIGNED_INTENT_TOKEN_CAP_PARTIAL_COVERAGE", "high",
+                "Signed per-mint limits bound recognized direct checked token debit declarations only. CPI, fees, unknown program side effects and total gross spending are NOT enforceable from the original wire alone");
+        }
+        if signed_token_source_review.is_some() {
+            verdict
+                .coverage
+                .push("signed_direct_token_source_authority_roles".into());
+            verdict.finding("SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE", "high",
+                "Signed source/mint/authority scopes bind direct checked debit declarations to required message signer roles, but do not verify token-account ownership, multisig, CPI, actual signature presence before signing or total executed spending");
         }
     }
     if let Some(endpoint) = &v.rpc_url {

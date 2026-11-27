@@ -49,6 +49,13 @@ class RuleCatalogue(unittest.TestCase):
                 self.assertNotIn(chr(92), reference, (rule["legacy_code"], reference))
                 self.assertFalse(Path(reference).is_absolute())
 
+    def test_active_emission_cannot_be_marked_retired(self):
+        rule = next(r for r in self.catalogue["rules"] if r["legacy_code"] == "RPC_RESPONSE_INVALID")
+        rule["test_status"] = "RETIRED_REDUNDANT_CHECK"
+        rule["lifecycle"] = "historical_not_emitted"
+        with self.assertRaisesRegex(AssertionError, "retired finding is still emitted"):
+            self.validate()
+
     def test_duplicate_rule_is_rejected(self):
         self.catalogue["rules"].append(copy.deepcopy(self.catalogue["rules"][0]))
         with self.assertRaisesRegex(AssertionError, "duplicate rule"):

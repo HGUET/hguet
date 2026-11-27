@@ -3143,16 +3143,18 @@
       "scope": "existing_v1_check",
       "summary": "The named analysis check could not establish its supported scope.",
       "source": "crates/hguet-cli/src/lib.rs",
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "test_source": "crates/hguet-core/src/token_intent_tests.rs",
+      "tests": [
+        "verified_reviews_reuse_exact_constraint_results_and_preserve_failures"
+      ],
+      "test_status": "RETIRED_REDUNDANT_CHECK",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Redundant CLI recomputation removed. Verification returns its exact reviews; mint/source overages still fail with INTENT_REJECTED before RPC. Historical code retained for catalogue compatibility.",
       "benchmark_fixtures": [
         "testing/scenarios/B-009.json",
         "testing/scenarios/B-010.json",
@@ -3249,7 +3251,8 @@
         "testing/scenarios-regression/U-160.json",
         "testing/scenarios-regression/U-161.json",
         "testing/scenarios-regression/U-162.json"
-      ]
+      ],
+      "lifecycle": "historical_not_emitted"
     },
     {
       "rule_id": "HGUET.SIGNED_INTENT_SOURCE_SCOPE_PARTIAL_COVERAGE",
@@ -3279,16 +3282,18 @@
       "scope": "existing_v1_check",
       "summary": "The named analysis check could not establish its supported scope.",
       "source": "crates/hguet-cli/src/lib.rs",
-      "test_source": "crates/hguet-cli/src/pipeline_tests.rs",
-      "tests": [],
-      "test_status": "TARGETED_REGRESSION_OPEN",
+      "test_source": "crates/hguet-core/src/token_intent_tests.rs",
+      "tests": [
+        "verified_reviews_reuse_exact_constraint_results_and_preserve_failures"
+      ],
+      "test_status": "RETIRED_REDUNDANT_CHECK",
       "evidence": [
         "existing v1 finding and its original analysis evidence"
       ],
       "limitations": [
         "The finding applies only to the reported check. Missing data and failed internal correlation are not zero effects, safe execution or permission."
       ],
-      "fixture_review": "Individual positive/negative assertion review remains open.",
+      "fixture_review": "Redundant CLI recomputation removed. Verification returns its exact reviews; mint/source overages still fail with INTENT_REJECTED before RPC. Historical code retained for catalogue compatibility.",
       "benchmark_fixtures": [
         "testing/scenarios/B-016.json",
         "testing/scenarios/B-017.json",
@@ -3374,7 +3379,8 @@
         "testing/scenarios-regression/U-160.json",
         "testing/scenarios-regression/U-161.json",
         "testing/scenarios-regression/U-162.json"
-      ]
+      ],
+      "lifecycle": "historical_not_emitted"
     },
     {
       "rule_id": "HGUET.RPC_EFFECT_EVIDENCE_INCOMPLETE",

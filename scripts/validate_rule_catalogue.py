@@ -47,6 +47,12 @@ def validate(catalogue=None):
     emitted.update(re.findall(r'(?:code:\s*|gap\(\s*)"([A-Z][A-Z0-9_]+)"', scope_source))
     rpc_source = read(ROOT / "crates/hguet-rpc/src/lib.rs").split("#[cfg(test)]")[0]
     emitted.update(re.findall(r'Self::[A-Za-z]+\s*=>\s*"(RPC_[A-Z_]+)"', rpc_source))
+    retired = {rule["legacy_code"] for rule in catalogue["rules"]
+               if rule.get("test_status") == "RETIRED_REDUNDANT_CHECK"}
+    assert not retired.intersection(emitted), "retired finding is still emitted: " + ", ".join(sorted(retired.intersection(emitted)))
+    for rule in catalogue["rules"]:
+        if rule["legacy_code"] in retired:
+            assert rule.get("lifecycle") == "historical_not_emitted", rule["legacy_code"]
     missing=sorted(emitted-seen)
     print(f"OPEN: {len(missing)} engine finding codes without individual catalogue entries")
     for code in missing:
