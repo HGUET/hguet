@@ -14,6 +14,7 @@ from solders.transaction_metadata import FailedTransactionMetadata
 from solders.account import Account
 from solders.instruction import Instruction, AccountMeta
 from solders.token.state import Mint, TokenAccount, TokenAccountState
+from runtime_errors import assert_instruction_error
 
 TOKEN = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
@@ -57,11 +58,11 @@ def main():
     assert report["wire"]["asset_totals"][0]["declared_debit_raw"] == "20000500"
     outcome = svm.send_transaction(tx)
     assert isinstance(outcome, FailedTransactionMetadata), outcome
-    assert "InstructionError(1," in str(outcome.err()), str(outcome)
+    rejection = assert_instruction_error(outcome, 1, 1)
     assert svm.get_balance(receiver) == before
     cases.append({"case":"late_native_failure_rolls_back_first_transfer","comparison":"PASS",
                   "declared_debit_raw":"20000500","actual_recipient_delta":0,
-                  "runtime_error":str(outcome.err())})
+                  "runtime_error":str(outcome.err()), "rejection":rejection})
     save("INCOMPLETE")
 
     svm = LiteSVM()
@@ -84,12 +85,12 @@ def main():
     assert report["wire"]["asset_totals"][0]["declared_debit_raw"] == "1001"
     outcome=svm.send_transaction(tx)
     assert isinstance(outcome,FailedTransactionMetadata),outcome
-    assert "InstructionError(1," in str(outcome.err()), str(outcome)
+    rejection = assert_instruction_error(outcome, 1, 1)
     assert [bytes(svm.get_account(a).data) for a in (source,dest,mint)] == before
     assert TokenAccount.from_bytes(svm.get_account(source).data).delegate is None
     cases.append({"case":"late_token_failure_rolls_back_delegate_approval","comparison":"PASS",
                   "declared_delegate_limit_raw":"99","actual_delegate":None,
-                  "runtime_error":str(outcome.err())})
+                  "runtime_error":str(outcome.err()), "rejection":rejection})
     save("PASS")
     print("PASS: 2 actual LiteSVM rollback comparisons")
 
