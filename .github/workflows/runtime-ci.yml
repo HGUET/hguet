@@ -127,6 +127,14 @@ jobs:
           sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/token2022_extensions.py \
             --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/token2022-extensions.json" \
             2>&1 | tee "$HGUET_EVIDENCE/token2022-extensions.log"
+      - name: Compare ALT lifecycle state in LiteSVM
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          python_path="$(command -v python)"
+          sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/alt_lifecycle.py \
+            --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/alt-lifecycle.json" \
+            2>&1 | tee "$HGUET_EVIDENCE/alt-lifecycle.log"
       - name: Verify Phase 1 local acceptance contracts
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash

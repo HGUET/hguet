@@ -86,3 +86,7 @@ At 29486e4dcb95b9c40d2d139c667e7f066d771a6f, full runtime acceptance succeeded, 
 Four additional mandatory LiteSVM groups compare permanent delegate behavior, hook configuration (not hook execution), fee collection/harvest/withdrawal/configuration and non-transferable rejection. Test-only change, no broad new decoder coverage claimed. Exact expected state and rejection codes must pass before updating measured results. Public historical fixture corrected separately after first public response exposed loss of integer precision in fixture preparation. New CI pending.
 
 Public Devnet smoke passed at 90e4a36; six artifact manifest entries verified. See [VERIFICATION.md](VERIFICATION.md). First live historical legacy audit verified, broader historical corpus remains open. Four new Token-2022 runtime groups are implemented and pending hosted results.
+
+## ALT lifecycle increment
+
+Exact source 9eef59dbbd0b34afcda0e69afcd907d1fef9689b passed [full Runtime](https://github.com/HGUET/hguet/actions/runs/46089660808), [PQ](https://github.com/HGUET/hguet/actions/runs/46089660871) and [public Devnet smoke](https://github.com/HGUET/hguet/actions/runs/46089660814). Four new Token-2022 groups and precise historical absolute balances passed. New ALT lifecycle groups test actual local create/extend/freeze/deactivate/close, exact failures and state/refund, with controlled sysvars. Hosted results pending. No new decoder or full validator compatibility claimed.
