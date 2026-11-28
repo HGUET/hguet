@@ -84,3 +84,5 @@ At 29486e4dcb95b9c40d2d139c667e7f066d771a6f, full runtime acceptance succeeded, 
 ## Token-2022 extension runtime increment
 
 Four additional mandatory LiteSVM groups compare permanent delegate behavior, hook configuration (not hook execution), fee collection/harvest/withdrawal/configuration and non-transferable rejection. Test-only change, no broad new decoder coverage claimed. Exact expected state and rejection codes must pass before updating measured results. Public historical fixture corrected separately after first public response exposed loss of integer precision in fixture preparation. New CI pending.
+
+Public Devnet smoke passed at 90e4a36; six artifact manifest entries verified. See [VERIFICATION.md](VERIFICATION.md). First live historical legacy audit verified, broader historical corpus remains open. Four new Token-2022 runtime groups are implemented and pending hosted results.

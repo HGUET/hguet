@@ -35,3 +35,7 @@ Never broadcast the historical bytes.
 ## First public smoke result
 
 Run 46089236362 returned a public Devnet transaction with the expected signed bytes, slot and version, but failed at preBalances before invoking the CLI. The checked-in fixture had rounded two balances above 2^53 by one lamport during JavaScript numeric serialization. The raw archived provider response retains exact integers. Corrected the two original decimal literals without parsing through JavaScript Number; the offline and live checks must run again. The original failure and artifact are retained in the verification record. No live audit pass is claimed yet.
+
+## Measured successful retry
+
+At source 90e4a36bf91a0b15161c59014fa5f9bd1954429a, [public smoke 46089512195](https://github.com/HGUET/hguet/actions/runs/46089512195) passed. Solders verified the original signatures, exact wire/message hashes and published metadata. HGUET audit returned exit 0 and FOUND_SIGNATURE_VERIFIED with signing_authorization=NOT_AUTHORIZED and execution_proven=false. Both absolute balances above 2^53 were preserved as exact decimal strings; the two deltas were -1000005000 and +1000000000 lamports, fee 5000. All six entries in [artifact 15240158130](https://github.com/HGUET/hguet/actions/runs/46089512195/artifacts/15240158130) matched their manifest. One public legacy transaction and one Devnet provider; not independent ledger proof or broad historical acceptance.

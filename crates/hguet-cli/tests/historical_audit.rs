@@ -307,6 +307,8 @@ fn published_devnet_example_has_valid_signature_and_historical_balance_rows() {
         .as_array()
         .unwrap();
     assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["before_lamports"], "13086426097436981");
+    assert_eq!(rows[0]["after_lamports"], "13086425097431981");
     assert_eq!(rows[0]["delta_lamports"], "-1000005000");
     assert_eq!(rows[1]["delta_lamports"], "1000000000");
     assert_eq!(

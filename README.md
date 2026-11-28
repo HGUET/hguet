@@ -86,7 +86,7 @@ hguet flow-rpc transaction.bin --network devnet --rpc-url https://YOUR_RPC --htm
 hguet audit TRANSACTION_SIGNATURE --network mainnet --rpc-url https://YOUR_RPC --html > audit.html
 ```
 
-Replace the placeholders with a trusted endpoint and actual input. `flow-rpc` discloses original transaction bytes to the chosen provider for simulation. `audit` sends the public transaction identifier, requests finalized historical metadata and verifies the returned original signatures locally. Neither command broadcasts. A single provider's reported history is not independent proof of ledger inclusion. Live public historical compatibility is still under validation.
+Replace the placeholders with a trusted endpoint and actual input. `flow-rpc` discloses original transaction bytes to the chosen provider for simulation. `audit` sends the public transaction identifier, requests finalized historical metadata and verifies the returned original signatures locally. Neither command broadcasts. A single provider's reported history is not independent proof of ledger inclusion. One fixed public legacy/Devnet transaction passed a complete live audit; wider historical compatibility is still under validation.
 
 ## A clear evidence model
 
@@ -183,7 +183,7 @@ HGUET cannot replace the customer-controlled wallet or independently protected s
 
 ## Project status
 
-The foundation is accepted on its recorded source snapshot. Program, asset, authority, diff, historical-audit, HTML and lab increments are implemented; their broader acceptance criteria remain open. **Extended runtime validation** is underway: the first 120-case SDK differential corpus and two atomic rollback comparisons passed. A first [published historical fixture and read-only public smoke](testing/history/README.md) have been added; hosted results are pending. Wider public history, Token-2022 and authority behavior, validator comparisons, fuzzing and independently reviewed benchmark evidence remain open.
+The foundation is accepted on its recorded source snapshot. Program, asset, authority, diff, historical-audit, HTML and lab increments are implemented; their broader acceptance criteria remain open. **Extended runtime validation** is underway: the first 120-case SDK differential corpus and two atomic rollback comparisons passed. A first [published historical fixture and read-only public smoke](testing/history/README.md) passed end-to-end on public Devnet ([evidence](https://github.com/HGUET/hguet/actions/runs/46089512195)). Wider public history, Token-2022 and authority behavior, validator comparisons, fuzzing and independently reviewed benchmark evidence remain open.
 
 Semantic mandates, x402 exact SVM verification, released Rust/TypeScript integrations, optional read-only MCP, DOT export and verified release packages are future deliverables, not available products. No 0.1.0 release is claimed.
 

@@ -44,3 +44,7 @@ All seven historical Rust integration tests and the separate CLI configuration g
 ## Published historical corpus
 
 The first [public historical fixture and smoke](../../../testing/history/README.md) reconstructs and independently verifies signed wire from official Solana documentation. An offline integration test consumes the published metadata projection; the separate network-enabled workflow requests finalized data from the official Devnet endpoint. Neither is an independent proof of consensus. Hosted results for this new fixture and public RPC remain pending. The previous full runtime workflow is green on 29486e4.
+
+## First live verification
+
+A public legacy/Devnet transaction passed the complete read-only smoke at 90e4a36 ([workflow](https://github.com/HGUET/hguet/actions/runs/46089512195)). SDK and actual HGUET audit agreed with exact published metadata, including absolute balances above 2^53. See [public history evidence](../../../testing/history/README.md). No broader compatibility or independent ledger proof.
