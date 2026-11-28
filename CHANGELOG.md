@@ -2,15 +2,33 @@
 
 ## Unreleased — Community Edition 0.1.0
 
-- Community-first release direction and scope established in [roadmap](docs/release/community-0.1.0/ROADMAP.md).
-- Existing local analysis and experimental Cloud capabilities documented separately.
-- Release gates, coverage baseline and Phase 1 task defined.
+Development record, not published release notes. Source-attributed results and outstanding failures: [VERIFICATION.md](docs/release/community-0.1.0/VERIFICATION.md).
 
-Documentation only; no release or claim that planned features have shipped.
+### Added
 
-### Phase 1.1 hardening (unreleased)
+- Reusable Rust analysis library, opt-in scoped analysis v2, bounded stdin, text output, offline doctor and policy demo.
+- Program Intelligence for selected System, SPL Token, Token-2022, Compute Budget, Memo, ATA and ALT instructions.
+- Asset Flow and RPC Flow with separate raw declarations, provider observations, CPI/net rows and evidence pointers.
+- Authority Intelligence for selected delegate, ownership, freeze/thaw, close, extension and ALT control declarations.
+- Semantic Transaction Diff with exact message identity, instruction fingerprints, account privileges, resources, opaque payload hashes and positional differences.
+- Historical Audit with local signature binding and provider-reported historical metadata; no current account reads.
+- Passive standalone HTML output for seven inventory commands and combined offline transaction dossier.
+- Six-case deterministic Security Demo Lab, JSON/HTML export, SHA-256 manifest and no overwrite.
+- Separate versioned JSON contracts and SDK/CLI regression suites for new reports.
 
-- Fail-closed runtime acceptance, exact expected rejection assertions, isolated runner toolchain and durable diagnostic evidence.
-- Single parse reuse, typed scoped policy result, v2 input error contract and wire evidence references.
-- Three targeted defensive RPC stage regression tests and hosted verification workflows.
-- See [acceptance record](docs/release/community-0.1.0/PHASE_01_1.md); final verification remains open.
+### Hardened and verified
+
+- Fail-closed mandatory runtime acceptance, exact expected rejection assertions, isolated runner toolchain and diagnostic artifacts.
+- Single-parse reuse in analysis, typed scoped policy results, v2 error contracts and evidence links.
+- Defensive RPC stage regression tests and UTF-8-safe provider error truncation.
+- Scoped LiteSVM comparisons, SDK differential fixtures, historical adversarial fixtures, HTML escaping and passive markup tests.
+- Latest measured functional snapshot: 315 workspace tests passed (6 ignored), 13 mandatory runtime cases, 49 additional SDK/CLI groups, 227 synthetic scenario passes, strict Clippy and separate PQ success. Full workflow remains red on two Rust formatting differences.
+
+### Documentation
+
+- Rewritten README, current CLI and architecture references, documentation index, coverage/limitations and measured verification record.
+- Historical specifications retained separately from current behavior and release targets.
+
+### Not yet released
+
+Broader runtime and public historical verification, semantic mandates, x402 exact SVM, released SDK integrations, optional MCP, DOT, independently reviewed benchmark and verified release packaging remain open. No signing authorization, custody, public paid Cloud or general safety guarantee.

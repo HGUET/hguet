@@ -1,19 +1,23 @@
-# Program coverage
+# Program and instruction coverage
 
-Coverage is instruction-specific, not a program safety endorsement.
+Coverage means a bounded declaration decoder or a specific verified observation, not a program safety endorsement. All rows remain partial.
 
-| Program family | Current baseline | 0.1.0 target |
+| Program family | Current original-wire intelligence | Local runtime evidence (selected cases) |
 | --- | --- | --- |
-| System | Direct native transfer subset | Validated supported instructions, fees/rent distinguished |
-| SPL Token | Partial direct/CPI movement and authority decoding | Runtime-validated supported effects, explicit gaps |
-| Token-2022 | Partial operations, TLV observations and opaque extensions | Supported fee, hook, delegate and account-state evidence; no blanket completeness |
-| Compute Budget, ATA, ALT, Memo | Partial recognition / ALT resolution | Validated core instruction coverage |
-| Stake, upgradeable loader | No broad semantic coverage claimed | Optional after mandatory coverage |
-| Jupiter / Raydium / Orca and other DeFi | No broad semantic coverage claimed | One bounded integration only if evidence justifies it |
-| Arbitrary programs | Opaque/partial effects | Explicit unknowns and evidence; never infer safety from a known ID |
+| System | Transfer, transfer with seed, account creation/funding, nonce withdrawal subset | Native transfers, repeated cap, insufficient SOL, SDK v0/v1, v0 ALT transfer |
+| SPL Token | Transfer/checked, mint/burn and checked variants, approve/checked, revoke, set authority, close, freeze/thaw, sync native | Checked transfer, mint/burn, approval/revoke, owner change, mint authority removal, freeze/thaw, empty-account close, wrong authority |
+| Token-2022 | Selected base instructions; checked fee transfer, set transfer fee, initialize permanent delegate, initialize/update transfer hook | Correct and incorrect expected transfer fee, resulting withheld amounts; other extensions primarily declarations |
+| Compute Budget | Selected heap, unit limit/price, loaded data limit declarations; v1 inline resources separately | SDK Compute Budget and v1 inline-resource cases |
+| Memo | Byte length and UTF-8 status; payload omitted | Memo local execution |
+| Associated Token Account | Six-account create and create-idempotent declarations and static program role check | Actual creation and idempotent repeat; resulting mint/owner/balance |
+| ALT | Create/extend/freeze/deactivate/close shapes; bounded addresses; table/index references retained | Actual v0 transfer using an active table; mutation execution not broadly verified |
+| Stake / upgradeable loader / DeFi | No broad semantic decoder coverage | Not established |
+| Unknown program or unresolved lookup | Explicit gaps; never infer zero or safety | Malformed/opaque/lookup-isolation SDK tests |
 
-Record exact program IDs, versions, decoded fields, test IDs, evidence and gaps before claiming semantics.
+## Evidence status
 
-## Phase 2.0 preview
+The [Program Intelligence contract](protocol/programs/v1/README.md) describes exact layouts, supported field bounds and missing data. Related [Asset Flow](protocol/flow/v1/README.md) and [Authority](protocol/authority/v1/README.md) views reuse the inventory; [RPC correlation](protocol/flow-rpc/v1/README.md) does not turn provider observations into verified effects.
 
-The separate programs command exposes bounded original-wire declarations for System movements, Compute Budget, Memo and six-account ATA create variants. SPL Token and Token-2022 static instructions now expose selected base operations and bounded extension layouts; unvalidated extension families are prefix-only. Canonical ALT create/freeze/extend/deactivate/close declarations are included, without claiming verified table state or actual execution of mutations. Existing v1/v2 token and ALT analysis is unchanged. See [contract](protocol/programs/v1/README.md). Runtime verification remains open for newly advertised behavior.
+`DECODED_DECLARATION` means supported wire fields were recognized. `PREFIX_ONLY`, `UNSUPPORTED_LAYOUT`, `UNRESOLVED_ACCOUNTS`, `UNRESOLVED_PROGRAM` and `DECODER_UNAVAILABLE` expose gaps. Memo invalid UTF-8 remains explicit. No program-name allowlisting or blanket support claim.
+
+See [source-attributed verification](docs/release/community-0.1.0/VERIFICATION.md) for actual SDK/LiteSVM results and remaining work. Broader validator execution, extension/state coverage and live-cluster behavior remain open.

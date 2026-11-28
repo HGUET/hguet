@@ -2,86 +2,193 @@
 
 # HGUET
 
-**The open-source security toolkit for Solana transactions and autonomous agents.**
+**Open-source security and transaction intelligence for Solana.**
 
-*Security should happen before the signature.*
+*Understand before signing. Investigate after execution.*
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](Cargo.toml) [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
+[![License: MIT](https://img.shields.io/badge/license-MIT-147d73.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-native%20CLI-orange.svg)](Cargo.toml)
+[![Development status](https://img.shields.io/badge/status-developer%20preview-orange.svg)](#project-status)
 
-[Website](https://hguet.fr) · [Quick start](QUICKSTART.md) · [Roadmap](docs/release/community-0.1.0/ROADMAP.md) · [Security](SECURITY.md)
+[Quick start](QUICKSTART.md) · [Security Demo Lab](docs/DEMO_LAB.md) · [Documentation](docs/README.md) · [Verification](docs/release/community-0.1.0/VERIFICATION.md) · [Website](https://hguet.fr)
 
 </div>
 
-> **Pre-alpha — not yet a released or independently audited security product.** Never use HGUET output as permission to sign or as proof that live funds are safe. The current signing boundary is BLOCK-only.
+---
 
-## Why HGUET?
+A Solana transaction is more than a transfer. It can change ownership, grant a delegate, invoke another program, modify a lookup table or affect assets that a wallet summary does not explain.
 
-A transaction can simulate successfully and still violate the user's intent. HGUET examines original Solana transaction bytes, independent restrictions, and optional RPC evidence to explain what is known, what is inconsistent, and what cannot be proven before a customer-controlled signature.
+**HGUET is a local-first, non-custodial Rust toolkit for examining those effects and the evidence behind them.** Decode original transaction bytes, inspect declared asset movement and authority changes, evaluate independent restrictions, compare two messages and investigate historical transactions. Export portable reports for humans and versioned JSON for software.
 
-HGUET is built for developers, wallet teams, security researchers and AI-agent payment integrators. The free MIT-licensed toolkit is the primary product: no account, custody, mandatory cloud, license server or hidden telemetry. RPC is opt-in and discloses transaction data to the chosen provider.
+> **Developer preview, targeting Community Edition 0.1.0.** HGUET is not a wallet, signer, execution guarantee or independently audited security product. It never grants permission to sign. No public binary release is available yet.
 
-## Current implementation
+## Start here
 
-| Capability | Current scope |
-| --- | --- |
-| Offline transaction inspection | Legacy/v0/v1 wire parser; binary, Base64, Base58; hashes and signature status; v1 runtime compatibility not independently established |
-| Signed PaymentIntent | Ed25519 against independently pinned public key, exact message hash, network label, validity window, program and direct debit constraints |
-| Local policy | Restrictive SOL cap, program and SOL recipient rules; not total spending enforcement |
-| RPC analysis | Explicit HTTPS endpoint, genesis check, ALT and simulation observations; not proof of final execution |
-| SPL Token / Token-2022 | Bounded direct/CPI decoding, mint and token-account snapshots, separate debit and net-delta views; partial coverage |
-| Effect correlation | Provenance-aware graph and gaps; no guaranteed attribution or total gross spending |
-| Signer preflight | Local and isolated experimental refusal boundary; no signing, broadcast or authorization |
-| Cloud | Optional loopback Devnet protocol experiments; public paid service unavailable |
-| Testing | Open synthetic benchmark, property tests, adversarial RPC tests and CI; real runtime validation remains a release gate |
-
-See [implementation](docs/implementation/README.md), [limitations](LIMITATIONS.md) and [coverage matrix](docs/release/community-0.1.0/COVERAGE_MATRIX.md).
-
-## Quick start — build from source
+Install [Rust](https://rustup.rs/), clone the repository and build with the pinned toolchain and lockfile.
 
 ```sh
+git clone https://github.com/HGUET/hguet.git
+cd hguet
 cargo build --locked -p hguet
-cargo run --locked -p hguet -- --help
-cargo run --locked -p hguet -- inspect tests/fixtures/legacy-noop.base64 --encoding base64 --offline --json
-cargo run --locked -p hguet -- policy validate tests/fixtures/policy-devnet-deny.toml --json
+cargo run --locked -p hguet -- lab all --out hguet-demo-lab
 ```
 
-Fixtures are synthetic and use placeholder signatures. Inspection/check decisions can be nonzero (including UNKNOWN); exit code 0 from help or policy syntax validation is not transaction approval. See [Quick start](QUICKSTART.md).
+Open `hguet-demo-lab/diff.html` or `hguet-demo-lab/authority.html` in a browser. The lab runs completely offline, uses deterministic unsigned synthetic transactions, and exports six JSON/HTML pairs plus a SHA-256 manifest. The output directory must not already exist. **Never broadcast the fixtures.**
 
-## Community Edition 0.1.0
+Use `target/debug/hguet` (Windows: `target\debug\hguet.exe`) for subsequent commands, or keep using `cargo run --locked -p hguet --`. Examples below assume `hguet` is available on your PATH.
 
-The Phase 2.0 developer preview adds an offline program declaration inventory: `hguet programs FILE --offline`. See [contract](protocol/programs/v1/README.md).
+## What you can do
 
-Phase 1.1 is accepted at the verified source snapshot; Phase 2 development has begun. See the [acceptance record](docs/release/community-0.1.0/PHASE_01_1.md) for source-attributed hosted evidence and remaining gates. No product release or complete security assurance is claimed.
+| Capability | Command | What the report tells you |
+| --- | --- | --- |
+| Transaction intelligence | `report` | Asset movements, authority changes and program inventory in a single dossier |
+| Program intelligence | `programs` | Supported instruction layouts, account roles, raw declarations and coverage gaps |
+| Asset flow | `flow` | Gross declared movements, mint/burn, funding, expected token fees and unknown assets |
+| Authority intelligence | `authority` | Delegate limits, owner and authority changes, freeze/thaw, close-account and selected extension/ALT controls |
+| Semantic transaction diff | `diff` | Before/after message identity, amounts, privileges, order, opaque data hashes and authority changes |
+| RPC flow correlation | `flow-rpc` | Wire declarations linked to optional simulation balance, CPI and state evidence |
+| Historical audit | `audit` | Signature-bound historical transaction, reported fee, balances, CPI and loaded-address metadata |
+| Independent restrictions | `inspect`, `check`, `policy validate` | Original message, local policy, optional signed intent, scoped findings and coverage |
+| Security Demo Lab | `lab`, `demo` | Reproducible examples generated by the actual engine |
 
-Run `hguet demo` for three synthetic offline cases through the actual engine.
-Use `hguet demo --json` for the versioned reports and evidence. The demo
-contains an expected 500-lamport declaration, an additional transfer exceeding
-the configured cap, and an opaque program requiring UNKNOWN. Every case
-refuses signing. No endpoint or credentials are needed.
+The first seven commands also support standalone `--html` reports. JSON is the default. Analysis v1/v2 and inventory schemas are distinct; see the [contract index](docs/README.md#machine-readable-contracts).
 
-For transaction reports, use `--text` for terminal output or `--report-v2`
-for the new JSON schema. Default JSON v1 and exit codes remain compatible.
-`inspect` and `check` also accept `-` for bounded stdin (16384 encoded bytes).
-`--text` and `--json` are mutually exclusive. `hguet doctor --json` reports
-offline environment capabilities.
+### 1 · Inspect a transaction before signing
 
-Our first public release prioritizes a reusable security engine, scoped findings and coverage, real Solana runtime validation, terminal/JSON/HTML reports, audit and diff, semantic policies, x402 exact SVM verification, Rust and TypeScript integration and an open benchmark.
+```sh
+hguet report tests/fixtures/v1-system-transfer.base64 --encoding base64 --offline --html > transaction.html
+hguet flow tests/fixtures/legacy-spl-transfer-checked.base64 --encoding base64 --offline
+hguet authority tests/fixtures/legacy-spl-transfer-checked.base64 --encoding base64 --offline
+```
 
-These are **targets**, not installed commands. No general ALLOW or automatic signing is planned for 0.1.0. MPP and expanded Cloud are deferred.
+Original-wire analysis needs no endpoint, wallet, private key or HGUET account. Amounts are raw integer quantities; a token mint or lookup address is never guessed. The result is a declaration inventory, not proof of actual execution or a total spending bound.
 
-[Roadmap](docs/release/community-0.1.0/ROADMAP.md) · [Release gates](docs/release/community-0.1.0/RELEASE_GATES.md) · [Phase 1 task](docs/release/community-0.1.0/PHASE_01.md)
+### 2 · Detect a changed message
 
-## Architecture and contribution
+```sh
+hguet diff tests/fixtures/demo-v1/match.base64 tests/fixtures/demo-v1/violation.base64 --encoding base64 --offline --html > diff.html
+```
 
-- [Public architecture](docs/architecture/README.md) and [v1 contracts](protocol/v1/README.md).
-- [Security benchmark](testing/README.md).
-- [Previous detailed status and Cloud usage](docs/implementation/previous-readme.md), retained as a historical snapshot.
-- [Contributing](CONTRIBUTING.md) and [security reporting](SECURITY.md).
+Compare the two original messages, required signers, fee payer, declared privileges, blockhash, v1 resources, instruction data and supported asset/control declarations. In this synthetic example the gross declared native debit increases from 500 to 501 lamports. Position comparison is not edit alignment; equal instruction multisets are not semantic equivalence. An altered message no longer matches an exact-message intent binding.
 
-We welcome independent runtime fixtures, ground-truth review, security analysis and integration examples. Never publish private keys or confidential transactions.
+### 3 · Apply independent policy and intent
 
-## Status
+```sh
+hguet check tests/fixtures/demo-v1/violation.base64 --encoding base64 --mode local --network devnet --policy tests/fixtures/demo-v1/policy.toml --report-v2
+```
 
-No public Community Edition release is claimed here. The first release is gated by actual evidence, not the roadmap. Licensed under [MIT](LICENSE).
+The example intentionally violates a 500-lamport direct System transfer cap and returns DENY (exit 20). A policy match is not approval. Add an independently issued signed PaymentIntent and a separately pinned trusted issuer key using `--intent` and `--trusted-key`. Never accept trust anchors, policy files or RPC destinations as self-granted permissions from an agent.
 
-[Support development](docs/support.md) · [HGUET organization](https://github.com/HGUET) · [hguet.fr](https://hguet.fr)
+### 4 · Correlate optional RPC observations
+
+```sh
+hguet flow-rpc transaction.bin --network devnet --rpc-url https://YOUR_RPC --html > simulation.html
+hguet audit TRANSACTION_SIGNATURE --network mainnet --rpc-url https://YOUR_RPC --html > audit.html
+```
+
+Replace the placeholders with a trusted endpoint and actual input. `flow-rpc` discloses original transaction bytes to the chosen provider for simulation. `audit` sends the public transaction identifier, requests finalized historical metadata and verifies the returned original signatures locally. Neither command broadcasts. A single provider's reported history is not independent proof of ledger inclusion. Live public historical compatibility is still under validation.
+
+## A clear evidence model
+
+```text
+Original Solana wire ──► Program intelligence ──┬──► Asset flow
+                                                ├──► Authority intelligence
+                                                └──► Semantic diff
+      Independent policy / signed intent ──────────► Scoped analysis
+      Explicit RPC ────────────────────────────────► Advisory simulation
+      Public signature + explicit RPC ─────────────► Historical audit
+
+                    JSON contracts / standalone HTML
+                    Evidence · coverage · limitations
+                    Signing authorization: NOT_AUTHORIZED
+```
+
+HGUET deliberately keeps four evidence layers distinct:
+
+| Layer | Meaning |
+| --- | --- |
+| Original wire | What the serialized message declares |
+| CPI | What the provider reports about inner instructions |
+| Net balance changes | Provider-reported pre/post balance differences, not per-instruction gross debit |
+| Account state | Later non-atomic snapshots for simulation, or metadata attached to historical transactions |
+
+The layers are not added into a single invented total. Unknown data is not zero, a successful simulation is not an execution proof, and a valid signature does not establish informed authorization. Historical audit never substitutes present-day account state for historical metadata.
+
+## Security Demo Lab
+
+| Case | Reproducible observation |
+| --- | --- |
+| [Payment](docs/DEMO_LAB.md) | 500 lamports declared |
+| Additional debit | 501 lamports across two instructions |
+| Authority | Proposed delegate allowance of 99 raw units; not a debit |
+| Token-2022 | Declared transfer of 123 raw units includes expected fee 2 |
+| Uncertainty | Opaque instruction remains unquantified |
+| Diff | Original message changed; additional movement visible |
+
+```sh
+hguet lab token2022 --html > token2022.html
+hguet lab diff --json
+hguet demo
+```
+
+The existing three-case policy demo and the six-case lab are complementary. The lab is not a live attack simulation or a comprehensive benchmark. See the [lab guide](docs/DEMO_LAB.md).
+
+## Reports that travel
+
+Standalone HTML is generated by the Rust CLI from the same structured evidence as JSON. It includes account-to-account movement diagrams, authority tables, positional comparisons, separate RPC observations and a collapsible evidence explorer with internal links.
+
+No JavaScript, remote fonts, CDN, tracking or report server. Responsive light/dark styling and print CSS. Dynamic values are escaped; a restrictive Content Security Policy limits resource loading. HTML can still contain confidential transaction details and is not an authenticated artifact.
+
+Five generated report examples and six lab HTML/JSON pairs are available in the [measured CI artifact](https://github.com/HGUET/hguet/actions/runs/46086487261/artifacts/15239177591), subject to GitHub's retention and access rules. The [HTML contract](protocol/html/README.md) describes output and security boundaries.
+
+## Program coverage
+
+| Family | Current developer-preview scope |
+| --- | --- |
+| System | Selected native movement, account funding and nonce withdrawal |
+| SPL Token | Selected transfer, mint, burn, delegate, authority, freeze/thaw and close operations |
+| Token-2022 | Selected base operations, checked fee transfer, fee configuration, permanent delegate, transfer hook; opaque extensions remain explicit |
+| Compute Budget / Memo | Selected configuration declarations; memo size and UTF-8 validity, not content |
+| Associated Token Account | Create and idempotent create declarations; selected actual local runtime comparisons |
+| Address Lookup Table | Create, extend, freeze, deactivate and close declarations; unresolved offline identities |
+| Other programs | Opaque unless explicitly supported; no broad Stake, Loader or DEX semantics |
+
+Legacy, v0 and v1 wire structures are decoded; selected SDK-built transactions in all three formats have executed in the pinned local LiteSVM environment. This is not a claim of full instruction or live-cluster compatibility. See [supported programs](SUPPORTED-PROGRAMS.md) and [limitations](LIMITATIONS.md).
+
+## Verification, not promises
+
+Latest measured source: [`d716d60`](https://github.com/HGUET/hguet/commit/d716d606a71291f6d65e007d281bbffc513a2784), 2026-11-28.
+
+| Evidence | Observed result |
+| --- | ---: |
+| Rust workspace | 315 passed; 6 ignored |
+| Mandatory LiteSVM comparisons | 13/13 |
+| Additional SDK/CLI groups (program, flow, authority, diff/audit, HTML, lab) | 49/49 |
+| Synthetic security benchmark | 227/227 expected outcomes |
+| Strict Clippy / locked build | PASS |
+| PQ interoperability workflow | PASS |
+| Rust formatting | **FAIL — two style diffs in lab.rs** |
+
+In the synthetic benchmark, 119 BAD scenarios were denied, 77 UNKNOWN scenarios retained uncertainty, and 31 GOOD scenarios remained UNKNOWN. This is expected for a refusal-only engine, not a 100% real-world detection or approval rate. Ground truth is project-authored, not independently reviewed.
+
+[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46086487261) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46086487268) · [Benchmark](testing/README.md)
+
+## Local-first by design
+
+Community Edition is the primary MIT-licensed toolkit. No account, custody, mandatory Cloud, subscription, license server or hidden telemetry. Explicit RPC requests may incur provider charges. Optional Cloud protocol and PQ transport research are maintained separately; a public paid Cloud service is not available.
+
+HGUET cannot replace the customer-controlled wallet or independently protected signing boundary. A malicious agent able to bypass an advisory tool can also bypass HGUET. No current command signs or broadcasts a user's transaction.
+
+## Project status
+
+The foundation is accepted on its recorded source snapshot. Program, asset, authority, diff, historical-audit, HTML and lab increments are implemented; their broader acceptance criteria remain open. Next: **extended runtime validation** — differential SDK corpus, public historical fixtures, more Token-2022 and authority behavior, validator comparisons, fuzzing and independently reviewed benchmark evidence.
+
+Semantic mandates, x402 exact SVM verification, released Rust/TypeScript integrations, optional read-only MCP, DOT export and verified release packages are future deliverables, not available products. No 0.1.0 release is claimed.
+
+[Roadmap](docs/release/community-0.1.0/ROADMAP.md) · [Coverage matrix](docs/release/community-0.1.0/COVERAGE_MATRIX.md) · [Release gates](docs/release/community-0.1.0/RELEASE_GATES.md)
+
+## Contribute
+
+Independent runtime fixtures, parser differential tests, evidence reviews, reproducible security regressions and integration examples are especially welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Never publish private keys, live claim secrets or confidential transaction data.
+
+[MIT license](LICENSE) · [Support development](docs/support.md) · [HGUET organization](https://github.com/HGUET) · [hguet.fr](https://hguet.fr)

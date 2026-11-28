@@ -1,15 +1,20 @@
-# Current limitations — pre-alpha
+# Current limitations — developer preview
 
-- The CLI is not a wallet or signer; automatic signing permission is structurally false. DENY means a supported violation; UNKNOWN is not permission. A syntax-valid policy or valid signature is not proof of safety.
-- Legacy/v0/v1 parser behavior needs differential verification against supported Solana SDK/runtime versions; a parser accepting v1 does not prove live cluster support.
-- Original-wire direct SOL and checked-token declarations are not total spending. CPI, fees, rent, opaque programs, multisig, lookup resolution, token extensions and account-state effects may remain unresolved.
-- Signed PaymentIntent v1 binds exact bytes and trusted issuer but is not a semantic purchase authorization; it lacks a general recipient/purpose grant and does not establish signer-side enforcement.
-- RPC is opt-in; its simulation and later state reads are advisory, non-atomic and may be incomplete or wrong. Replacement blockhash and disabled provider signature verification limit what simulation establishes.
-- No finalized transaction forensic audit, full historical state reconstruction, x402/MPP verifier, released SDK or production signer is claimed.
-- Existing benchmark is primarily synthetic and authored within the project; mock/transport tests are not runtime validation or an independent audit.
-- Cloud loopback experiments are not a public paid service. The free release is independent.
-- No release platform, binary, publisher signature, SBOM or external review is claimed until actual evidence is published.
+HGUET is an unreleased, non-custodial security and transaction intelligence toolkit. The following limits apply even when a test suite passes.
 
-[Implementation](docs/implementation/README.md) · [Coverage matrix](docs/release/community-0.1.0/COVERAGE_MATRIX.md) · [Release gates](docs/release/community-0.1.0/RELEASE_GATES.md).
+| Boundary | What is not established |
+| --- | --- |
+| Authorization | No result permits signing or broadcasting. DENY is a supported violation; UNKNOWN and scoped MATCH are not approval. HGUET cannot enforce a wallet's behavior by itself. |
+| Wire parsing | Selected legacy/v0/v1 cases are SDK- and LiteSVM-validated, not comprehensive live-cluster compatibility. |
+| Program semantics | Supported layouts are instruction-specific. Opaque programs, many Token-2022 extensions, broader System/Stake/Loader/DEX semantics, multisig and hooks remain incomplete. |
+| Asset flow | Gross declarations are not net loss, wallet-specific spend or actual execution; fees, rent, supply, CPI and withheld amounts are not globally reconciled. Unknown values never mean zero. |
+| Authority | Declared owner/delegate changes do not prove current permissions, effective control, irreversibility or final state. Approvals are not additive. |
+| Semantic diff | Position-based comparison and normalized fingerprints, not edit alignment or semantic equivalence; unresolved ALT identity is not a resolved address. |
+| RPC simulation | Single-provider advisory claims; replacement blockhash, sigVerify=false and later non-atomic snapshots. No finality or execution proof. Transaction bytes are disclosed to the provider. |
+| Historical audit | Requests finalized metadata and verifies returned signatures; no independent ledger inclusion or consensus proof. Historical loaded addresses are provider claims; no full historical state reconstruction. Live public historical cases remain unverified. |
+| Signed intent and policy | Exact message binding and limited direct restrictions do not establish a general recipient/purpose authorization or total spending bound. Independently pinned issuer and policy are essential. |
+| Reports and lab | Passive HTML and synthetic examples are available; not authenticated reports or a comprehensive accessibility/browser audit. No DOT export. Reports may contain sensitive transaction details. |
+| Verification | Tests are scoped to their fixtures and exact source snapshot. Project-authored synthetic benchmark is not an independent audit or a traffic sample; broader validator, fuzz and external review are open. |
+| Integration/release | No released SDK, x402/MPP verifier, production signer, public binary release or verified supply-chain package yet. Cloud experiments are not a public paid service. |
 
-Phase 1.1 adds bounded stdin, report v2 and a reusable engine. Hosted results apply only to their source snapshots; see the [acceptance record](docs/release/community-0.1.0/PHASE_01_1.md). A scoped MATCH never proves safety, actual execution or total spending. No final release readiness is claimed.
+See [current evidence](docs/release/community-0.1.0/VERIFICATION.md), [supported programs](SUPPORTED-PROGRAMS.md), [coverage matrix](docs/release/community-0.1.0/COVERAGE_MATRIX.md) and [release gates](docs/release/community-0.1.0/RELEASE_GATES.md).
