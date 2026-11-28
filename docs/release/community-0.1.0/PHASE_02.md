@@ -80,3 +80,7 @@ Exact hosted formatting corrections applied to lab.rs at fb834f066a4b555a0bbb629
 ## Phase 2.6 measured differential/rollback and public history increment
 
 At 29486e4dcb95b9c40d2d139c667e7f066d771a6f, full runtime acceptance succeeded, including 120 differential and 2 actual rollback cases; artifact manifest 502/502 verified. See [VERIFICATION.md](VERIFICATION.md). Added an independently signed published Devnet example, reconstructed from official Solana documentation and verified locally using Ed25519, plus an offline Rust historical test and separately network-enabled bounded public smoke. Published metadata is not a live response. New hosted results pending; no wide public corpus or independent ledger proof claimed.
+
+## Token-2022 extension runtime increment
+
+Four additional mandatory LiteSVM groups compare permanent delegate behavior, hook configuration (not hook execution), fee collection/harvest/withdrawal/configuration and non-transferable rejection. Test-only change, no broad new decoder coverage claimed. Exact expected state and rejection codes must pass before updating measured results. Public historical fixture corrected separately after first public response exposed loss of integer precision in fixture preparation. New CI pending.
