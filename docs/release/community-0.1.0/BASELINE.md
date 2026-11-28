@@ -1,5 +1,7 @@
 # Documentation baseline â€” 2026-11-27
 
+> **Current status:** this file preserves historical measurements. For the latest exact-source evidence, including Phase 2 and Demo Lab, see [VERIFICATION.md](VERIFICATION.md). Later results supersede earlier pending statuses without rewriting historical measurements.
+
 Source snapshot: `b34924ee6e665dacf2253cecad0e200dc764fce5`. This is not a tested build record.
 
 - MIT license; core, policy, RPC, signer, CLI and Cloud components.

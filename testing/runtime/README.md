@@ -81,3 +81,31 @@ The CI runtime step uses explicit Bash pipefail so tee cannot mask failure.
 ## Fail-closed acceptance (Phase 1.1)
 
 Run the pure acceptance unit tests with `python -m unittest discover -s testing/runtime -p test_acceptance.py -v`. The harness writes an incremental report, checks the exact mandatory inventory and exits nonzero for failed/missing/duplicate/unexpected/incomplete cases. Python optimization disabling assertions is refused. Expected runtime rejection checks verify instruction index and specific custom error; the runtime evidence remains local and does not establish live cluster support. Hosted results and artifact links: [Phase 1.1](../../docs/release/community-0.1.0/PHASE_01_1.md).
+
+## Current hosted harness inventory
+
+[Exact-source verification](../../docs/release/community-0.1.0/VERIFICATION.md) records all groups on d716d60; previous local-only or pending statements above are historical.
+
+| Script | Mandatory groups | Scope |
+| --- | ---: | --- |
+| native.py | 13 | Actual LiteSVM execution/state comparisons |
+| programs_preview.py | 10 | SDK declarations and selected actual Compute/Memo/ATA cases |
+| flow_preview.py | 8 | Raw asset totals, selected actual execution, error and RPC configuration groups |
+| authority_preview.py | 7 | Selected actual authority mutations and SDK/CLI checks |
+| diff_preview.py | 10 | Nine diff groups and one historical audit configuration group |
+| html_preview.py | 7 | Passive HTML, JSON parity and five generated reports |
+| lab_preview.py | 7 | Six deterministic unsigned cases, manifest/parity, no overwrite |
+
+Run from the repository root with a built CLI and both pinned requirements files installed. For each script:
+
+```sh
+python testing/runtime/native.py --hguet target/debug/hguet --out /tmp/runtime-evidence/result.json
+python testing/runtime/programs_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/programs-preview.json
+python testing/runtime/flow_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/flow-preview.json
+python testing/runtime/authority_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/authority-preview.json
+python testing/runtime/diff_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/diff-preview.json
+python testing/runtime/html_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/html-preview.json
+python testing/runtime/lab_preview.py --hguet target/debug/hguet --out /tmp/runtime-evidence/lab-preview.json
+```
+
+Use a fresh evidence directory for the lab export. Hosted Linux CI runs the scripts in a separate network namespace; use equivalent isolation where available. All 62 groups passed on the recorded source, but full workflow failed on formatting. The six demo lab cases themselves remain unsigned and non-executed; the historical audit uses signed synthetic fixtures and mocked provider metadata, not live public history. More validator, differential/fuzz and public historical evidence is required.

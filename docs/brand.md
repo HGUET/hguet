@@ -7,15 +7,15 @@
 ## Product identity
 
 - **Name:** HGUET
-- **Category:** Open-source Solana transaction security toolkit
-- **Primary line:** Secure the intent. Verify the transaction.
+- **Category:** Open-source security and transaction intelligence for Solana
+- **Primary line:** Understand before signing. Investigate after execution.
 - **Short supporting line:** Security before the signature.
 - **Website:** https://hguet.fr
 - **GitHub:** https://github.com/HGUET
 
 ### Public organization description (copy exactly)
 
-`Open-source security for Solana transactions and autonomous agents. Verify intent, simulate transactions, understand risk — before signing.`
+`Open-source security and transaction intelligence for Solana. Inspect assets, authority and intent before signing; compare and investigate transactions.`
 
 ### Suggested organization profile settings
 

@@ -1,5 +1,7 @@
 # HGUET CLI — Commands, configuration and accountless Cloud UX
 
+> **Historical/proposed grammar.** The actual command and output reference is now [CLI.md](../CLI.md). Offline report, programs, flow, authority, diff, explicit flow-rpc/audit, HTML and lab have been implemented since this draft. Proposed Cloud commands and broader signing behavior below are not current contracts.
+
 > **Community Edition direction (2026-11-27):** This is target grammar, not current help. For existing commands use [Quick start](../../QUICKSTART.md). Proposed 0.1.0 CLI prioritizes local inspect/check/simulate/audit/diff/explain/doctor/demo, bounded stdin and text/JSON/HTML; Cloud grammar is deferred. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
 
 **Status:** Unreleased design draft, **not implemented**. This replaces the old `register/login/topup/balance/usage` design. See [SOL payment specification](payment-per-request.md).

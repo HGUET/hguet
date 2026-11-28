@@ -37,3 +37,7 @@ The six cases are not a comprehensive security benchmark or runtime test suite.
 The existing policy demo, `hguet demo`, remains unchanged.
 
 The [Lab v1 schema](../protocol/lab/v1/report.schema.json) validates case, manifest and error envelopes; register the local report, diff, flow, authority and program schemas by their documented URNs. A complete export requires a valid manifest and all listed hashes to match, not simply the presence of a manifest file. All dynamic lab labels are escaped by the same passive HTML renderer.
+
+## Verified development snapshot
+
+The network-isolated lab suite passed all 7 mandatory groups on d716d60. The [verified CI artifact](https://github.com/HGUET/hguet/actions/runs/46086487261/artifacts/15239177591) contains the six actual HTML/JSON pairs and manifest in security-demo-lab/. GitHub artifacts may expire or require authentication. Full runtime CI remains red on formatting; this is scoped functional evidence, not release readiness. See [verification](release/community-0.1.0/VERIFICATION.md).

@@ -44,3 +44,20 @@ See BASELINE.md for commands, source attribution, evidence locations and hashes.
 Intermediate hosted runs measured 13/13 mandatory LiteSVM comparisons and 227/227 synthetic benchmark cases; the same runs also reported strict formatting/lint failures. See [PHASE_01_1.md](PHASE_01_1.md) for links and later corrective commits. Do not waive G02/G03/G04/G05 on older results. No release gate is marked complete by this checkpoint.
 
 Phase 1.1 final hosted acceptance succeeded at `19c24255c41749c90b9c6d9bd8c02158bd97d640`; see [verified evidence](PHASE_01_1.md#final-acceptance--2026-11-27). These results do not close whole-release gates or certify later source revisions.
+
+## Phase 2 evidence checkpoint — 2026-11-28
+
+[Verification record](VERIFICATION.md) identifies source d716d60, 315 workspace tests passed (6 ignored), 13 mandatory LiteSVM comparisons, 49 additional SDK/CLI groups, 227 synthetic scenario passes, strict Clippy and separate PQ success. Full runtime workflow FAILS on two formatting differences. This is partial evidence, not release acceptance.
+
+| Gate | New evidence and remaining work |
+| --- | --- |
+| G01/G02 | Network-isolated reports and lab, standalone contract parity; existing v1/v2 regressions passed. Broader clean installation and platform compatibility remain open. |
+| G03/G04 | Selected SDK legacy/v0/v1 and actual LiteSVM cases; broader differential corpus, validator, live public historical and fuzzing remain open. |
+| G05/G06 | Wire flow, authority, diff, RPC links and historical metadata separation, refusal preserved; semantic/state and independent threat review coverage incomplete. |
+| G07 | HTML, audit, diff and demo lab now implemented, scoped tests pass. DOT, browser/accessibility, portability and live historical checks remain open. |
+| G08/G09/G10 | Semantic mandates, x402 and external integrations not yet accepted. |
+| G11 | 227/227 expected synthetic outcomes; independent review and third-party adapter remain open. |
+| G12 | No public release package or publisher attestation. |
+| G13 | Current README, command/contract index, coverage and limitations updated; full release documentation acceptance pending. |
+
+No entire gate is waived by this checkpoint.

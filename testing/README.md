@@ -1,5 +1,7 @@
 # HGUET Security Benchmark (foundation)
 
+> **Latest measured run:** [VERIFICATION.md](../docs/release/community-0.1.0/VERIFICATION.md) records 227/227 expected outcomes at d716d60 (119 BAD DENY, 77 UNKNOWN UNKNOWN, 31 GOOD UNKNOWN). Full CI fails on formatting, not the benchmark. The separate [runtime/SDK harness](runtime/README.md) has 13 mandatory runtime and 49 additional groups. These counts do not measure real-world detection or independent audit.
+
 > **Community Edition direction (2026-11-27):** Source baseline has 60 main and 167 regression JSON files; run the generator and runner to confirm executable counts. Historical dated counts below are not current measurements. Expand into an open runtime and third-party adapter benchmark, without conflating mocked responses with real execution. See the [release roadmap](../docs/release/community-0.1.0/ROADMAP.md).
 
 Executable framework that measures how well the **real `hguet` binary** detects dangerous

@@ -1,5 +1,7 @@
 # HGUET CLI — Architecture specification (unreleased)
 
+> **Current implementation:** see [current.md](current.md) for the actual six-crate workspace and report architecture, and [CLI reference](../CLI.md) for implemented commands. This older design specification retains proposed Cloud and signer terminology, target crate names and verdicts; they are not current availability or permission. Current contracts, refusal-only behavior and release gates take precedence.
+
 > **Community Edition direction (2026-11-27):** Free Community Edition is the primary product. This is the component architecture reference, not the release plan. Existing implemented contracts and limitations remain binding; future Cloud work is not a release gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
 
 **Status:** Unreleased design draft · **Compatibility review:** 2026-11-15 · **Implementation:** partial public Rust CLI and private loopback/server primitives exist; no production Cloud or complete paid interoperability  

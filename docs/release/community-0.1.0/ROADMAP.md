@@ -33,3 +33,9 @@ Milestones: alpha.1 (foundation), beta.1 (validated engine and reports), rc.1 (i
 [Baseline](BASELINE.md) · [Coverage matrix](COVERAGE_MATRIX.md) · [Release gates](RELEASE_GATES.md) · [Phase 1](PHASE_01.md).
 
 Phase 1.1 accepted at the measured snapshot in [PHASE_01_1.md](PHASE_01_1.md). Phase 2 sequencing supersedes the earlier allocation of first diff, historical audit and HTML report implementations to Phase 4; release gates are unchanged.
+
+## Current delivery checkpoint — 2026-11-28
+
+The initial vertical slices 2.0–2.5 and Demo Lab are implemented and have passed their scoped functional comparisons. The latest measured source has a formatting-only CI failure; see [VERIFICATION.md](VERIFICATION.md). These are not whole-phase or release-gate passes.
+
+Next priority is Phase 2.6 / Phase 3 validation rather than additional command breadth: fix formatting and run exact-source acceptance, validate read-only public historical samples, expand SDK differential and actual LiteSVM/validator cases (especially Token-2022, authority and ALT), exercise bounded fuzzing, and publish reproducible reviewed evidence. DOT, richer alignment and semantic reconciliation remain open. No broader DEX, mandate, x402 or integration claim until its own acceptance. Existing roadmap gates stay mandatory.

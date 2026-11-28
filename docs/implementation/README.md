@@ -1,5 +1,7 @@
 # First Rust implementation slice — unreleased
 
+> **Current source navigation:** use [documentation index](../README.md), [current architecture](../architecture/current.md), [CLI reference](../CLI.md) and [verification record](../release/community-0.1.0/VERIFICATION.md). The detailed slices below are retained as development history; old coverage/command/status statements are not the current feature matrix.
+
 > **Community Edition direction (2026-11-27):** Detailed implementation record, including historical slices. Current commands are in [QUICKSTART.md](../../QUICKSTART.md). Phase 1 must reconcile historical descriptions against code and actual test results. Cloud sandbox instructions are preserved in [previous-readme.md](previous-readme.md). See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md) and [coverage matrix](../../docs/release/community-0.1.0/COVERAGE_MATRIX.md).
 
 This is a **working but partial transaction analysis prototype**, not a security-ready Solana policy agent and **not** a released version. Later sections document implemented opt-in RPC and other capabilities; early slice descriptions are historical.
