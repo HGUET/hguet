@@ -100,7 +100,9 @@ fn payment() -> Result<Vec<u8>, String> {
 }
 
 fn additional() -> Result<Vec<u8>, String> {
-    fixture(include_str!("../../../tests/fixtures/demo-v1/violation.base64"))
+    fixture(include_str!(
+        "../../../tests/fixtures/demo-v1/violation.base64"
+    ))
 }
 
 pub fn run(name: &str) -> Result<LabCase, String> {
@@ -132,7 +134,9 @@ pub fn run(name: &str) -> Result<LabCase, String> {
         "uncertainty" => (
             "uncertainty",
             "Opaque program: missing quantitative semantics is not zero or safety.",
-            fixture(include_str!("../../../tests/fixtures/demo-v1/opaque.base64"))?,
+            fixture(include_str!(
+                "../../../tests/fixtures/demo-v1/opaque.base64"
+            ))?,
             None,
         ),
         "diff" => (
