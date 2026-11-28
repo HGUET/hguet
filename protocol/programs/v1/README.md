@@ -36,3 +36,7 @@ Phase 2.0 token increment adds declaration checks to six existing runtime cases 
 ALT interface reference: https://docs.rs/solana-address-lookup-table-interface/4.0.0/solana_address_lookup_table_interface/instruction/enum.ProgramInstruction.html . SDK constructors: https://kevinheavey.github.io/solders/api_reference/system_program.html . Existing v0 lookup runtime now also asserts the program inventory preserves an unresolved destination address as null.
 
 Isolation tests compare an oversized token instruction followed by a decodable sibling and a v0 transaction containing both a static token instruction and a lookup-dependent token instruction. Only the affected instruction loses coverage; the lookup identity stays null. Checked-fee declarations include their wire decimals separately from actual mint state.
+
+## Verified development snapshot
+
+All ten SDK/CLI groups passed, including selected actual LiteSVM Compute Budget, Memo and ATA comparisons. Broader extension and ALT mutation execution remain open. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.

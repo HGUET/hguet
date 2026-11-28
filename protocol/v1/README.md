@@ -1,6 +1,6 @@
 # HGUET public protocol v1 — accountless SOL pay-per-check (DRAFT)
 
-> **Community Edition direction (2026-11-27):** Existing public v1 schemas and signed bytes are unchanged. Proposed report v2 is separate; the private Cloud protocol is not a Community Edition gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
+> **Community Edition direction (2026-11-27):** Existing public v1 schemas and signed bytes are unchanged. Implemented opt-in analysis report v2 and the newer inventory contracts are separate; see the [current contract index](../../docs/README.md#machine-readable-contracts). the private Cloud protocol is not a Community Edition gate. See the [release roadmap](../../docs/release/community-0.1.0/ROADMAP.md).
 
 **Design status:** Unreleased draft, not a running public API. **No HGUET product releases exist yet.** The `protocol/v1` folder denotes a proposed wire-schema major version, **not** an HGUET v1.0 product release. · Compatibility review 2026-11-15. Private loopback prototypes do not constitute a released service.
 

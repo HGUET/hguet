@@ -182,3 +182,7 @@ V2 effects reuse the pipeline's parsed transaction. Runtime and signature
 coverage semantics remain unchanged. These changes require fresh test evidence.
 
 Phase 1.1 adds direct wire pointers for selected policy/signature findings. Three formerly open targeted catalogue references now have paired stage-level tests using actual RPC guards and production finding mapping. At source 32e4e79 the hosted catalogue validator reports 125 entries, zero uncatalogued codes and zero targeted reference gaps; this does not establish independent review or provider-to-stage reachability. See [acceptance evidence](../../docs/release/community-0.1.0/PHASE_01_1.md).
+
+## Current contract navigation
+
+Analysis v2 is implemented and remains opt-in for inspect/check. The seven independent inventory commands use separate contracts and do not replace analysis v1/v2. See the [contract index](../../docs/README.md#machine-readable-contracts). Phase 1.1 was accepted at its measured snapshot; later functional verification including catalogue and JSON contract checks is recorded in [VERIFICATION.md](../../docs/release/community-0.1.0/VERIFICATION.md). Earlier pending catalogue/runtime statements describe development history, not a new verification claim. Independent reachability/review and broader release acceptance remain open.

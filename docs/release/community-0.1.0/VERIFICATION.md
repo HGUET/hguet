@@ -25,7 +25,7 @@ The 62 runtime and SDK/CLI groups above (13 mandatory runtime + 49 additional gr
 ## Reproduce and inspect
 
 - [Runtime & full acceptance workflow](https://github.com/HGUET/hguet/actions/runs/46086487261) — conclusion failure due to formatting.
-- [Runtime evidence artifact](https://github.com/HGUET/hguet/actions/runs/46086487261/artifacts/15239177591) — downloaded and verified: **498/498** listed file SHA-256 values matched. Source.txt and benchmark metadata name the exact source above.
+- [Runtime evidence artifact](https://github.com/HGUET/hguet/actions/runs/46086487261/artifacts/15239177591) — downloaded and verified: **498/498** listed file SHA-256 values matched. source.txt and benchmark metadata name the exact source above.
 - [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46086487268) — success. The separate PQ artifact was not re-downloaded for this checkpoint.
 - Earlier [full green runtime](https://github.com/HGUET/hguet/actions/runs/46086362411) and [PQ](https://github.com/HGUET/hguet/actions/runs/46086362409) on `28554a4b35df4da5000ba981b0b27c0155707d42`, before the lab changes.
 

@@ -19,7 +19,10 @@ No full authority inventory, CPI coverage, final-state or safety claim.
 Existing analysis, program and flow reports are unchanged. No signing,
 broadcasting, account custody, real funds or mandatory Cloud. Runtime checks
 for existing SPL approval and account-owner change fixtures compare actual
-state to the new declaration report; all other operations require their own
-runtime evidence. Phase 2.2 remains open.
+state to the declaration report; the additional selected runtime comparisons below extend that evidence. Phase 2.2 remains open.
 
-The [JSON schema](report.schema.json) is separate from all existing reports; register the local program schema at urn:hguet:programs:v1. The network-isolated SDK suite checks runtime delegate revocation, freeze/thaw, mint authority removal, empty-account close, and offline unknown/control classification, ordered approval replacement declarations, and versioned errors. This is a mandatory test suite, not a claim that the tests already passed. Additional Token-2022 and ALT runtime coverage remains open.
+The [JSON schema](report.schema.json) is separate from all existing reports; register the local program schema at urn:hguet:programs:v1. The network-isolated SDK suite checks runtime delegate revocation, freeze/thaw, mint authority removal, empty-account close, and offline unknown/control classification, ordered approval replacement declarations, and versioned errors. This is a mandatory test suite; measured results are recorded below. Additional Token-2022 and ALT runtime coverage remains open.
+
+## Verified development snapshot
+
+All seven Authority SDK/CLI groups passed, including actual delegate revoke, freeze/thaw, mint authority removal and empty-account close comparisons. Broader authority/CPI/state semantics remain open. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.

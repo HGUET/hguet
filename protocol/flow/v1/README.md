@@ -29,8 +29,10 @@ schema by logical identifier urn:hguet:programs:v1. Register the local
 `protocol/programs/v1/report.schema.json` under that identifier before
 validating (no network resolution). See `testing/runtime/flow_preview.py`.
 
-This is only the first offline slice of Phase 2.1. Existing RPC analysis remains
-separate. CPI/net/state correlation, richer authority reports and historical
-execution analysis are pending. No public release or independent audit claimed.
+This contract is the original-wire slice of Phase 2.1. Separate RPC correlation, authority and historical audit contracts now exist. Full semantic reconciliation of CPI/net/state remains incomplete. No public release or independent audit claimed.
 
 The SDK suite also checks totals greater than u64 and self-transfers. The existing actual ALT and Token-2022 fee runtime tests now compare flow declarations too, including a rejected wrong-fee transaction, whose declaration must not become an observed debit. These checks do not imply execution of the other SDK fixtures.
+
+## Verified development snapshot
+
+All eight Flow SDK/CLI groups passed, including raw total boundaries, unknowns, selected actual runtime comparisons and RPC configuration errors. Standalone flow remains offline; the separate [RPC flow](../../flow-rpc/v1/README.md) provides advisory correlation, and the [historical audit](../../audit/v1/README.md) provides historical metadata. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.

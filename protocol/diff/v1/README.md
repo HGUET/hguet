@@ -29,4 +29,8 @@ Signing is always NOT_AUTHORIZED. Existing report contracts unchanged.
 This is the initial Phase 2.3 slice, not a release. SDK fixtures and full
 hosted regression checks are required for acceptance.
 
-The [JSON schema](report.schema.json) validates the diff envelope, snapshots, identity and pointer shapes, and refusal invariants. The nested decoder summaries are intentionally open objects, not exhaustive independent contracts. The SDK suite also checks v1 inline resource changes, exact message and blockhash digests, and lookup references. Compiled indices and the entire lookup declaration list are preserved separately from normalized fingerprints; a remaining unexplained byte change is explicitly classified as unclassified_message_bytes. Hosted test results must be recorded before acceptance.
+The [JSON schema](report.schema.json) validates the diff envelope, snapshots, identity and pointer shapes, and refusal invariants. The nested decoder summaries are intentionally open objects, not exhaustive independent contracts. The SDK suite also checks v1 inline resource changes, exact message and blockhash digests, and lookup references. Compiled indices and the entire lookup declaration list are preserved separately from normalized fingerprints; a remaining unexplained byte change is explicitly classified as unclassified_message_bytes. Measured hosted results are recorded below; broader acceptance remains open.
+
+## Verified development snapshot
+
+All nine Diff SDK/CLI groups passed, including v1 inline resources, opaque data, repeated/reordered instructions and unresolved ALT references. Position alignment and equivalence remain unproved. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.

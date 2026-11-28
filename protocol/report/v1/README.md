@@ -12,3 +12,7 @@ produced, not that signing is approved. Exit 40 is hguet_report_error.
 Register local flow, authority and program schemas at their documented URNs
 before validating this [schema](report.schema.json). The SDK suite verifies
 nested contracts and equality with the independent commands.
+
+## Verified development snapshot
+
+The combined report's nested JSON parity, schema and HTML projection passed in the seven-group HTML SDK/CLI suite. Both views derive from one program decode and do not establish execution or authorization. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.
