@@ -157,23 +157,25 @@ Legacy, v0 and v1 wire structures are decoded; selected SDK-built transactions i
 
 ## Verification, not promises
 
-Latest measured full Runtime CI source: [`29486e4`](https://github.com/HGUET/hguet/commit/29486e4dcb95b9c40d2d139c667e7f066d771a6f), 2026-11-28.
+Latest measured full Runtime CI source: [`9eef59d`](https://github.com/HGUET/hguet/commit/9eef59dbbd0b34afcda0e69afcd907d1fef9689b), 2026-11-28.
 
 | Evidence | Observed result |
 | --- | ---: |
-| Rust workspace | 315 passed; 6 ignored |
+| Rust workspace | PASS (see exact-source evidence) |
 | Mandatory LiteSVM comparisons | 13/13 |
 | Additional SDK/CLI groups (program, flow, authority, diff/audit, HTML, lab) | 49/49 |
 | Synthetic security benchmark | 227/227 expected outcomes |
 | Strict Clippy / locked build | PASS |
-| PQ interoperability workflow | PASS at fb834f0 (before Python-only extended tests) |
+| PQ interoperability workflow | PASS at 9eef59d |
 | Rust formatting | PASS |
 | Deterministic SDK differential corpus | 120/120 |
 | Actual atomic rollback comparisons | 2/2 |
+| Token-2022 extension runtime groups | 4/4 |
+| Public historical Devnet smoke | 1/1 |
 
 In the synthetic benchmark, 119 BAD scenarios were denied, 77 UNKNOWN scenarios retained uncertainty, and 31 GOOD scenarios remained UNKNOWN. This is expected for a refusal-only engine, not a 100% real-world detection or approval rate. Ground truth is project-authored, not independently reviewed.
 
-[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46088566612) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46088474986) · [Benchmark](testing/README.md)
+[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46089660808) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46089660871) · [Benchmark](testing/README.md)
 
 ## Local-first by design
 

@@ -28,3 +28,7 @@
 Phase 1.1 accepted on [19c24255](PHASE_01_1.md). Initial Phase 2 runtime/SDK slices have been progressively verified; exact source and links are retained in [PHASE_02.md](PHASE_02.md). Latest measured full Runtime CI source 29486e4: 315 workspace tests passed, 6 ignored; 62 prior runtime/SDK/CLI groups, 120 additional differential cases and two actual rollback comparisons passed; 227 synthetic benchmark expected outcomes passed. Formatting and strict Clippy passed. PQ passed on fb834f0 before the Python-only additions. The first published historical fixture and public Devnet smoke passed at 90e4a36; broader public corpus remains open. No entire release gate or complete instruction family is certified by these counts.
 
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md) · [Release gates](RELEASE_GATES.md).
+
+## Token-2022 checkpoint
+
+All three workflows passed at 9eef59d. Four actual Token-2022 extension runtime groups passed; 504 artifact hashes verified. Existing decoder coverage remains scoped, hook CPI and mint-close behavior remain open. Two ALT lifecycle groups implemented at b840fb9; acceptance pending. See [VERIFICATION.md](VERIFICATION.md).

@@ -21,3 +21,7 @@ The [Program Intelligence contract](protocol/programs/v1/README.md) describes ex
 `DECODED_DECLARATION` means supported wire fields were recognized. `PREFIX_ONLY`, `UNSUPPORTED_LAYOUT`, `UNRESOLVED_ACCOUNTS`, `UNRESOLVED_PROGRAM` and `DECODER_UNAVAILABLE` expose gaps. Memo invalid UTF-8 remains explicit. No program-name allowlisting or blanket support claim.
 
 See [source-attributed verification](docs/release/community-0.1.0/VERIFICATION.md) for actual SDK/LiteSVM results and remaining work. Broader validator execution, extension/state coverage and live-cluster behavior remain open.
+
+## Extended runtime checkpoint
+
+At 9eef59d, four actual Token-2022 extension runtime groups passed: permanent delegate, hook configuration (not hook CPI), fee collection/harvest/withdrawal/future fee configuration, non-transferable rejection. No expansion of static layout coverage is implied. Two new ALT lifecycle groups are implemented and pending CI; until measured, the existing v0 lookup transfer is the confirmed ALT runtime case. See [verification](docs/release/community-0.1.0/VERIFICATION.md).
