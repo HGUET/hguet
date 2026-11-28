@@ -61,3 +61,7 @@ Phase 1.1 final hosted acceptance succeeded at `19c24255c41749c90b9c6d9bd8c02158
 | G13 | Current README, command/contract index, coverage and limitations updated; full release documentation acceptance pending. |
 
 No entire gate is waived by this checkpoint.
+
+## Extended validation checkpoint
+
+Full Runtime CI succeeded on 29486e4 (including formatting and Clippy); 120 differential and 2 actual rollback cases passed, with all 502 artifact manifest entries verified. See [VERIFICATION.md](VERIFICATION.md). G03/G04 receive additional scoped evidence; no whole gate is waived. A first published historical fixture and separate live public smoke are implemented but not yet verified by hosted execution.

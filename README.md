@@ -157,7 +157,7 @@ Legacy, v0 and v1 wire structures are decoded; selected SDK-built transactions i
 
 ## Verification, not promises
 
-Latest measured source: [`d716d60`](https://github.com/HGUET/hguet/commit/d716d606a71291f6d65e007d281bbffc513a2784), 2026-11-28.
+Latest measured full Runtime CI source: [`29486e4`](https://github.com/HGUET/hguet/commit/29486e4dcb95b9c40d2d139c667e7f066d771a6f), 2026-11-28.
 
 | Evidence | Observed result |
 | --- | ---: |
@@ -166,12 +166,14 @@ Latest measured source: [`d716d60`](https://github.com/HGUET/hguet/commit/d716d6
 | Additional SDK/CLI groups (program, flow, authority, diff/audit, HTML, lab) | 49/49 |
 | Synthetic security benchmark | 227/227 expected outcomes |
 | Strict Clippy / locked build | PASS |
-| PQ interoperability workflow | PASS |
-| Rust formatting | **FAIL — two style diffs in lab.rs** |
+| PQ interoperability workflow | PASS at fb834f0 (before Python-only extended tests) |
+| Rust formatting | PASS |
+| Deterministic SDK differential corpus | 120/120 |
+| Actual atomic rollback comparisons | 2/2 |
 
 In the synthetic benchmark, 119 BAD scenarios were denied, 77 UNKNOWN scenarios retained uncertainty, and 31 GOOD scenarios remained UNKNOWN. This is expected for a refusal-only engine, not a 100% real-world detection or approval rate. Ground truth is project-authored, not independently reviewed.
 
-[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46086487261) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46086487268) · [Benchmark](testing/README.md)
+[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46088566612) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46088474986) · [Benchmark](testing/README.md)
 
 ## Local-first by design
 
@@ -181,7 +183,7 @@ HGUET cannot replace the customer-controlled wallet or independently protected s
 
 ## Project status
 
-The foundation is accepted on its recorded source snapshot. Program, asset, authority, diff, historical-audit, HTML and lab increments are implemented; their broader acceptance criteria remain open. Next: **extended runtime validation** — differential SDK corpus, public historical fixtures, more Token-2022 and authority behavior, validator comparisons, fuzzing and independently reviewed benchmark evidence.
+The foundation is accepted on its recorded source snapshot. Program, asset, authority, diff, historical-audit, HTML and lab increments are implemented; their broader acceptance criteria remain open. **Extended runtime validation** is underway: the first 120-case SDK differential corpus and two atomic rollback comparisons passed. A first [published historical fixture and read-only public smoke](testing/history/README.md) have been added; hosted results are pending. Wider public history, Token-2022 and authority behavior, validator comparisons, fuzzing and independently reviewed benchmark evidence remain open.
 
 Semantic mandates, x402 exact SVM verification, released Rust/TypeScript integrations, optional read-only MCP, DOT export and verified release packages are future deliverables, not available products. No 0.1.0 release is claimed.
 

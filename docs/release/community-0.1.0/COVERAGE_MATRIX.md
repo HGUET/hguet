@@ -25,6 +25,6 @@
 
 ## Evidence checkpoints
 
-Phase 1.1 accepted on [19c24255](PHASE_01_1.md). Initial Phase 2 runtime/SDK slices have been progressively verified; exact source and links are retained in [PHASE_02.md](PHASE_02.md). Latest measured source d716d60: 315 workspace tests passed, 6 ignored; 62 runtime and SDK/CLI groups passed, including structural and negative tests; 227 synthetic benchmark expected outcomes passed. Separate PQ workflow passed. Full runtime workflow remains red on formatting. No entire release gate or complete instruction family is certified by these counts.
+Phase 1.1 accepted on [19c24255](PHASE_01_1.md). Initial Phase 2 runtime/SDK slices have been progressively verified; exact source and links are retained in [PHASE_02.md](PHASE_02.md). Latest measured full Runtime CI source 29486e4: 315 workspace tests passed, 6 ignored; 62 prior runtime/SDK/CLI groups, 120 additional differential cases and two actual rollback comparisons passed; 227 synthetic benchmark expected outcomes passed. Formatting and strict Clippy passed. PQ passed on fb834f0 before the Python-only additions. The first published historical fixture and live Devnet smoke were added afterwards; new evidence pending. No entire release gate or complete instruction family is certified by these counts.
 
 [Limitations](../../../LIMITATIONS.md) · [Supported programs](../../../SUPPORTED-PROGRAMS.md) · [Release gates](RELEASE_GATES.md).

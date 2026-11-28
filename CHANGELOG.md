@@ -22,7 +22,8 @@ Development record, not published release notes. Source-attributed results and o
 - Single-parse reuse in analysis, typed scoped policy results, v2 error contracts and evidence links.
 - Defensive RPC stage regression tests and UTF-8-safe provider error truncation.
 - Scoped LiteSVM comparisons, SDK differential fixtures, historical adversarial fixtures, HTML escaping and passive markup tests.
-- Latest measured functional snapshot: 315 workspace tests passed (6 ignored), 13 mandatory runtime cases, 49 additional SDK/CLI groups, 227 synthetic scenario passes, strict Clippy and separate PQ success. Full workflow remains red on two Rust formatting differences.
+- Latest measured full Runtime CI at 29486e4: 315 workspace tests passed (6 ignored), 13 mandatory runtime cases, 49 additional SDK/CLI groups, 120 SDK differential cases, 2 actual rollback cases and 227 synthetic scenario passes; formatting and strict Clippy passed. PQ succeeded at fb834f0 before Python-only additions.
+- Added first published signed historical fixture from official Solana documentation and separate read-only public Devnet smoke; new hosted results pending.
 
 ### Documentation
 

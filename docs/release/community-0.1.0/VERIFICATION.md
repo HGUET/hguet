@@ -1,6 +1,6 @@
 # Source-attributed verification — 2026-11-28
 
-**Measured development snapshot, not release acceptance.** Source [`d716d606a71291f6d65e007d281bbffc513a2784`](https://github.com/HGUET/hguet/commit/d716d606a71291f6d65e007d281bbffc513a2784). The complete runtime workflow is red because formatting fails; no claim that all CI is green.
+**Historical measured snapshot, not release acceptance.** The later full green 29486e4 checkpoint is recorded below. Source [`d716d606a71291f6d65e007d281bbffc513a2784`](https://github.com/HGUET/hguet/commit/d716d606a71291f6d65e007d281bbffc513a2784). The complete runtime workflow is red because formatting fails; no claim that all CI is green.
 
 | Evidence | Result | Source artifact entry |
 | --- | --- | --- |

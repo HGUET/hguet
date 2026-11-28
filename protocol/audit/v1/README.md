@@ -40,3 +40,7 @@ The [JSON schema](report.schema.json) validates the versioned report and error e
 ## Verified development snapshot
 
 All seven historical Rust integration tests and the separate CLI configuration group passed. Public historical transactions have not yet been verified; local signature checks do not prove ledger inclusion. See [source-attributed verification](../../../docs/release/community-0.1.0/VERIFICATION.md) for d716d60, where full runtime CI remained red on formatting. No complete release or independent security assurance is claimed.
+
+## Published historical corpus
+
+The first [public historical fixture and smoke](../../../testing/history/README.md) reconstructs and independently verifies signed wire from official Solana documentation. An offline integration test consumes the published metadata projection; the separate network-enabled workflow requests finalized data from the official Devnet endpoint. Neither is an independent proof of consensus. Hosted results for this new fixture and public RPC remain pending. The previous full runtime workflow is green on 29486e4.
