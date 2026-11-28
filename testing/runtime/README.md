@@ -109,3 +109,7 @@ python testing/runtime/lab_preview.py --hguet target/debug/hguet --out /tmp/runt
 ```
 
 Use a fresh evidence directory for the lab export. Hosted Linux CI runs the scripts in a separate network namespace; use equivalent isolation where available. All 62 groups passed on the recorded source, but full workflow failed on formatting. The six demo lab cases themselves remain unsigned and non-executed; the historical audit uses signed synthetic fixtures and mocked provider metadata, not live public history. More validator, differential/fuzz and public historical evidence is required.
+
+## Extended validation (Phase 2.6, pending hosted results)
+
+`differential.py` constructs a deterministic 40-message SDK corpus (legacy/v0/v1, one/two signers, raw amount boundaries, v0 ALT, all 16 v1 config masks). For every message it compares local report and diff against SDK digests, roles, compiled indices and instruction bytes; truncated and trailing-byte variants must fail with a non-authorizing error. All 120 cases retain exact synthetic wire hex and results. These are structural tests, not executions or coverage-guided fuzzing. `rollback.py` executes two negative LiteSVM cases: a late insufficient-SOL transfer after a valid transfer, and a late token overspend after a delegate approval. Both must fail at instruction 1 and leave affected state unchanged. Report declarations are preserved independently. Neither script uses live RPC or real funds. Both are mandatory isolated CI steps, with incremental evidence. No pass claimed until measured.
