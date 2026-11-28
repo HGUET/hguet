@@ -140,18 +140,39 @@ fn flows(out: &mut String, root: &Value, flow: &Value, prefix: &str) {
             out.push_str("<dl class=\"fields\">");
             field(out, "Asset kind", &row["asset"]["kind"]);
             field(out, "Mint", &row["asset"]["mint"]);
-            field(out, "Expected fee (raw, not extra debit)", &row["expected_fee_raw"]);
+            field(
+                out,
+                "Expected fee (raw, not extra debit)",
+                &row["expected_fee_raw"],
+            );
             out.push_str("</dl>");
             if let Some(pointer) = row["evidence_ref"].as_str() {
-                evidence_link(out, root, &format!("{prefix}{pointer}"), "Original instruction evidence");
+                evidence_link(
+                    out,
+                    root,
+                    &format!("{prefix}{pointer}"),
+                    "Original instruction evidence",
+                );
             }
             out.push_str("</article>");
         }
     }
     out.push_str("<dl class=\"fields\">");
-    field(out, "Unknown asset instructions", &flow["unknown_asset_instruction_indices"]);
-    field(out, "Unresolved endpoints", &flow["unresolved_endpoint_instruction_indices"]);
-    field(out, "Unquantified instructions", &flow["unquantified_instruction_indices"]);
+    field(
+        out,
+        "Unknown asset instructions",
+        &flow["unknown_asset_instruction_indices"],
+    );
+    field(
+        out,
+        "Unresolved endpoints",
+        &flow["unresolved_endpoint_instruction_indices"],
+    );
+    field(
+        out,
+        "Unquantified instructions",
+        &flow["unquantified_instruction_indices"],
+    );
     out.push_str("</dl>");
 }
 
@@ -174,12 +195,21 @@ fn authorities(out: &mut String, root: &Value, report: &Value, prefix: &str) {
     if let Some(rows) = report["changes"].as_array() {
         for row in rows {
             if let Some(pointer) = row["evidence_ref"].as_str() {
-                evidence_link(out, root, &format!("{prefix}{pointer}"), &format!("Instruction #{} evidence", row["instruction_index"]));
+                evidence_link(
+                    out,
+                    root,
+                    &format!("{prefix}{pointer}"),
+                    &format!("Instruction #{} evidence", row["instruction_index"]),
+                );
             }
         }
     }
     out.push_str("<dl class=\"fields\">");
-    field(out, "Unclassified instructions", &report["unclassified_instruction_indices"]);
+    field(
+        out,
+        "Unclassified instructions",
+        &report["unclassified_instruction_indices"],
+    );
     out.push_str("</dl>");
 }
 
@@ -200,13 +230,25 @@ fn programs(out: &mut String, root: &Value, report: &Value, prefix: &str) {
     );
     if let Some(rows) = report["instructions"].as_array() {
         for (i, _) in rows.iter().enumerate() {
-            evidence_link(out, root, &format!("{prefix}/instructions/{i}"), &format!("Instruction #{i}"));
+            evidence_link(
+                out,
+                root,
+                &format!("{prefix}/instructions/{i}"),
+                &format!("Instruction #{i}"),
+            );
         }
     }
 }
 
 fn rpc_observations(out: &mut String, evidence: &Value, historical: bool) {
-    heading(out, if historical { "Historical provider observations" } else { "Advisory simulation observations" });
+    heading(
+        out,
+        if historical {
+            "Historical provider observations"
+        } else {
+            "Advisory simulation observations"
+        },
+    );
     out.push_str("<p class=\"muted\">Single-provider metadata is untrusted. No independent execution proof. Missing data is not zero.</p>");
     if evidence.is_null() {
         out.push_str("<p>Provider evidence not available.</p>");
@@ -216,41 +258,114 @@ fn rpc_observations(out: &mut String, evidence: &Value, historical: bool) {
     field(out, "Status", &evidence["status"]);
     if historical {
         field(out, "Reported slot", &evidence["slot"]);
-        field(out, "Reported fee (lamports)", &evidence["reported_fee_lamports"]);
+        field(
+            out,
+            "Reported fee (lamports)",
+            &evidence["reported_fee_lamports"],
+        );
         field(out, "Effects status", &evidence["effects_status"]);
     } else {
         field(out, "Simulation slot", &evidence["context_slot"]);
-        field(out, "Simulated fee (lamports)", &evidence["effect_analysis"]["simulated_fee_lamports"]);
+        field(
+            out,
+            "Simulated fee (lamports)",
+            &evidence["effect_analysis"]["simulated_fee_lamports"],
+        );
     }
     out.push_str("</dl>");
-    let effects = if historical { &evidence["effects"] } else { &evidence["effect_analysis"] };
+    let effects = if historical {
+        &evidence["effects"]
+    } else {
+        &evidence["effect_analysis"]
+    };
     out.push_str("<h3>Native net balance rows</h3>");
-    table(out, &effects["lamport_deltas"], &[("Account", "/address"), ("Before", "/before_lamports"), ("After", "/after_lamports"), ("Delta (lamports)", "/delta_lamports")]);
+    table(
+        out,
+        &effects["lamport_deltas"],
+        &[
+            ("Account", "/address"),
+            ("Before", "/before_lamports"),
+            ("After", "/after_lamports"),
+            ("Delta (lamports)", "/delta_lamports"),
+        ],
+    );
     out.push_str("<h3>Token net balance rows</h3>");
-    table(out, &effects["token_deltas"], &[("Account", "/token_account"), ("Mint", "/mint"), ("Before", "/before_raw_amount"), ("After", "/after_raw_amount"), ("Delta (raw)", "/delta_raw_amount"), ("Complete pair", "/complete_pair")]);
+    table(
+        out,
+        &effects["token_deltas"],
+        &[
+            ("Account", "/token_account"),
+            ("Mint", "/mint"),
+            ("Before", "/before_raw_amount"),
+            ("After", "/after_raw_amount"),
+            ("Delta (raw)", "/delta_raw_amount"),
+            ("Complete pair", "/complete_pair"),
+        ],
+    );
     out.push_str("<h3>Reported CPI token instructions</h3>");
-    table(out, &effects["cpi"]["token_instructions"], &[("Parent", "/parent_instruction_index"), ("Inner", "/inner_instruction_index"), ("Operation", "/operation"), ("Amount (raw)", "/amount_raw")]);
+    table(
+        out,
+        &effects["cpi"]["token_instructions"],
+        &[
+            ("Parent", "/parent_instruction_index"),
+            ("Inner", "/inner_instruction_index"),
+            ("Operation", "/operation"),
+            ("Amount (raw)", "/amount_raw"),
+        ],
+    );
 }
 
 fn diff(out: &mut String, root: &Value) {
     heading(out, "Transaction comparison");
     out.push_str("<p class=\"muted\">Position comparison, not edit alignment or semantic equivalence. Equal multisets do not prove equal execution.</p><div class=\"compare\">");
     for (side, label) in [("before", "Before"), ("after", "After")] {
-        let _ = write!(out, "<article class=\"panel\"><h3>{label}</h3><dl class=\"fields\">");
-        for (label, key) in [("Message hash", "message_sha256"), ("Fee payer", "fee_payer"), ("Format", "wire_format"), ("Signature status", "signature_status"), ("Coverage gaps", "coverage_gap_indices")] {
+        let _ = write!(
+            out,
+            "<article class=\"panel\"><h3>{label}</h3><dl class=\"fields\">"
+        );
+        for (label, key) in [
+            ("Message hash", "message_sha256"),
+            ("Fee payer", "fee_payer"),
+            ("Format", "wire_format"),
+            ("Signature status", "signature_status"),
+            ("Coverage gaps", "coverage_gap_indices"),
+        ] {
             field(out, label, &root[side][key]);
         }
         out.push_str("</dl></article>");
     }
     out.push_str("</div><dl class=\"fields\">");
-    field(out, "Message fields changed", &root["message_fields_changed"]);
-    field(out, "Instruction order equal", &root["ordered_instruction_fingerprints_equal"]);
-    field(out, "Instruction multiset equal", &root["instruction_multiset_equal"]);
+    field(
+        out,
+        "Message fields changed",
+        &root["message_fields_changed"],
+    );
+    field(
+        out,
+        "Instruction order equal",
+        &root["ordered_instruction_fingerprints_equal"],
+    );
+    field(
+        out,
+        "Instruction multiset equal",
+        &root["instruction_multiset_equal"],
+    );
     out.push_str("</dl>");
-    table(out, &root["instruction_changes"], &[("Before index", "/before_index"), ("After index", "/after_index"), ("Status", "/status"), ("Changed fields", "/changed_fields")]);
+    table(
+        out,
+        &root["instruction_changes"],
+        &[
+            ("Before index", "/before_index"),
+            ("After index", "/after_index"),
+            ("Status", "/status"),
+            ("Changed fields", "/changed_fields"),
+        ],
+    );
     if let Some(rows) = root["instruction_changes"].as_array() {
         for row in rows {
-            out.push_str("<article class=\"panel\"><h3>Changed position</h3><div class=\"compare\">");
+            out.push_str(
+                "<article class=\"panel\"><h3>Changed position</h3><div class=\"compare\">",
+            );
             for (key, label) in [("before_ref", "Before"), ("after_ref", "After")] {
                 let _ = write!(out, "<div><h4>{label}</h4>");
                 if let Some(pointer) = row[key].as_str() {
@@ -277,7 +392,12 @@ fn evidence_tree(out: &mut String, value: &Value, path: &str, label: &str, depth
     match value {
         Value::Object(map) => {
             let open = if depth < 2 { " open" } else { "" };
-            let _ = write!(out, "<details id=\"{id}\"{open}><summary>{} · {} fields</summary>", escape(label), map.len());
+            let _ = write!(
+                out,
+                "<details id=\"{id}\"{open}><summary>{} · {} fields</summary>",
+                escape(label),
+                map.len()
+            );
             for (key, child) in map {
                 evidence_tree(out, child, &child_path(path, key), key, depth + 1);
             }
@@ -285,14 +405,30 @@ fn evidence_tree(out: &mut String, value: &Value, path: &str, label: &str, depth
         }
         Value::Array(rows) => {
             let open = if depth < 2 { " open" } else { "" };
-            let _ = write!(out, "<details id=\"{id}\"{open}><summary>{} · {} rows</summary>", escape(label), rows.len());
+            let _ = write!(
+                out,
+                "<details id=\"{id}\"{open}><summary>{} · {} rows</summary>",
+                escape(label),
+                rows.len()
+            );
             for (i, child) in rows.iter().enumerate() {
-                evidence_tree(out, child, &child_path(path, &i.to_string()), &format!("#{i}"), depth + 1);
+                evidence_tree(
+                    out,
+                    child,
+                    &child_path(path, &i.to_string()),
+                    &format!("#{i}"),
+                    depth + 1,
+                );
             }
             out.push_str("</details>");
         }
         _ => {
-            let _ = write!(out, "<div class=\"evidence-value\" id=\"{id}\"><span>{}</span><code>{}</code></div>", escape(label), text(value));
+            let _ = write!(
+                out,
+                "<div class=\"evidence-value\" id=\"{id}\"><span>{}</span><code>{}</code></div>",
+                escape(label),
+                text(value)
+            );
         }
     }
 }
@@ -322,7 +458,14 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
     out.push_str("</style></head><body><main><header><p class=\"brand\">HGUET / COMMUNITY EDITION</p><p class=\"eyebrow\">SOLANA TRANSACTION INTELLIGENCE · DEVELOPER PREVIEW</p><h1>");
     out.push_str(title);
     out.push_str("</h1><p class=\"boundary\">Signing authorization: NOT_AUTHORIZED</p><p>Read-only evidence report. Not a safety certificate or proof of execution.</p><nav aria-label=\"Report sections\"><a href=\"#analysis\">Analysis</a><a href=\"#limitations\">Limitations</a><a href=\"#evidence\">Evidence</a></nav></header><section id=\"analysis\"><dl class=\"fields\">");
-    for (label, key) in [("Message hash", "message_sha256"), ("Status", "status"), ("Relation", "relation"), ("Network", "network"), ("Signature", "signature"), ("RPC error", "rpc_error")] {
+    for (label, key) in [
+        ("Message hash", "message_sha256"),
+        ("Status", "status"),
+        ("Relation", "relation"),
+        ("Network", "network"),
+        ("Signature", "signature"),
+        ("RPC error", "rpc_error"),
+    ] {
         if let Some(value) = root.get(key) {
             field(&mut out, label, value);
         }
@@ -332,7 +475,12 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
         "hguet_transaction_report" => {
             flows(&mut out, &root, &root["wire"], "/wire");
             authorities(&mut out, &root, &root["authority"], "/authority");
-            programs(&mut out, &root, &root["wire"]["program_report"], "/wire/program_report");
+            programs(
+                &mut out,
+                &root,
+                &root["wire"]["program_report"],
+                "/wire/program_report",
+            );
         }
         "hguet_program_intelligence" => programs(&mut out, &root, &root, ""),
         "hguet_asset_flow" => {
@@ -347,7 +495,12 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
         "hguet_rpc_asset_flow" | "hguet_historical_audit" => {
             if !root["wire"].is_null() {
                 flows(&mut out, &root, &root["wire"], "/wire");
-                programs(&mut out, &root, &root["wire"]["program_report"], "/wire/program_report");
+                programs(
+                    &mut out,
+                    &root,
+                    &root["wire"]["program_report"],
+                    "/wire/program_report",
+                );
             }
             if kind == "hguet_historical_audit" {
                 if !root["authority"].is_null() {
@@ -357,7 +510,15 @@ pub fn render<T: Serialize>(report: &T) -> Result<String, String> {
             } else {
                 rpc_observations(&mut out, &root["rpc_evidence"], false);
                 heading(&mut out, "Evidence correlation");
-                table(&mut out, &root["endpoint_links"], &[("Instruction", "/instruction_index"), ("Endpoint", "/endpoint_role"), ("Match status", "/status")]);
+                table(
+                    &mut out,
+                    &root["endpoint_links"],
+                    &[
+                        ("Instruction", "/instruction_index"),
+                        ("Endpoint", "/endpoint_role"),
+                        ("Match status", "/status"),
+                    ],
+                );
             }
         }
         _ => unreachable!("checked report kind"),
@@ -381,7 +542,8 @@ mod tests {
 
     #[test]
     fn untrusted_values_never_become_markup() {
-        let payload = "</code><script>alert(1)</script><img src=x onerror=alert(2)> & \" ' \u{202e}";
+        let payload =
+            "</code><script>alert(1)</script><img src=x onerror=alert(2)> & \" ' \u{202e}";
         let report = json!({
             "schema_version":1,"kind":"hguet_program_intelligence",
             "signing_authorization":"NOT_AUTHORIZED",
@@ -415,8 +577,10 @@ mod tests {
     #[test]
     fn only_known_non_authorizing_envelopes_render() {
         assert!(render(&json!({"kind":"arbitrary","schema_version":1,
-            "signing_authorization":"NOT_AUTHORIZED"})).is_err());
+            "signing_authorization":"NOT_AUTHORIZED"}))
+        .is_err());
         assert!(render(&json!({"kind":"hguet_asset_flow","schema_version":1,
-            "signing_authorization":"AUTHORIZED"})).is_err());
+            "signing_authorization":"AUTHORIZED"}))
+        .is_err());
     }
 }
