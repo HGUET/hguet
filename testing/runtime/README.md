@@ -129,3 +129,5 @@ The four Token-2022 groups passed on 9eef59d with the full Runtime workflow gree
 ## Coverage-guided fuzzing
 
 See [fuzz workspace](../../fuzz/README.md) for two ASan-instrumented libFuzzer targets and source-attributed bounded smoke workflow. Separate from deterministic SDK differential and code mutation testing. Initial hosted results pending.
+
+The two ALT lifecycle groups passed at e265036 in full Runtime CI; all 506 artifact hashes matched. The controlled close refunded 1503360 lamports. See [VERIFICATION.md](../../docs/release/community-0.1.0/VERIFICATION.md).

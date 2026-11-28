@@ -32,3 +32,7 @@ Phase 1.1 accepted on [19c24255](PHASE_01_1.md). Initial Phase 2 runtime/SDK sli
 ## Token-2022 checkpoint
 
 All three workflows passed at 9eef59d. Four actual Token-2022 extension runtime groups passed; 504 artifact hashes verified. Existing decoder coverage remains scoped, hook CPI and mint-close behavior remain open. Two ALT lifecycle groups implemented at b840fb9; acceptance pending. See [VERIFICATION.md](VERIFICATION.md).
+
+## ALT and fuzzing checkpoint
+
+Both ALT lifecycle groups passed at e265036; 506 manifest hashes verified. Controlled SlotHashes expiry is not real validator timing. Separate developer-only coverage-guided fuzz workspace implemented at 36b3bcb with two ASan targets; initial hosted execution pending. No fuzz coverage percentage or whole-release gate claim.

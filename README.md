@@ -157,7 +157,7 @@ Legacy, v0 and v1 wire structures are decoded; selected SDK-built transactions i
 
 ## Verification, not promises
 
-Latest measured full Runtime CI source: [`9eef59d`](https://github.com/HGUET/hguet/commit/9eef59dbbd0b34afcda0e69afcd907d1fef9689b), 2026-11-28.
+Latest measured full Runtime CI source: [`e265036`](https://github.com/HGUET/hguet/commit/e265036de6d0c6950c05fa4f25d4d0dc1cf9411e), 2026-11-28.
 
 | Evidence | Observed result |
 | --- | ---: |
@@ -171,11 +171,12 @@ Latest measured full Runtime CI source: [`9eef59d`](https://github.com/HGUET/hgu
 | Deterministic SDK differential corpus | 120/120 |
 | Actual atomic rollback comparisons | 2/2 |
 | Token-2022 extension runtime groups | 4/4 |
-| Public historical Devnet smoke | 1/1 |
+| Public historical Devnet smoke | 1/1 (9eef59d) |
+| ALT lifecycle runtime groups | 2/2 |
 
 In the synthetic benchmark, 119 BAD scenarios were denied, 77 UNKNOWN scenarios retained uncertainty, and 31 GOOD scenarios remained UNKNOWN. This is expected for a refusal-only engine, not a 100% real-world detection or approval rate. Ground truth is project-authored, not independently reviewed.
 
-[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46089660808) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46089660871) · [Benchmark](testing/README.md)
+[Exact evidence, commands and checksums](docs/release/community-0.1.0/VERIFICATION.md) · [Runtime workflow](https://github.com/HGUET/hguet/actions/runs/46090077710) · [PQ workflow](https://github.com/HGUET/hguet/actions/runs/46089660871) · [Benchmark](testing/README.md)
 
 ## Local-first by design
 

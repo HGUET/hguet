@@ -25,3 +25,5 @@ See [source-attributed verification](docs/release/community-0.1.0/VERIFICATION.m
 ## Extended runtime checkpoint
 
 At 9eef59d, four actual Token-2022 extension runtime groups passed: permanent delegate, hook configuration (not hook CPI), fee collection/harvest/withdrawal/future fee configuration, non-transferable rejection. No expansion of static layout coverage is implied. Two new ALT lifecycle groups are implemented and pending CI; until measured, the existing v0 lookup transfer is the confirmed ALT runtime case. See [verification](docs/release/community-0.1.0/VERIFICATION.md).
+
+ALT lifecycle groups passed on e265036: SDK create/extend/freeze/deactivate/close, exact wrong-authority/frozen/cooldown rejection, actual lookup transfers and close refund with controlled slot history. No validator timing or broad live-cluster claim. See [verification](docs/release/community-0.1.0/VERIFICATION.md).
