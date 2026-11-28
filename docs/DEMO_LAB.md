@@ -35,3 +35,5 @@ The network-isolated SDK/CLI suite verifies roundtrip and unsigned status,
 reproducibility, actual CLI report parity, local HTML anchors and no overwrite.
 The six cases are not a comprehensive security benchmark or runtime test suite.
 The existing policy demo, `hguet demo`, remains unchanged.
+
+The [Lab v1 schema](../protocol/lab/v1/report.schema.json) validates case, manifest and error envelopes; register the local report, diff, flow, authority and program schemas by their documented URNs. A complete export requires a valid manifest and all listed hashes to match, not simply the presence of a manifest file. All dynamic lab labels are escaped by the same passive HTML renderer.

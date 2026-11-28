@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 
 const CSS: &str = include_str!("report.css");
 
-fn escape(text: &str) -> String {
+pub(crate) fn escape(text: &str) -> String {
     let mut out = String::new();
     for c in text.chars() {
         match c {

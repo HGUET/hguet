@@ -17,6 +17,8 @@ pub const CASES: [&str; 6] = [
 
 #[derive(Debug, Serialize)]
 pub struct LabCase {
+    pub lab_version: u8,
+    pub kind: &'static str,
     pub name: &'static str,
     pub description: &'static str,
     pub synthetic: bool,
@@ -69,7 +71,13 @@ fn authority_wire() -> Result<Vec<u8>, String> {
     let token = key("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")?;
     let mut data = vec![4];
     data.extend(99u64.to_le_bytes());
-    Ok(unsigned(&[[7; 32], [8; 32], [6; 32], token], 2, 3, &[1, 2, 0], &data))
+    Ok(unsigned(
+        &[[7; 32], [8; 32], [6; 32], token],
+        2,
+        3,
+        &[1, 2, 0],
+        &data,
+    ))
 }
 
 fn fee_wire() -> Result<Vec<u8>, String> {
@@ -97,7 +105,12 @@ fn additional() -> Result<Vec<u8>, String> {
 
 pub fn run(name: &str) -> Result<LabCase, String> {
     let (name, description, bytes, before) = match name {
-        "payment" => ("payment", "Original synthetic payment: 500 lamports.", payment()?, None),
+        "payment" => (
+            "payment",
+            "Original synthetic payment: 500 lamports.",
+            payment()?,
+            None,
+        ),
         "additional-debit" => (
             "additional-debit",
             "A second declared debit increases gross SOL outflow; compare with payment.",
@@ -137,6 +150,8 @@ pub fn run(name: &str) -> Result<LabCase, String> {
     }
     .map_err(|_| "lab report serialization failed")?;
     Ok(LabCase {
+        lab_version: 1,
+        kind: "hguet_lab_case",
         name,
         description,
         synthetic: true,
@@ -149,13 +164,13 @@ pub fn run(name: &str) -> Result<LabCase, String> {
 }
 
 pub fn render(case: &LabCase) -> Result<String, String> {
-    // All labels are compile-time case names and descriptions.
     let document = html::render(&case.report)?;
     Ok(document.replacen(
         "<p class=\"brand\">",
         &format!(
             "<p class=\"boundary\">SYNTHETIC LAB · {} · Never broadcast</p><p>{}</p><p class=\"brand\">",
-            case.name, case.description
+            html::escape(case.name),
+            html::escape(case.description)
         ),
         1,
     ))
@@ -167,7 +182,8 @@ fn new_file(path: &Path, contents: &[u8]) -> Result<(), String> {
         .create_new(true)
         .open(path)
         .map_err(|_| "cannot create lab file")?;
-    file.write_all(contents).map_err(|_| "cannot write lab file".into())
+    file.write_all(contents)
+        .map_err(|_| "cannot write lab file".into())
 }
 
 /// Export to a new directory only. On failure, a partial directory can remain;
@@ -187,11 +203,12 @@ pub fn export(path: &Path) -> Result<Value, String> {
         entries.push(json!({"file":name,"sha256":hguet_core::sha256_hex(&bytes)}));
     }
     let manifest = json!({
-        "lab_version":1,"synthetic":true,"offline":true,
+        "lab_version":1,"kind":"hguet_lab_manifest","synthetic":true,"offline":true,
         "execution_performed":false,"signing_authorization":"NOT_AUTHORIZED",
         "cases":CASES,"files":entries
     });
-    let serialized = serde_json::to_vec_pretty(&manifest).map_err(|_| "lab serialization failed")?;
+    let serialized =
+        serde_json::to_vec_pretty(&manifest).map_err(|_| "lab serialization failed")?;
     new_file(&path.join("manifest.json"), &serialized)?;
     Ok(manifest)
 }
@@ -213,18 +230,45 @@ mod tests {
     }
 
     #[test]
+    fn public_lab_labels_are_escaped() {
+        let mut case = run("payment").unwrap();
+        case.description = "<img src=x onerror=alert(1)>";
+        let document = render(&case).unwrap();
+        assert!(!document.contains("<img"));
+        assert!(document.contains("&lt;img"));
+    }
+
+    #[test]
     fn values_are_engine_results_not_hardcoded_report_fields() {
         let payment = run("payment").unwrap();
-        assert_eq!(payment.report["wire"]["asset_totals"][0]["declared_debit_raw"], "500");
+        assert_eq!(
+            payment.report["wire"]["asset_totals"][0]["declared_debit_raw"],
+            "500"
+        );
         let extra = run("additional-debit").unwrap();
-        assert_eq!(extra.report["wire"]["asset_totals"][0]["declared_debit_raw"], "501");
+        assert_eq!(
+            extra.report["wire"]["asset_totals"][0]["declared_debit_raw"],
+            "501"
+        );
         let authority = run("authority").unwrap();
-        assert_eq!(authority.report["authority"]["changes"][0]["declared_delegate_limit_raw"], "99");
+        assert_eq!(
+            authority.report["authority"]["changes"][0]["declared_delegate_limit_raw"],
+            "99"
+        );
         assert_eq!(authority.report["wire"]["flows"], json!([]));
         let fee = run("token2022").unwrap();
-        assert_eq!(fee.report["wire"]["asset_totals"][0]["declared_debit_raw"], "123");
-        assert_eq!(fee.report["wire"]["asset_totals"][0]["declared_expected_fee_raw"], "2");
-        assert_eq!(run("uncertainty").unwrap().report["wire"]["unquantified_instruction_indices"], json!([0]));
+        assert_eq!(
+            fee.report["wire"]["asset_totals"][0]["declared_debit_raw"],
+            "123"
+        );
+        assert_eq!(
+            fee.report["wire"]["asset_totals"][0]["declared_expected_fee_raw"],
+            "2"
+        );
+        assert_eq!(
+            run("uncertainty").unwrap().report["wire"]["unquantified_instruction_indices"],
+            json!([0])
+        );
         assert_eq!(run("diff").unwrap().report["relation"], "MESSAGE_CHANGED");
     }
 }

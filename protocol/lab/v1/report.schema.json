@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hguet:lab:v1",
+  "title": "HGUET Synthetic Lab v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lab_version",
+        "kind",
+        "name",
+        "description",
+        "synthetic",
+        "execution_performed",
+        "signing_authorization",
+        "transaction_base64",
+        "before_transaction_base64",
+        "report"
+      ],
+      "properties": {
+        "lab_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_lab_case"
+        },
+        "name": {
+          "enum": [
+            "payment",
+            "additional-debit",
+            "authority",
+            "token2022",
+            "uncertainty",
+            "diff"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "synthetic": {
+          "const": true
+        },
+        "execution_performed": {
+          "const": false
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "transaction_base64": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5464,
+          "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+        },
+        "before_transaction_base64": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 5464,
+              "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report": {
+          "oneOf": [
+            {
+              "$ref": "urn:hguet:report:v1"
+            },
+            {
+              "$ref": "urn:hguet:diff:v1"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "name": {
+                "const": "diff"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "before_transaction_base64": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5464,
+                "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+              },
+              "report": {
+                "allOf": [
+                  {
+                    "$ref": "urn:hguet:diff:v1"
+                  },
+                  {
+                    "properties": {
+                      "kind": {
+                        "const": "hguet_transaction_diff"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "before_transaction_base64": {
+                "type": "null"
+              },
+              "report": {
+                "allOf": [
+                  {
+                    "$ref": "urn:hguet:report:v1"
+                  },
+                  {
+                    "properties": {
+                      "kind": {
+                        "const": "hguet_transaction_report"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lab_version",
+        "kind",
+        "synthetic",
+        "offline",
+        "execution_performed",
+        "signing_authorization",
+        "cases",
+        "files"
+      ],
+      "properties": {
+        "lab_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_lab_manifest"
+        },
+        "synthetic": {
+          "const": true
+        },
+        "offline": {
+          "const": true
+        },
+        "execution_performed": {
+          "const": false
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        },
+        "cases": {
+          "const": [
+            "payment",
+            "additional-debit",
+            "authority",
+            "token2022",
+            "uncertainty",
+            "diff"
+          ]
+        },
+        "files": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "sha256"
+            ],
+            "properties": {
+              "file": {
+                "enum": [
+                  "payment.json",
+                  "payment.html",
+                  "additional-debit.json",
+                  "additional-debit.html",
+                  "authority.json",
+                  "authority.html",
+                  "token2022.json",
+                  "token2022.html",
+                  "uncertainty.json",
+                  "uncertainty.html",
+                  "diff.json",
+                  "diff.html"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lab_version",
+        "kind",
+        "error",
+        "signing_authorization"
+      ],
+      "properties": {
+        "lab_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hguet_lab_error"
+        },
+        "error": {
+          "type": "string"
+        },
+        "signing_authorization": {
+          "const": "NOT_AUTHORIZED"
+        }
+      }
+    }
+  ]
+}
