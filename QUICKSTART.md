@@ -100,3 +100,13 @@ hguet report transaction.base64 --offline --encoding base64 --html > transaction
 ```
 
 The default JSON output has its own [combined report contract](protocol/report/v1/README.md); both nested views derive from the same parsed original message.
+
+## Security Demo Lab
+
+```sh
+hguet lab payment --html > payment.html
+hguet lab diff --json
+hguet lab all --out hguet-demo-lab
+```
+
+Six deterministic unsigned synthetic cases: payment, additional-debit, authority, token2022, uncertainty and diff. No signing, execution or RPC. The export directory must not exist; its manifest records hashes of all 12 JSON/HTML files. See [lab guide](docs/DEMO_LAB.md). Existing `hguet demo` policy examples are unchanged.

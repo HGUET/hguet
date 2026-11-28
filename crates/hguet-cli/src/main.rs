@@ -26,6 +26,8 @@ Usage:\n\
   hguet flow FILE --offline [--encoding binary|base64|base58] [--json|--html]\n\
   hguet flow-rpc FILE --rpc-url HTTPS_URL --network mainnet|devnet|testnet [--encoding binary|base64|base58] [--json|--html]\n\
   hguet doctor [--json]  (offline environment report)\n\
+  hguet lab CASE [--json|--html]  (unsigned synthetic fixtures)\n\
+  hguet lab all --out NEW_DIR  (offline export)\n\
   hguet demo [--json]  (synthetic offline analysis)\n\
   hguet cloud hello --ca-file FILE [--json]  (local Devnet gateway only)\n\
   hguet cloud quote PROGRAM --message-sha256 HEX --claim-sha256 HEX --max-lamports N --ca-file FILE --quote-key FILE [--save-order FILE] [--json]\n\
@@ -597,7 +599,43 @@ fn audit_command() -> i32 {
     }
 }
 
+fn lab_command() -> i32 {
+    let mut args = env::args().skip(2);
+    let result = match (args.next(), args.next(), args.next(), args.next()) {
+        (Some(name), Some(format), None, None) if name != "all" && format == "--html" => {
+            hguet::lab::run(&name).and_then(|case| hguet::lab::render(&case))
+        }
+        (Some(name), None, None, None) if name != "all" => {
+            hguet::lab::run(&name).and_then(|case| format_inventory(&case, false))
+        }
+        (Some(name), Some(format), None, None) if name != "all" && format == "--json" => {
+            hguet::lab::run(&name).and_then(|case| format_inventory(&case, false))
+        }
+        (Some(name), Some(flag), Some(path), None) if name == "all" && flag == "--out" => {
+            hguet::lab::export(std::path::Path::new(&path))
+                .and_then(|manifest| format_inventory(&manifest, false))
+        }
+        _ => Err("expected lab CASE [--json|--html] or lab all --out NEW_DIR".into()),
+    };
+    match result {
+        Ok(output) => {
+            println!("{output}");
+            0
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({"lab_version":1,"kind":"hguet_lab_error","error":error,"signing_authorization":"NOT_AUTHORIZED"})
+            );
+            40
+        }
+    }
+}
+
 fn main() {
+    if env::args().nth(1).as_deref() == Some("lab") {
+        process::exit(lab_command());
+    }
     if env::args().nth(1).as_deref() == Some("report") {
         process::exit(inventory_command("report"));
     }

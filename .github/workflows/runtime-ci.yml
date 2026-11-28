@@ -95,6 +95,14 @@ jobs:
           sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/html_preview.py \
             --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/html-preview.json" \
             2>&1 | tee "$HGUET_EVIDENCE/html-preview.log"
+      - name: Verify deterministic security demo lab
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          python_path="$(command -v python)"
+          sudo --preserve-env=LD_LIBRARY_PATH unshare --net -- "$python_path" testing/runtime/lab_preview.py \
+            --hguet "$PWD/target/debug/hguet" --out "$HGUET_EVIDENCE/lab-preview.json" \
+            2>&1 | tee "$HGUET_EVIDENCE/lab-preview.log"
       - name: Verify Phase 1 local acceptance contracts
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash

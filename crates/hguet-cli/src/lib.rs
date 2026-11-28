@@ -6,6 +6,7 @@ pub mod effects;
 pub mod flow;
 pub mod flow_rpc;
 pub mod html;
+pub mod lab;
 pub mod programs;
 pub mod report;
 pub mod report_v2;
