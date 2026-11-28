@@ -90,3 +90,7 @@ Public Devnet smoke passed at 90e4a36; six artifact manifest entries verified. S
 ## ALT lifecycle increment
 
 Exact source 9eef59dbbd0b34afcda0e69afcd907d1fef9689b passed [full Runtime](https://github.com/HGUET/hguet/actions/runs/46089660808), [PQ](https://github.com/HGUET/hguet/actions/runs/46089660871) and [public Devnet smoke](https://github.com/HGUET/hguet/actions/runs/46089660814). Four new Token-2022 groups and precise historical absolute balances passed. New ALT lifecycle groups test actual local create/extend/freeze/deactivate/close, exact failures and state/refund, with controlled sysvars. Hosted results pending. No new decoder or full validator compatibility claimed.
+
+## Coverage-guided fuzz smoke
+
+Both ALT lifecycle workflows passed on b840fb9 and e265036 (46090021895 and 46090077710). Added separate developer-only cargo-fuzz workspace and two libFuzzer targets, checked-in seed materialization, 20,000-execution budgets per target and network-isolated ASan runs with preserved corpus/crashes/logs. Actual fuzz results pending. No percentage or whole-release acceptance claimed.

@@ -1,0 +1,75 @@
+name: Coverage-guided fuzz smoke (ASan)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'fuzz/**'
+      - '.github/workflows/fuzz-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      NIGHTLY: nightly-2026-10-01
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare source-attributed evidence
+        shell: bash
+        run: |
+          evidence="$RUNNER_TEMP/hguet-fuzz"
+          mkdir -p "$evidence"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/source.txt"
+          echo "HGUET_EVIDENCE=$evidence" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=$RUNNER_TEMP/hguet-fuzz-rustup" >> "$GITHUB_ENV"
+          echo "CARGO_HOME=$RUNNER_TEMP/hguet-fuzz-cargo" >> "$GITHUB_ENV"
+      - name: Install pinned fuzz tools
+        shell: bash
+        run: |
+          rustup toolchain install "$NIGHTLY" --profile minimal
+          cargo +"$NIGHTLY" install cargo-fuzz --version 0.13.2 --locked
+          echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
+          rustc +"$NIGHTLY" -Vv > "$HGUET_EVIDENCE/toolchain.txt"
+          "$CARGO_HOME/bin/cargo-fuzz" --version >> "$HGUET_EVIDENCE/toolchain.txt"
+      - name: Build ASan-instrumented targets
+        shell: bash
+        run: |
+          # Keep the application lockfile unchanged; record the separate fuzz resolution.
+          cp Cargo.lock fuzz/Cargo.lock
+          cargo +"$NIGHTLY" fuzz build --sanitizer address 2>&1 | tee "$HGUET_EVIDENCE/build.log"
+          cp fuzz/Cargo.lock "$HGUET_EVIDENCE/fuzz-Cargo.lock"
+          python fuzz/seeds.py --out "$HGUET_EVIDENCE/corpus"
+      - name: Run coverage-guided wire and report smoke
+        shell: bash
+        run: |
+          mkdir -p "$HGUET_EVIDENCE/crashes/wire" "$HGUET_EVIDENCE/crashes/reports"
+          status=0
+          for target in wire reports; do
+            # Run the already built executable in an isolated network namespace.
+            exe="$PWD/fuzz/target/x86_64-unknown-linux-gnu/release/$target"
+            test -x "$exe"
+            sha256sum "$exe" >> "$HGUET_EVIDENCE/binaries.sha256"
+            if sudo unshare --net -- "$exe" "$HGUET_EVIDENCE/corpus/$target" \
+              -seed=314159 -max_len=4097 -runs=20000 -timeout=10 -rss_limit_mb=2048 \
+              -artifact_prefix="$HGUET_EVIDENCE/crashes/$target/" \
+              2>&1 | tee "$HGUET_EVIDENCE/$target.log"; then
+              echo "$target PASS" >> "$HGUET_EVIDENCE/status.txt"
+            else
+              echo "$target FAIL" >> "$HGUET_EVIDENCE/status.txt"
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Preserve crash inputs and evidence
+        if: always()
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/hguet-fuzz"
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fuzz-evidence
+          path: ${{ runner.temp }}/hguet-fuzz/
+          if-no-files-found: error

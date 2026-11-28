@@ -125,3 +125,7 @@ The first extended validation checkpoint passed 120/120 differential and 2/2 rol
 `alt_lifecycle.py` executes SDK-built create, extend, freeze, deactivate and close instructions in two independent LiteSVM branches. It verifies exact account layout, authority and address order, real v0 lookup transfers, rejection of wrong authority and frozen-table mutations, rejection of active and cooling-down close, and refund of table lamports after controlled slot history expiry. Error checks require the exact instruction index and fieldless error variant. Slot/SlotHashes are explicitly controlled, not an actual validator wait. Offline flow stays unresolved even when the runtime resolves the destination; no rent amount is invented. Mandatory isolated CI step, source-attributed evidence. No live RPC or real funds. References: https://docs.rs/crate/solana-address-lookup-table-program/latest/source/src/processor.rs and https://kevinheavey.dev/solders/api_reference/litesvm.html .
 
 The four Token-2022 groups passed on 9eef59d with the full Runtime workflow green; 504 manifest entries verified. The exact-source public Devnet and PQ workflows also succeeded. See [verification](../../docs/release/community-0.1.0/VERIFICATION.md). ALT lifecycle groups remain pending.
+
+## Coverage-guided fuzzing
+
+See [fuzz workspace](../../fuzz/README.md) for two ASan-instrumented libFuzzer targets and source-attributed bounded smoke workflow. Separate from deterministic SDK differential and code mutation testing. Initial hosted results pending.

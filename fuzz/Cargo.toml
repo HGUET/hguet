@@ -1,0 +1,31 @@
+[package]
+name = "hguet-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.10"
+hguet-core = { path = "../crates/hguet-core" }
+hguet = { path = "../crates/hguet-cli" }
+serde_json = "1"
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "wire"
+path = "fuzz_targets/wire.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "reports"
+path = "fuzz_targets/reports.rs"
+test = false
+doc = false
+bench = false
