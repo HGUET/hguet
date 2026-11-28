@@ -94,3 +94,7 @@ Exact source 9eef59dbbd0b34afcda0e69afcd907d1fef9689b passed [full Runtime](http
 ## Coverage-guided fuzz smoke
 
 Both ALT lifecycle workflows passed on b840fb9 and e265036 (46090021895 and 46090077710). Added separate developer-only cargo-fuzz workspace and two libFuzzer targets, checked-in seed materialization, 20,000-execution budgets per target and network-isolated ASan runs with preserved corpus/crashes/logs. Actual fuzz results pending. No percentage or whole-release acceptance claimed.
+
+## Local validator increment
+
+Both ASan targets passed 20,000 runs each at 36b3bcb; verified manifest 506/506. A separate local Agave v2.3.13 validator harness now compares real legacy transfer, rollback and v0 ALT historical metadata in a loopback-only network namespace. A bounded replay adapter uses the existing historical decoder without claiming production HTTPS/genesis verification. No change to public RPC endpoint or network rules. Initial hosted results pending.

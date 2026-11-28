@@ -1,0 +1,66 @@
+name: Real local Agave validator comparisons
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'testing/validator/**'
+      - 'crates/hguet-cli/examples/validator_history.rs'
+      - '.github/workflows/validator-local.yml'
+permissions:
+  contents: read
+jobs:
+  validator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare evidence and pinned toolchain
+        shell: bash
+        run: |
+          evidence="$RUNNER_TEMP/hguet-validator"
+          mkdir -p "$evidence"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/source.txt"
+          echo "HGUET_EVIDENCE=$evidence" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=$RUNNER_TEMP/hguet-validator-rustup" >> "$GITHUB_ENV"
+          echo "CARGO_HOME=$RUNNER_TEMP/hguet-validator-cargo" >> "$GITHUB_ENV"
+      - name: Install exact Agave release and verify asset digest
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/agave.tar.bz2"
+          curl --fail --location --retry 2 --max-time 300 -o "$archive" https://github.com/anza-xyz/agave/releases/download/v2.3.13/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+          echo "c43539ebdf6942472e8b87635d6ea55f428a51e3d0219f7b6f720fc6b19fade0  $archive" | sha256sum --check
+          tar -xjf "$archive" -C "$RUNNER_TEMP"
+          validator="$RUNNER_TEMP/solana-release/bin/solana-test-validator"
+          "$validator" --version | tee "$HGUET_EVIDENCE/validator-version.txt"
+          sha256sum "$archive" "$validator" > "$HGUET_EVIDENCE/validator.sha256"
+          echo "HGUET_VALIDATOR=$validator" >> "$GITHUB_ENV"
+      - name: Build locked HGUET and test adapter
+        shell: bash
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal
+          cargo +1.100.0 build --locked -p hguet --bin hguet --example validator_history
+          python -m pip install -r testing/runtime/requirements.txt
+          sha256sum target/debug/hguet target/debug/examples/validator_history > "$HGUET_EVIDENCE/binaries.sha256"
+      - name: Execute on loopback-only validator
+        shell: bash
+        run: |
+          python_path="$(command -v python)"
+          sudo unshare --net -- bash -c 'ip link set lo up; exec "$@"' _ "$python_path" testing/validator/run.py \
+            --validator "$HGUET_VALIDATOR" --hguet "$PWD/target/debug/hguet" \
+            --replay "$PWD/target/debug/examples/validator_history" --out "$HGUET_EVIDENCE"
+      - name: Preserve evidence excluding ephemeral ledger and keys
+        if: always()
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/hguet-validator"
+          sudo rm -rf temporary-home
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-validator-evidence
+          path: ${{ runner.temp }}/hguet-validator/
+          if-no-files-found: error

@@ -221,6 +221,18 @@ fn decode(
     Ok(Some(HistoricalTransaction { wire, evidence }))
 }
 
+/// Decode a captured getTransaction result as untrusted evidence. This verifies
+/// the signed wire and requested first signature, NOT its source, genesis,
+/// inclusion or finality. Intended for offline evidence replay and test harnesses.
+/// The networked fetch path independently checks the endpoint and genesis.
+pub fn decode_untrusted_result(
+    result: Value,
+    signature: &str,
+) -> Result<Option<HistoricalTransaction>, RpcError> {
+    let expected = validate_signature(signature)?;
+    decode(result, &expected)
+}
+
 /// Exactly two read-only RPC methods: cluster identity and historical transaction.
 /// Never simulate, resolve present-day accounts, or return provider error strings.
 pub fn fetch<T: JsonRpcTransport>(

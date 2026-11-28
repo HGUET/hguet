@@ -173,6 +173,7 @@ Latest measured full Runtime CI source: [`e265036`](https://github.com/HGUET/hgu
 | Token-2022 extension runtime groups | 4/4 |
 | Public historical Devnet smoke | 1/1 (9eef59d) |
 | ALT lifecycle runtime groups | 2/2 |
+| ASan coverage-guided smoke | 40,000 executions, no saved crashes (36b3bcb) |
 
 In the synthetic benchmark, 119 BAD scenarios were denied, 77 UNKNOWN scenarios retained uncertainty, and 31 GOOD scenarios remained UNKNOWN. This is expected for a refusal-only engine, not a 100% real-world detection or approval rate. Ground truth is project-authored, not independently reviewed.
 

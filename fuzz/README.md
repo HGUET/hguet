@@ -37,3 +37,7 @@ preserve the failing input and add a focused regression before claiming a fix.
 A smoke pass is not exhaustive fuzz coverage or an independent audit.
 Existing deterministic differential tests and cargo-mutants code mutation
 testing are distinct techniques. Hosted execution pending.
+
+## First measured smoke
+
+Source 36b3bcb passed both targets in run 46090470828: 20,000 executions each, no saved crash files. Wire final cov=1527, ft=2584, corp=215; reports cov=3580, ft=6395, corp=263. These are libFuzzer counters, not source coverage percentages. All 506 artifact entries verified; see [verification](../docs/release/community-0.1.0/VERIFICATION.md). Separate resolved fuzz lockfile is preserved in that artifact.
