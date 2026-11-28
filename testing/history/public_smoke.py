@@ -28,7 +28,12 @@ def rpc(method, params):
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=20) as response:
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            raise HTTPError(req.full_url, code, "unexpected redirect", headers, fp)
+
+    opener = urllib.request.build_opener(NoRedirect())
+    with opener.open(request, timeout=20) as response:
         if response.geturl() != ENDPOINT and response.geturl() != ENDPOINT + "/":
             raise ValueError("unexpected RPC redirect")
         raw = response.read(MAX_RESPONSE + 1)
@@ -88,7 +93,13 @@ def main():
         assert result["slot"] == fixture["result"]["slot"]
         assert result["version"] == fixture["result"]["version"]
         for field in ("err", "fee", "preBalances", "postBalances"):
-            assert result["meta"][field] == fixture["result"]["meta"][field], field
+            actual = result["meta"][field]
+            expected = fixture["result"]["meta"][field]
+            if actual != expected:
+                record["metadata_mismatch"] = {"field": field, "published": expected,
+                                               "provider": actual}
+                save()
+                raise AssertionError(field)
         record["sdk_and_published_example"] = "PASS"
         process = subprocess.run([str(args.hguet.resolve()), "audit", signature,
                                  "--network", "devnet", "--rpc-url", ENDPOINT],

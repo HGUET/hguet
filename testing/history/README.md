@@ -31,3 +31,7 @@ Outputs contain public transaction metadata, exact source and hashes in CI.
 A single provider match is not independent consensus verification. Wider
 mainnet/v0/v1/token/CPI historical corpus and second-provider checks are open.
 Never broadcast the historical bytes.
+
+## First public smoke result
+
+Run 46089236362 returned a public Devnet transaction with the expected signed bytes, slot and version, but failed at preBalances before invoking the CLI. The checked-in fixture had rounded two balances above 2^53 by one lamport during JavaScript numeric serialization. The raw archived provider response retains exact integers. Corrected the two original decimal literals without parsing through JavaScript Number; the offline and live checks must run again. The original failure and artifact are retained in the verification record. No live audit pass is claimed yet.
