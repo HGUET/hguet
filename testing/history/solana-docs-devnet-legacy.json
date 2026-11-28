@@ -1,0 +1,38 @@
+{
+  "source": "https://solana.com/developers/docs/rpc/http/gettransaction",
+  "source_kind": "published_documentation_example",
+  "network": "devnet",
+  "signature": "4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9",
+  "message_sha256": "724d4379bcff7f86039d30805ed4273a5a7566fe7ea9d5130c43b851de7503e2",
+  "wire_sha256": "42281e32d5f988da4906687ae84325c4102f51e8463f0e7c3ad2c67f5fc686c3",
+  "result": {
+    "slot": 423108383,
+    "blockTime": 1763747336,
+    "version": "legacy",
+    "transaction": [
+      "AatNeaaALFspaMystVMlYdgO7lYqRTebYJPth4fFprHMalkI2VExxH2Qhc039IuKqACkjaQKCEllogFl3wYFNQIBAAEDeXJtpS2Z1gsH6tc7L28L9gg8yFx3qU401pHXj4vK/smyazex53qurotO/9d6NWjyUXTpQwkE31NjjnrwCoLbrwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABsaJIO5Ws2Qd98ODNO4wx7H7gCX9mST/gM2qW0LuhnwBAgIAAQwCAAAAAMqaOwAAAAA=",
+      "base64"
+    ],
+    "meta": {
+      "err": null,
+      "fee": 5000,
+      "preBalances": [
+        13086426097436980,
+        0,
+        1
+      ],
+      "postBalances": [
+        13086425097431980,
+        1000000000,
+        1
+      ],
+      "preTokenBalances": [],
+      "postTokenBalances": [],
+      "innerInstructions": [],
+      "loadedAddresses": {
+        "writable": [],
+        "readonly": []
+      }
+    }
+  }
+}

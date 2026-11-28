@@ -1,0 +1,51 @@
+name: Public historical Devnet smoke (read-only)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'testing/history/**'
+      - '.github/workflows/historical-public.yml'
+permissions:
+  contents: read
+jobs:
+  public-history:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare evidence and isolated toolchain
+        shell: bash
+        run: |
+          evidence="$RUNNER_TEMP/hguet-public-history"
+          mkdir -p "$evidence"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/source.txt"
+          echo "HGUET_EVIDENCE=$evidence" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=$RUNNER_TEMP/hguet-history-rustup" >> "$GITHUB_ENV"
+          echo "CARGO_HOME=$RUNNER_TEMP/hguet-history-cargo" >> "$GITHUB_ENV"
+      - name: Build locked CLI
+        shell: bash
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal
+          cargo +1.100.0 build --locked -p hguet
+          sha256sum target/debug/hguet > "$HGUET_EVIDENCE/cli.sha256"
+          python -m pip install -r testing/runtime/requirements.txt
+          python -m pip freeze > "$HGUET_EVIDENCE/python-packages.txt"
+      - name: Query fixed public Devnet fixture
+        shell: bash
+        run: |
+          python testing/history/public_smoke.py --hguet target/debug/hguet --out "$HGUET_EVIDENCE"
+      - name: Hash and preserve evidence
+        if: always()
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/hguet-public-history"
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-historical-evidence
+          path: ${{ runner.temp }}/hguet-public-history/
+          if-no-files-found: error

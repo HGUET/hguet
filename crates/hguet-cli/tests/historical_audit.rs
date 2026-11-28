@@ -1,4 +1,4 @@
-//! Signed synthetic historical fixtures; never contacts an RPC or real funds.
+//! Signed synthetic and published historical fixtures; no RPC or real funds.
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::{Signer, SigningKey};
 use hguet::audit;
@@ -266,4 +266,51 @@ fn invalid_inputs_and_wrong_genesis_stop_before_history_request() {
     let report = run(&signature, &p);
     assert_eq!(report.rpc_error, Some("RPC_GENESIS_MISMATCH"));
     assert_eq!(p.methods.into_inner(), vec!["getGenesisHash"]);
+}
+
+#[test]
+fn published_devnet_example_has_valid_signature_and_historical_balance_rows() {
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../testing/history/solana-docs-devnet-legacy.json"
+    ))
+    .unwrap();
+    let signature = fixture["signature"].as_str().unwrap();
+    let wire = STANDARD
+        .decode(fixture["result"]["transaction"][0].as_str().unwrap())
+        .unwrap();
+    assert_eq!(
+        hguet_core::sha256_hex(&wire),
+        fixture["wire_sha256"].as_str().unwrap()
+    );
+    let parsed = parse_transaction(&wire).unwrap();
+    assert_eq!(
+        parsed.transaction_signature_status,
+        TransactionSignatureStatus::Verified
+    );
+    assert_eq!(
+        parsed.message_sha256,
+        fixture["message_sha256"].as_str().unwrap()
+    );
+    let p = provider(fixture["result"].clone());
+    let report = run(signature, &p);
+    assert_eq!(report.status, "FOUND_SIGNATURE_VERIFIED");
+    assert!(report.signatures_verified);
+    assert!(!report.execution_proven);
+    let value = serde_json::to_value(report).unwrap();
+    assert_eq!(
+        value["wire"]["asset_totals"][0]["declared_debit_raw"],
+        "1000000000"
+    );
+    assert_eq!(value["historical"]["slot"], 423108383);
+    assert_eq!(value["historical"]["reported_fee_lamports"], "5000");
+    let rows = value["historical"]["effects"]["lamport_deltas"]
+        .as_array()
+        .unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["delta_lamports"], "-1000005000");
+    assert_eq!(rows[1]["delta_lamports"], "1000000000");
+    assert_eq!(
+        p.methods.into_inner(),
+        vec!["getGenesisHash", "getTransaction"]
+    );
 }

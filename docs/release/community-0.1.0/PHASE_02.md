@@ -76,3 +76,7 @@ Initial implementations 2.0–2.5 and the synthetic lab exist and have scoped fu
 ## Phase 2.6 — first validation increment
 
 Exact hosted formatting corrections applied to lab.rs at fb834f066a4b555a0bbb629670d365db99b74f98. Added a deterministic SDK differential corpus (40 valid messages plus 80 structurally malformed variants) and two actual local rollback comparisons. Mandatory CI steps preserve individual wire hashes, results and runtime errors. No new product commands. Hosted results pending. Public historical corpus, wider extension/ALT runtime, validator and coverage-guided fuzzing remain open.
+
+## Phase 2.6 measured differential/rollback and public history increment
+
+At 29486e4dcb95b9c40d2d139c667e7f066d771a6f, full runtime acceptance succeeded, including 120 differential and 2 actual rollback cases; artifact manifest 502/502 verified. See [VERIFICATION.md](VERIFICATION.md). Added an independently signed published Devnet example, reconstructed from official Solana documentation and verified locally using Ed25519, plus an offline Rust historical test and separately network-enabled bounded public smoke. Published metadata is not a live response. New hosted results pending; no wide public corpus or independent ledger proof claimed.
